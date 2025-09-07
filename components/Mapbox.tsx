@@ -20,7 +20,10 @@ export default function MapboxMap({
   const [isMapReady, setIsMapReady] = useState(false);
 
   useEffect(() => {
-    Mapbox.setAccessToken(Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN);
+    const accessToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
+    if (accessToken) {
+      Mapbox.setAccessToken(accessToken);
+    }
   }, []);
 
   const handleMapPress = (feature: any) => {
