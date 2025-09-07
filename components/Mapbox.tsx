@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View } from "react-native";
 import Mapbox from "@rnmapbox/maps";
 import Constants from "expo-constants";
+import tw from "twrnc";
 
 interface MapboxMapProps {
   style?: any;
@@ -29,8 +30,8 @@ export default function MapboxMap({
   };
 
   return (
-    <View className="flex-1" style={style}>
-      <Mapbox.MapView className="flex-1" onPress={handleMapPress} onDidFinishLoadingMap={() => setIsMapReady(true)}>
+    <View style={[tw`flex-1`, style]}>
+      <Mapbox.MapView style={tw`flex-1`} onPress={handleMapPress} onDidFinishLoadingMap={() => setIsMapReady(true)}>
         <Mapbox.Camera
           centerCoordinate={initialCenter}
           zoomLevel={initialZoom}
