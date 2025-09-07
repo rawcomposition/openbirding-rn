@@ -12,8 +12,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses location to show your position on the map and find nearby birding hotspots.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location to show your position on the map and find nearby birding hotspots."
-      }
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location to show your position on the map and find nearby birding hotspots.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.rawcomposition.openbirding"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +23,11 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "INTERNET"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET"
+      ]
     },
     "web": {
       "bundler": "metro",
