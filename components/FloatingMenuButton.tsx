@@ -23,10 +23,10 @@ export default function FloatingMenuButton({ onPress }: FloatingMenuButtonProps)
     >
       <TouchableOpacity
         onPress={onPress}
-        style={tw`bg-blue-600 w-14 h-14 rounded-full items-center justify-center shadow-lg`}
+        style={tw`bg-white w-14 h-14 rounded-full items-center justify-center shadow-lg`}
         activeOpacity={0.8}
       >
-        <Ionicons name="menu" size={24} color="white" />
+        <Ionicons name="menu" size={24} color="#1f2937" />
       </TouchableOpacity>
     </View>
   );
