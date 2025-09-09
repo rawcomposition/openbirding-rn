@@ -34,7 +34,12 @@ export default function MapboxMap({
 
   return (
     <View style={[tw`flex-1`, style]}>
-      <Mapbox.MapView style={tw`flex-1`} onPress={handleMapPress} onDidFinishLoadingMap={() => setIsMapReady(true)}>
+      <Mapbox.MapView
+        style={tw`flex-1`}
+        onPress={handleMapPress}
+        onDidFinishLoadingMap={() => setIsMapReady(true)}
+        scaleBarEnabled={false}
+      >
         <Mapbox.Camera
           centerCoordinate={initialCenter}
           zoomLevel={initialZoom}
