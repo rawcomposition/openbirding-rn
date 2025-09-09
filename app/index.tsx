@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Mapbox from "@/components/Mapbox";
 import FloatingMenuButton from "@/components/FloatingMenuButton";
@@ -11,6 +11,9 @@ export default function HomeScreen() {
 
   const handleMapPress = (feature: any) => {
     console.log("Map pressed:", feature);
+    if (isBottomSheetOpen) {
+      handleCloseBottomSheet();
+    }
   };
 
   const handleMenuPress = () => {
@@ -26,6 +29,13 @@ export default function HomeScreen() {
       <View style={tw`flex-1`}>
         <Mapbox onPress={handleMapPress} initialCenter={[-74.006, 40.7128]} initialZoom={12} />
         <FloatingMenuButton onPress={handleMenuPress} />
+        {isBottomSheetOpen && (
+          <TouchableOpacity
+            style={tw`absolute inset-0 bg-transparent`}
+            onPress={handleCloseBottomSheet}
+            activeOpacity={1}
+          />
+        )}
         <PacksBottomSheet isOpen={isBottomSheetOpen} onClose={handleCloseBottomSheet} />
       </View>
     </GestureHandlerRootView>

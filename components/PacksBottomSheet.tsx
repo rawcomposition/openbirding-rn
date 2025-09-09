@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import { View, Text } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +17,14 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
   const router = useRouter();
 
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+
+  useEffect(() => {
+    if (isOpen) {
+      bottomSheetRef.current?.snapToIndex(1);
+    } else {
+      bottomSheetRef.current?.close();
+    }
+  }, [isOpen]);
 
   const handleNavigateToPacks = () => {
     onClose();
@@ -37,7 +45,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
   return (
     <BottomSheet
       ref={bottomSheetRef}
-      index={isOpen ? 1 : -1}
+      index={-1}
       snapPoints={snapPoints}
       onChange={handleSheetChanges}
       enablePanDownToClose
