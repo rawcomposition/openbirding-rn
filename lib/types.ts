@@ -7,6 +7,16 @@ export type Hotspot = {
   lng: number;
   open: number | null;
   notes: string | null;
+  last_updated_by: string | null;
+  pack_id: number | null;
+};
+
+export type Pack = {
+  id: number;
+  region: string;
+  name: string;
+  hotspots: number;
+  last_synced: string | null;
 };
 
 export type BoundingBox = {

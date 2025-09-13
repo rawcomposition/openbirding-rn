@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { Hotspot } from "./types";
+import { Hotspot, Pack } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -19,6 +19,16 @@ async function createTables(): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
   await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS packs (
+      id INTEGER PRIMARY KEY,
+      region TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      hotspots INTEGER,
+      last_synced TEXT
+    );
+  `);
+
+  await db.execAsync(`
     CREATE TABLE IF NOT EXISTS hotspots (
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
@@ -28,7 +38,10 @@ async function createTables(): Promise<void> {
       lng REAL NOT NULL,
       open INTEGER CHECK (open IN (0, 1) OR open IS NULL),
       notes TEXT,
-      updated_at TEXT
+      last_updated_by TEXT,
+      pack_id INTEGER,
+      updated_at TEXT,
+      FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
   `);
 }
@@ -44,6 +57,16 @@ async function createIndexes(): Promise<void> {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_hotspots_lat_lng 
     ON hotspots (lat, lng);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_hotspots_pack_id 
+    ON hotspots (pack_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_packs_region 
+    ON packs (region);
   `);
 }
 
