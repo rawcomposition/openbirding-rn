@@ -1,19 +1,21 @@
 import React from "react";
-import { View, Text, FlatList, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import tw from "twrnc";
+import { Pack } from "@/lib/types";
+import { useInstallPack } from "@/hooks/useInstallPack";
 
-type Pack = {
-  id: number;
-  region: string;
-  hotspots: number;
-  name: string;
+type PacksResponse = {
+  data: Pack[];
+  count: number;
 };
 
 export default function PacksList() {
-  const { data, isLoading, error } = useQuery<Pack[]>({
+  const { data, isLoading, error } = useQuery<PacksResponse>({
     queryKey: ["/packs"],
   });
+
+  const { installPack, installingId, progress, isInstalling } = useInstallPack();
 
   if (isLoading) {
     return (
@@ -32,20 +34,60 @@ export default function PacksList() {
     );
   }
 
-  const renderPack = ({ item }: { item: Pack }) => (
-    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
-      <View style={tw`flex-1`}>
-        <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
-        <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
+  const renderPack = ({ item }: { item: Pack }) => {
+    const installing = installingId === item.id;
+    const currentProgress = installing ? progress : 0;
+    const isInstallingPhase = installing && isInstalling;
+
+    return (
+      <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
+          <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
+        </View>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 text-sm mr-3`}>{item.region}</Text>
+          <View style={tw`relative`}>
+            <TouchableOpacity
+              onPress={() => installPack(item)}
+              disabled={installingId !== null}
+              style={tw`px-4 py-2 rounded-lg border-2 ${
+                installing
+                  ? "border-blue-500 bg-white"
+                  : installingId !== null
+                  ? "border-gray-300 bg-gray-100"
+                  : "border-blue-500 bg-blue-500"
+              }`}
+            >
+              <Text
+                style={tw`font-medium ${
+                  installing ? "text-blue-500" : installingId !== null ? "text-gray-400" : "text-white"
+                }`}
+              >
+                {isInstallingPhase ? "Installing..." : installing ? `${currentProgress}%` : "Install"}
+              </Text>
+            </TouchableOpacity>
+            {installing && (
+              <View
+                style={[
+                  tw`absolute top-0 left-0 h-full bg-blue-500 rounded-lg`,
+                  {
+                    width: `${currentProgress}%`,
+                  },
+                ]}
+              />
+            )}
+          </View>
+        </View>
       </View>
-      <Text style={tw`text-gray-600 text-sm`}>{item.region}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={tw`flex-1`}>
+      <Text style={tw`text-gray-700 text-sm mb-4 p-4`}>{data?.count || 0} packs available</Text>
       <FlatList
-        data={data || []}
+        data={data?.data || []}
         renderItem={renderPack}
         keyExtractor={(item) => item.id.toString()}
         style={tw`flex-1`}

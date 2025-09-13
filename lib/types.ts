@@ -7,8 +7,12 @@ export type Hotspot = {
   lng: number;
   open: number | null;
   notes: string | null;
-  last_updated_by: string | null;
-  pack_id: number | null;
+  lastUpdatedBy: string | null;
+  updatedAt: string | null;
+};
+
+export type HotspotWithPackId = Hotspot & {
+  pack_id: number;
 };
 
 export type Pack = {
