@@ -4,9 +4,13 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { View, Text } from "react-native";
+import tw from "twrnc";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { get } from "@/lib/utils";
+import { initializeDatabase } from "@/lib/database";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,10 +31,36 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+  const [dbInitialized, setDbInitialized] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initDatabase = async () => {
+      try {
+        await initializeDatabase();
+        setDbInitialized(true);
+      } catch (error) {
+        console.error("Database initialization failed:", error);
+        setDbError(error instanceof Error ? error.message : "Database initialization failed");
+      }
+    };
+
+    initDatabase();
+  }, []);
 
   if (!loaded) {
-    // Async font loading only occurs in development.
     return null;
+  }
+
+  if (!dbInitialized && !dbError) return null;
+
+  if (dbError) {
+    return (
+      <View style={tw`flex-1 justify-center items-center bg-gray-50 p-4`}>
+        <Text style={tw`text-red-500 text-center text-lg font-semibold`}>Database Error</Text>
+        <Text style={tw`text-gray-600 text-center mt-2`}>{dbError}</Text>
+      </View>
+    );
   }
 
   return (
