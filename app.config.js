@@ -56,6 +56,7 @@ module.exports = ({ config }) => ({
             "This app uses location to show your position on the map and find nearby hotspots.",
         },
       ],
+      "expo-sqlite",
     ],
     experiments: { typedRoutes: true },
     extra: {
