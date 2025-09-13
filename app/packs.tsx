@@ -23,7 +23,7 @@ export default function PacksPage() {
         <Text style={tw`text-gray-900 text-xl font-semibold`}>Hotspot Packs</Text>
       </View>
 
-      <View style={tw`flex-1 p-4`}>
+      <View style={tw`flex-1`}>
         <PacksList />
       </View>
     </View>

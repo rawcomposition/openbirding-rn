@@ -10,13 +10,8 @@ type Pack = {
   name: string;
 };
 
-type PacksResponse = {
-  data: Pack[];
-  count: number;
-};
-
 export default function PacksList() {
-  const { data, isLoading, error } = useQuery<PacksResponse>({
+  const { data, isLoading, error } = useQuery<Pack[]>({
     queryKey: ["/packs"],
   });
 
@@ -38,16 +33,19 @@ export default function PacksList() {
   }
 
   const renderPack = ({ item }: { item: Pack }) => (
-    <View style={tw`bg-white p-4 m-2 rounded-lg border border-gray-200 shadow-sm`}>
-      <Text style={tw`text-gray-900 text-lg font-semibold`}>{item.name}</Text>
-      <Text style={tw`text-gray-700`}>{item.hotspots.toLocaleString()} hotspots</Text>
+    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
+        <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
+      </View>
+      <Text style={tw`text-gray-600 text-sm`}>{item.region}</Text>
     </View>
   );
 
   return (
     <View style={tw`flex-1`}>
       <FlatList
-        data={data?.data || []}
+        data={data || []}
         renderItem={renderPack}
         keyExtractor={(item) => item.id.toString()}
         style={tw`flex-1`}
