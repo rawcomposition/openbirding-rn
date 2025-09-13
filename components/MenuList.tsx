@@ -33,15 +33,15 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings }: Me
 
   const renderMenuItem = ({ item }: { item: MenuOption }) => (
     <TouchableOpacity
-      style={tw`flex-row items-center p-4 border-b border-slate-700`}
+      style={tw`flex-row items-center p-4 border-b border-gray-200`}
       onPress={item.onPress}
       activeOpacity={0.7}
     >
       <View style={tw`w-8 h-8 items-center justify-center mr-4`}>
-        <Ionicons name={item.icon} size={24} color="#94a3b8" />
+        <Ionicons name={item.icon} size={24} color="#6b7280" />
       </View>
-      <Text style={tw`text-white text-lg flex-1`}>{item.title}</Text>
-      <Ionicons name="chevron-forward" size={20} color="#64748b" />
+      <Text style={tw`text-gray-900 text-lg flex-1`}>{item.title}</Text>
+      <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
     </TouchableOpacity>
   );
 

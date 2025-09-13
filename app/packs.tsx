@@ -15,12 +15,12 @@ export default function PacksPage() {
   };
 
   return (
-    <View style={tw`flex-1 bg-slate-800`}>
-      <View style={[tw`flex-row items-center p-4 border-b border-slate-700`, { paddingTop: insets.top + 16 }]}>
+    <View style={tw`flex-1 bg-gray-50`}>
+      <View style={[tw`flex-row items-center p-4 border-b border-gray-200 bg-white`, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={handleBack} style={tw`mr-4`}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color="#374151" />
         </TouchableOpacity>
-        <Text style={tw`text-white text-xl font-semibold`}>Hotspot Packs</Text>
+        <Text style={tw`text-gray-900 text-xl font-semibold`}>Hotspot Packs</Text>
       </View>
 
       <View style={tw`flex-1 p-4`}>

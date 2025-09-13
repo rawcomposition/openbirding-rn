@@ -24,7 +24,7 @@ export default function PacksList() {
     return (
       <View style={tw`flex-1 justify-center items-center`}>
         <ActivityIndicator size="large" color="#3b82f6" />
-        <Text style={tw`mt-4 text-white`}>Loading packs...</Text>
+        <Text style={tw`mt-4 text-gray-900`}>Loading packs...</Text>
       </View>
     );
   }
@@ -38,16 +38,14 @@ export default function PacksList() {
   }
 
   const renderPack = ({ item }: { item: Pack }) => (
-    <View style={tw`bg-slate-800 p-4 m-2 rounded-lg`}>
-      <Text style={tw`text-white text-lg font-semibold`}>{item.name}</Text>
-      <Text style={tw`text-slate-400 text-sm`}>{item.region}</Text>
-      <Text style={tw`text-slate-300`}>Hotspots: {item.hotspots}</Text>
+    <View style={tw`bg-white p-4 m-2 rounded-lg border border-gray-200 shadow-sm`}>
+      <Text style={tw`text-gray-900 text-lg font-semibold`}>{item.name}</Text>
+      <Text style={tw`text-gray-700`}>{item.hotspots.toLocaleString()} hotspots</Text>
     </View>
   );
 
   return (
     <View style={tw`flex-1`}>
-      <Text style={tw`text-slate-300 text-sm mb-4`}>{data?.count || 0} packs available</Text>
       <FlatList
         data={data?.data || []}
         renderItem={renderPack}

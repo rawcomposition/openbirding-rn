@@ -1,7 +1,6 @@
 import React, { useRef, useMemo, useEffect } from "react";
 import { View, Text } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import tw from "twrnc";
 import MenuList from "./MenuList";
@@ -13,7 +12,6 @@ type PacksBottomSheetProps = {
 
 export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
@@ -49,12 +47,12 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
       snapPoints={snapPoints}
       onChange={handleSheetChanges}
       enablePanDownToClose
-      backgroundStyle={tw`bg-slate-800`}
-      handleIndicatorStyle={tw`bg-slate-500`}
+      backgroundStyle={tw`bg-white`}
+      handleIndicatorStyle={tw`bg-gray-300`}
     >
       <BottomSheetView style={tw`flex-1`}>
         <View style={tw`px-4 pb-2`}>
-          <Text style={tw`text-white text-xl font-bold text-center`}>Menu</Text>
+          <Text style={tw`text-gray-900 text-xl font-bold text-center`}>Menu</Text>
         </View>
         <View style={tw`flex-1`}>
           <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
