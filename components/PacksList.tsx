@@ -62,16 +62,6 @@ export default function PacksList() {
                 {isInstallingPhase ? "Installing..." : installing ? `${currentProgress}%` : "Install"}
               </Text>
             </TouchableOpacity>
-            {installing && (
-              <View
-                style={[
-                  tw`absolute top-0 left-0 h-full bg-blue-500 rounded-lg`,
-                  {
-                    width: `${currentProgress}%`,
-                  },
-                ]}
-              />
-            )}
           </View>
         </View>
       </View>
