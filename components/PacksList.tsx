@@ -5,13 +5,8 @@ import tw from "twrnc";
 import { Pack } from "@/lib/types";
 import { useInstallPack } from "@/hooks/useInstallPack";
 
-type PacksResponse = {
-  data: Pack[];
-  count: number;
-};
-
 export default function PacksList() {
-  const { data, isLoading, error } = useQuery<PacksResponse>({
+  const { data, isLoading, error } = useQuery<Pack[]>({
     queryKey: ["/packs"],
   });
 
@@ -85,9 +80,8 @@ export default function PacksList() {
 
   return (
     <View style={tw`flex-1`}>
-      <Text style={tw`text-gray-700 text-sm mb-4 p-4`}>{data?.count || 0} packs available</Text>
       <FlatList
-        data={data?.data || []}
+        data={data || []}
         renderItem={renderPack}
         keyExtractor={(item) => item.id.toString()}
         style={tw`flex-1`}
