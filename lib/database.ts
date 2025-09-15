@@ -1,5 +1,4 @@
 import * as SQLite from "expo-sqlite";
-import { Hotspot, Pack } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -21,7 +20,6 @@ async function createTables(): Promise<void> {
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS packs (
       id INTEGER PRIMARY KEY,
-      region TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       hotspots INTEGER,
       last_synced TEXT

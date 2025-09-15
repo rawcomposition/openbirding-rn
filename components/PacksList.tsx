@@ -41,7 +41,6 @@ export default function PacksList() {
           <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
         </View>
         <View style={tw`flex-row items-center`}>
-          <Text style={tw`text-gray-600 text-sm mr-3`}>{item.region}</Text>
           <View style={tw`relative`}>
             <Pressable
               onPress={() => installPack(item)}

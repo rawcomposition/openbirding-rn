@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert } from "react-native";
 import axios from "axios";
 import { getDatabase } from "@/lib/database";
-import { Hotspot, Pack } from "@/lib/types";
+import { ApiHotspot, Pack } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
 export function useInstallPack() {
@@ -29,17 +29,19 @@ export function useInstallPack() {
         },
       });
 
-      const hotspots: Hotspot[] = response.data;
+      const hotspots: ApiHotspot[] = response.data;
       const db = getDatabase();
 
       setIsInstalling(true);
       setProgress(100);
 
       await db.withTransactionAsync(async () => {
-        await db.runAsync(
-          `INSERT OR REPLACE INTO packs (id, region, name, hotspots, last_synced) VALUES (?, ?, ?, ?, ?)`,
-          [pack.id, pack.region, pack.name, pack.hotspots, new Date().toISOString()]
-        );
+        await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, last_synced) VALUES (?, ?, ?, ?)`, [
+          pack.id,
+          pack.name,
+          hotspots.length,
+          new Date().toISOString(),
+        ]);
 
         await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [pack.id]);
 

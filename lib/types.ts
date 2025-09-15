@@ -1,4 +1,4 @@
-export type Hotspot = {
+export type ApiHotspot = {
   id: string;
   name: string;
   region: string;
@@ -13,7 +13,6 @@ export type Hotspot = {
 
 export type Pack = {
   id: number;
-  region: string;
   name: string;
   hotspots: number;
   last_synced: string | null;
