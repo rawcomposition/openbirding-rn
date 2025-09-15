@@ -30,7 +30,6 @@ async function createTables(): Promise<void> {
     CREATE TABLE IF NOT EXISTS hotspots (
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
-      region TEXT,
       species INTEGER NOT NULL DEFAULT 0,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
@@ -48,11 +47,6 @@ async function createIndexes(): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
   await db.execAsync(`
-    CREATE INDEX IF NOT EXISTS idx_hotspots_region_species 
-    ON hotspots (region, species);
-  `);
-
-  await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_hotspots_lat_lng 
     ON hotspots (lat, lng);
   `);
@@ -60,11 +54,6 @@ async function createIndexes(): Promise<void> {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_hotspots_pack_id 
     ON hotspots (pack_id);
-  `);
-
-  await db.execAsync(`
-    CREATE INDEX IF NOT EXISTS idx_packs_region 
-    ON packs (region);
   `);
 }
 

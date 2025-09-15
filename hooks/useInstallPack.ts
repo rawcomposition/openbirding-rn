@@ -47,11 +47,10 @@ export function useInstallPack() {
 
         for (const hotspot of hotspots) {
           await db.runAsync(
-            `INSERT INTO hotspots (id, name, region, species, lat, lng, open, notes, last_updated_by, pack_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO hotspots (id, name, species, lat, lng, open, notes, last_updated_by, pack_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               hotspot.id,
               hotspot.name,
-              hotspot.region,
               hotspot.species,
               hotspot.lat,
               hotspot.lng,
