@@ -4,13 +4,15 @@ import { useQuery } from "@tanstack/react-query";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
 import { useInstallPack } from "@/hooks/useInstallPack";
+import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 export default function PacksList() {
   const { data, isLoading, error } = useQuery<Pack[]>({
     queryKey: ["/packs"],
   });
 
-  const { installPack, installingId, progress, isInstalling } = useInstallPack();
+  const { data: installedPackIds } = useInstalledPacks();
+  const { installPack, uninstallPack, installingId, operationType } = useInstallPack();
 
   if (isLoading) {
     return (
@@ -30,9 +32,20 @@ export default function PacksList() {
   }
 
   const renderPack = ({ item }: { item: Pack }) => {
-    const installing = installingId === item.id;
-    const currentProgress = installing ? progress : 0;
-    const isInstallingPhase = installing && isInstalling;
+    const isCurrentlyInstalling = installingId === item.id;
+    const isInstalled = installedPackIds?.has(item.id) ?? false;
+
+    // Determine what we're doing and how to style it
+    const isUninstalling = isCurrentlyInstalling && operationType === "uninstall";
+    const isDownloading = isCurrentlyInstalling && operationType === "install";
+    const shouldShowRedStyling = (isInstalled && !isCurrentlyInstalling) || isUninstalling;
+
+    // Determine button text
+    const getButtonText = () => {
+      if (isUninstalling) return "Uninstalling";
+      if (isDownloading) return "Downloading";
+      return isInstalled ? "Uninstall" : "Install";
+    };
 
     return (
       <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
@@ -43,20 +56,20 @@ export default function PacksList() {
         <View style={tw`flex-row items-center`}>
           <View style={tw`relative`}>
             <Pressable
-              onPress={() => installPack(item)}
+              onPress={() => (isInstalled ? uninstallPack(item) : installPack(item))}
               disabled={installingId !== null}
-              style={tw.style(`py-2 rounded-lg border border-gray-200 relative overflow-hidden`, {
-                "w-20": !isInstallingPhase,
+              style={tw.style(`py-2 rounded-lg border`, {
+                "border-gray-200": !shouldShowRedStyling,
+                "border-red-200": shouldShowRedStyling,
               })}
             >
-              {installing && (
-                <View
-                  pointerEvents="none"
-                  style={tw.style(`absolute top-0 left-0 bottom-0 bg-slate-200`, { width: `${currentProgress}%` })}
-                />
-              )}
-              <Text style={tw`font-medium text-center mx-4`}>
-                {isInstallingPhase ? "Installing" : installing ? `${currentProgress}%` : "Install"}
+              <Text
+                style={tw.style(`font-medium text-center mx-4`, {
+                  "text-gray-700": !shouldShowRedStyling,
+                  "text-red-700": shouldShowRedStyling,
+                })}
+              >
+                {getButtonText()}
               </Text>
             </Pressable>
           </View>
