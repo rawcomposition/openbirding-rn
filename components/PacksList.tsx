@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useQuery } from "@tanstack/react-query";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
-import { useInstallPack } from "@/hooks/useInstallPack";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import PackListRow from "./PackListRow";
 
 const tabs = [
   { id: "installed", label: "Installed" },
@@ -21,7 +20,6 @@ export default function PacksList() {
   });
 
   const { data: installedPackIds } = useInstalledPacks();
-  const { installPack, uninstallPack, installingId, operationType } = useInstallPack();
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];
@@ -60,63 +58,9 @@ export default function PacksList() {
   const hasInstalledPacks = installedPackIds && installedPackIds.size > 0;
   const showEmptyState = activeTab === "installed" && !hasInstalledPacks;
 
-  const PackItem = ({ item }: { item: Pack }) => {
-    const isCurrentlyInstalling = installingId === item.id;
-    const isInstalled = installedPackIds?.has(item.id) ?? false;
-
-    const isUninstalling = isCurrentlyInstalling && operationType === "uninstall";
-    const isDownloading = isCurrentlyInstalling && operationType === "install";
-
-    const getButtonText = () => {
-      if (isUninstalling) return "Updating";
-      if (isDownloading) return "Downloading";
-      return isInstalled ? "Update" : "Install";
-    };
-
-    const renderRightActions = () => {
-      if (!isInstalled) return null;
-
-      return (
-        <View style={tw`w-20 bg-red-500 justify-center items-center`}>
-          <Pressable onPress={() => uninstallPack(item)} style={tw`w-full h-full justify-center items-center`}>
-            <Text style={tw`text-white font-medium text-sm`}>Uninstall</Text>
-          </Pressable>
-        </View>
-      );
-    };
-
-    const content = (
-      <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
-        <View style={tw`flex-1`}>
-          <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
-          <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
-        </View>
-        <View style={tw`flex-row items-center`}>
-          <View style={tw`relative`}>
-            <Pressable
-              onPress={() => installPack(item)}
-              disabled={installingId !== null}
-              style={tw`py-2 rounded-lg border border-gray-200`}
-            >
-              <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    );
-
-    if (isInstalled) {
-      return (
-        <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
-          {content}
-        </Swipeable>
-      );
-    }
-
-    return content;
-  };
-
-  const renderPack = ({ item }: { item: Pack }) => <PackItem item={item} />;
+  const renderPack = ({ item }: { item: Pack }) => (
+    <PackListRow id={item.id} name={item.name} hotspots={item.hotspots} />
+  );
 
   return (
     <View style={tw`flex-1`}>

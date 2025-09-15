@@ -22,7 +22,7 @@ async function createTables(): Promise<void> {
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       hotspots INTEGER,
-      last_synced TEXT
+      installed_at TEXT
     );
   `);
 

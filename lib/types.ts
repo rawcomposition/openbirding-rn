@@ -11,11 +11,17 @@ export type ApiHotspot = {
   updatedAt: string | null;
 };
 
+export type ApiPack = {
+  id: number;
+  name: string;
+  hotspots: number;
+};
+
 export type Pack = {
   id: number;
   name: string;
   hotspots: number;
-  last_synced: string | null;
+  installed_at: string | null;
 };
 
 export type BoundingBox = {

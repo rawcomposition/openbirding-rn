@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { getDatabase } from "@/lib/database";
-import { ApiHotspot, Pack } from "@/lib/types";
+import { ApiHotspot, ApiPack } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
 export function useInstallPack() {
@@ -11,12 +11,11 @@ export function useInstallPack() {
   const [operationType, setOperationType] = useState<"install" | "uninstall" | null>(null);
   const queryClient = useQueryClient();
 
-  const installPack = async (pack: Pack) => {
+  const installPack = async (pack: ApiPack) => {
     if (installingId !== null) {
       Toast.show({
         type: "info",
         text1: "Installation in Progress",
-        text2: "Please wait for the current installation to complete.",
       });
       return;
     }
@@ -40,7 +39,7 @@ export function useInstallPack() {
       });
 
       await db.withTransactionAsync(async () => {
-        await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, last_synced) VALUES (?, ?, ?, ?)`, [
+        await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
           pack.id,
           pack.name,
           hotspots.length,
@@ -71,7 +70,6 @@ export function useInstallPack() {
       Toast.show({
         type: "success",
         text1: wasAlreadyInstalled ? "Pack Updated" : "Pack Installed",
-        text2: `${wasAlreadyInstalled ? "Updated" : "Installed"} ${pack.name} with ${hotspots.length} hotspots`,
       });
     } catch (error) {
       console.error("Failed to install pack:", error);
@@ -85,7 +83,6 @@ export function useInstallPack() {
       Toast.show({
         type: "error",
         text1: "Installation Failed",
-        text2: `Failed to install ${pack.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     } finally {
       setInstallingId(null);
@@ -94,47 +91,44 @@ export function useInstallPack() {
     }
   };
 
-  const uninstallPack = async (pack: Pack) => {
+  const uninstallPack = async (packId: number) => {
     if (installingId !== null) {
       Toast.show({
         type: "info",
         text1: "Operation in Progress",
-        text2: "Please wait for the current operation to complete.",
       });
       return;
     }
 
     try {
-      setInstallingId(pack.id);
+      setInstallingId(packId);
       setOperationType("uninstall");
 
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
-        newSet.delete(pack.id);
+        newSet.delete(packId);
         return newSet;
       });
 
       const db = getDatabase();
-      await db.runAsync(`DELETE FROM packs WHERE id = ?`, [pack.id]);
+      await db.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
 
       Toast.show({
         type: "success",
         text1: "Pack Uninstalled",
-        text2: `Uninstalled ${pack.name}`,
       });
     } catch (error) {
       console.error("Failed to uninstall pack:", error);
 
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
-        newSet.add(pack.id);
+        newSet.add(packId);
         return newSet;
       });
 
       Toast.show({
         type: "error",
         text1: "Uninstall Failed",
-        text2: `Failed to uninstall ${pack.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
     } finally {
       setInstallingId(null);
