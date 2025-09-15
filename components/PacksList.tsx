@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, Pressable } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
@@ -43,25 +43,23 @@ export default function PacksList() {
         <View style={tw`flex-row items-center`}>
           <Text style={tw`text-gray-600 text-sm mr-3`}>{item.region}</Text>
           <View style={tw`relative`}>
-            <TouchableOpacity
+            <Pressable
               onPress={() => installPack(item)}
               disabled={installingId !== null}
-              style={tw`px-4 py-2 rounded-lg border-2 ${
-                installing
-                  ? "border-blue-500 bg-white"
-                  : installingId !== null
-                  ? "border-gray-300 bg-gray-100"
-                  : "border-blue-500 bg-blue-500"
-              }`}
+              style={tw.style(`py-2 rounded-lg border border-gray-200 relative overflow-hidden`, {
+                "w-20": !isInstallingPhase,
+              })}
             >
-              <Text
-                style={tw`font-medium ${
-                  installing ? "text-blue-500" : installingId !== null ? "text-gray-400" : "text-white"
-                }`}
-              >
-                {isInstallingPhase ? "Installing..." : installing ? `${currentProgress}%` : "Install"}
+              {installing && (
+                <View
+                  pointerEvents="none"
+                  style={tw.style(`absolute top-0 left-0 bottom-0 bg-slate-200`, { width: `${currentProgress}%` })}
+                />
+              )}
+              <Text style={tw`font-medium text-center mx-4`}>
+                {isInstallingPhase ? "Installing" : installing ? `${currentProgress}%` : "Install"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
