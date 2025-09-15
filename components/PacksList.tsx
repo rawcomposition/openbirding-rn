@@ -50,6 +50,9 @@ export default function PacksList() {
     );
   }
 
+  const hasInstalledPacks = installedPackIds && installedPackIds.size > 0;
+  const showEmptyState = activeTab === "installed" && !hasInstalledPacks;
+
   const renderPack = ({ item }: { item: Pack }) => {
     const isCurrentlyInstalling = installingId === item.id;
     const isInstalled = installedPackIds?.has(item.id) ?? false;
@@ -129,13 +132,23 @@ export default function PacksList() {
         />
       </View>
 
-      <FlatList
-        data={filteredPacks}
-        renderItem={renderPack}
-        keyExtractor={(item) => item.id.toString()}
-        style={tw`flex-1`}
-        showsVerticalScrollIndicator={false}
-      />
+      {showEmptyState ? (
+        <View style={tw`flex-1 justify-center items-center px-8`}>
+          <Text style={tw`text-gray-800 text-lg text-center mb-4`}>No packs installed yet</Text>
+          <Text style={tw`text-gray-700 text-center mb-6`}>Download hotspot packs to get started</Text>
+          <Pressable onPress={() => setActiveTab("all")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
+            <Text style={tw`text-white font-medium`}>Download Packs</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredPacks}
+          renderItem={renderPack}
+          keyExtractor={(item) => item.id.toString()}
+          style={tw`flex-1`}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
