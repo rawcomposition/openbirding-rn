@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Alert } from "react-native";
 import axios from "axios";
 import { getDatabase } from "@/lib/database";
-import { Hotspot, Pack, HotspotWithPackId } from "@/lib/types";
+import { Hotspot, Pack } from "@/lib/types";
+import { API_URL } from "@/lib/utils";
 
 export function useInstallPack() {
   const [installingId, setInstallingId] = useState<number | null>(null);
@@ -19,7 +20,7 @@ export function useInstallPack() {
       setInstallingId(pack.id);
       setProgress(0);
 
-      const response = await axios.get(`/api/packs/${pack.id}`, {
+      const response = await axios.get(`${API_URL}/packs/${pack.id}`, {
         onDownloadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progressPercent = Math.round((progressEvent.loaded * 100) / progressEvent.total);

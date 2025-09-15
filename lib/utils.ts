@@ -2,7 +2,7 @@ type Params = {
   [key: string]: string | number | boolean;
 };
 
-const API_URL = "https://api.openbirding.org/api/v1";
+export const API_URL = "https://api.openbirding.org/api/v1";
 
 export const get = async (url: string, params: Params = {}) => {
   const cleanParams = Object.keys(params).reduce((accumulator: Record<string, string>, key) => {

@@ -11,10 +11,6 @@ export type Hotspot = {
   updatedAt: string | null;
 };
 
-export type HotspotWithPackId = Hotspot & {
-  pack_id: number;
-};
-
 export type Pack = {
   id: number;
   region: string;
