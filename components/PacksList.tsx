@@ -9,11 +9,11 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 const tabs = [
   { id: "installed", label: "Installed" },
-  { id: "available", label: "Available" },
+  { id: "all", label: "All Packs" },
 ] as const;
 
 export default function PacksList() {
-  const [activeTab, setActiveTab] = useState<"available" | "installed">("installed");
+  const [activeTab, setActiveTab] = useState<"all" | "installed">("installed");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, error } = useQuery<Pack[]>({
@@ -30,8 +30,6 @@ export default function PacksList() {
 
     if (activeTab === "installed") {
       packs = packs.filter((pack) => installedPackIds?.has(pack.id));
-    } else if (activeTab === "available") {
-      packs = packs.filter((pack) => !installedPackIds?.has(pack.id));
     }
 
     if (searchQuery.trim()) {
@@ -107,7 +105,7 @@ export default function PacksList() {
       </View>
     );
 
-    if (activeTab === "installed" && isInstalled) {
+    if (isInstalled) {
       return (
         <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
           {content}
@@ -160,7 +158,7 @@ export default function PacksList() {
           <View style={tw`items-center`}>
             <Text style={tw`text-gray-800 text-lg text-center mb-4`}>No packs installed yet</Text>
             <Text style={tw`text-gray-700 text-center mb-6`}>Download hotspot packs to get started</Text>
-            <Pressable onPress={() => setActiveTab("available")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
+            <Pressable onPress={() => setActiveTab("all")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
               <Text style={tw`text-white font-medium`}>Download Packs</Text>
             </Pressable>
           </View>
