@@ -6,6 +6,7 @@ import "react-native-reanimated";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import tw from "twrnc";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -68,46 +69,48 @@ export default function RootLayout() {
   const toastStyles = tw`bg-white rounded-full pr-4 pl-3 py-2 mx-4 shadow-lg border border-gray-100 flex-row items-center justify-center`;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="packs" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <Toast
-          config={{
-            success: ({ text1 }) => (
-              <View style={toastStyles}>
-                <View style={tw`mr-1.5`}>
-                  <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="packs" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <Toast
+            config={{
+              success: ({ text1 }) => (
+                <View style={toastStyles}>
+                  <View style={tw`mr-1.5`}>
+                    <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                  </View>
+                  <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
                 </View>
-                <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
-              </View>
-            ),
-            error: ({ text1 }) => (
-              <View style={toastStyles}>
-                <View style={tw`mr-1.5`}>
-                  <Ionicons name="alert-circle" size={20} color="#DC2626" />
+              ),
+              error: ({ text1 }) => (
+                <View style={toastStyles}>
+                  <View style={tw`mr-1.5`}>
+                    <Ionicons name="alert-circle" size={20} color="#DC2626" />
+                  </View>
+                  <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
                 </View>
-                <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
-              </View>
-            ),
-            info: ({ text1 }) => (
-              <View style={toastStyles}>
-                <View style={tw`mr-1.5`}>
-                  <Ionicons name="information-circle" size={20} color="#2563EB" />
+              ),
+              info: ({ text1 }) => (
+                <View style={toastStyles}>
+                  <View style={tw`mr-1.5`}>
+                    <Ionicons name="information-circle" size={20} color="#2563EB" />
+                  </View>
+                  <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
                 </View>
-                <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
-              </View>
-            ),
-          }}
-          position="top"
-          topOffset={65}
-        />
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </QueryClientProvider>
+              ),
+            }}
+            position="top"
+            topOffset={65}
+          />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

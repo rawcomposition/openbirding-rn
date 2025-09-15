@@ -25,6 +25,8 @@ export function useInstallPack() {
       setInstallingId(pack.id);
       setOperationType("install");
 
+      const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(pack.id) ?? false;
+
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
         newSet.add(pack.id);
@@ -68,8 +70,8 @@ export function useInstallPack() {
 
       Toast.show({
         type: "success",
-        text1: "Pack Installed",
-        text2: `Installed ${pack.name} with ${hotspots.length} hotspots`,
+        text1: wasAlreadyInstalled ? "Pack Updated" : "Pack Installed",
+        text2: `${wasAlreadyInstalled ? "Updated" : "Installed"} ${pack.name} with ${hotspots.length} hotspots`,
       });
     } catch (error) {
       console.error("Failed to install pack:", error);

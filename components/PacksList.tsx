@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useQuery } from "@tanstack/react-query";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
@@ -53,49 +54,55 @@ export default function PacksList() {
   const hasInstalledPacks = installedPackIds && installedPackIds.size > 0;
   const showEmptyState = activeTab === "installed" && !hasInstalledPacks;
 
-  const renderPack = ({ item }: { item: Pack }) => {
+  const SwipeablePackItem = ({ item }: { item: Pack }) => {
     const isCurrentlyInstalling = installingId === item.id;
     const isInstalled = installedPackIds?.has(item.id) ?? false;
 
     const isUninstalling = isCurrentlyInstalling && operationType === "uninstall";
     const isDownloading = isCurrentlyInstalling && operationType === "install";
-    const shouldShowRedStyling = (isInstalled && !isCurrentlyInstalling) || isUninstalling;
+
     const getButtonText = () => {
-      if (isUninstalling) return "Uninstalling";
+      if (isUninstalling) return "Updating";
       if (isDownloading) return "Downloading";
-      return isInstalled ? "Uninstall" : "Install";
+      return isInstalled ? "Update" : "Install";
+    };
+
+    const renderRightActions = () => {
+      if (!isInstalled) return null;
+
+      return (
+        <View style={tw`w-20 bg-red-500 justify-center items-center`}>
+          <Pressable onPress={() => uninstallPack(item)} style={tw`w-full h-full justify-center items-center`}>
+            <Text style={tw`text-white font-medium text-sm`}>Uninstall</Text>
+          </Pressable>
+        </View>
+      );
     };
 
     return (
-      <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
-        <View style={tw`flex-1`}>
-          <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
-          <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
-        </View>
-        <View style={tw`flex-row items-center`}>
-          <View style={tw`relative`}>
-            <Pressable
-              onPress={() => (isInstalled ? uninstallPack(item) : installPack(item))}
-              disabled={installingId !== null}
-              style={tw.style(`py-2 rounded-lg border`, {
-                "border-gray-200": !shouldShowRedStyling,
-                "border-red-200": shouldShowRedStyling,
-              })}
-            >
-              <Text
-                style={tw.style(`font-medium text-center mx-4`, {
-                  "text-gray-700": !shouldShowRedStyling,
-                  "text-red-700": shouldShowRedStyling,
-                })}
+      <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
+        <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
+            <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
+          </View>
+          <View style={tw`flex-row items-center`}>
+            <View style={tw`relative`}>
+              <Pressable
+                onPress={() => installPack(item)}
+                disabled={installingId !== null}
+                style={tw`py-2 rounded-lg border border-gray-200`}
               >
-                {getButtonText()}
-              </Text>
-            </Pressable>
+                <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      </View>
+      </Swipeable>
     );
   };
+
+  const renderPack = ({ item }: { item: Pack }) => <SwipeablePackItem item={item} />;
 
   return (
     <View style={tw`flex-1`}>
