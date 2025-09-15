@@ -27,17 +27,17 @@ export function useInstallPack() {
 
       const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(pack.id) ?? false;
 
-      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
-        const newSet = new Set(oldData || []);
-        newSet.add(pack.id);
-        return newSet;
-      });
-
       const response = await fetch(`${API_URL}/packs/${pack.id}`);
       const hotspots: ApiHotspot[] = await response.json();
       const db = getDatabase();
 
       setIsInstalling(true);
+
+      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
+        const newSet = new Set(oldData || []);
+        newSet.add(pack.id);
+        return newSet;
+      });
 
       await db.withTransactionAsync(async () => {
         await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, last_synced) VALUES (?, ?, ?, ?)`, [

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useQuery } from "@tanstack/react-query";
@@ -9,11 +9,11 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 const tabs = [
   { id: "installed", label: "Installed" },
-  { id: "all", label: "All Packs" },
+  { id: "available", label: "Available" },
 ] as const;
 
 export default function PacksList() {
-  const [activeTab, setActiveTab] = useState<"all" | "installed">("installed");
+  const [activeTab, setActiveTab] = useState<"available" | "installed">("installed");
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, error } = useQuery<Pack[]>({
@@ -23,16 +23,24 @@ export default function PacksList() {
   const { data: installedPackIds } = useInstalledPacks();
   const { installPack, uninstallPack, installingId, operationType } = useInstallPack();
 
-  let filteredPacks = data || [];
+  const filteredPacks = useMemo(() => {
+    if (!data) return [];
 
-  if (activeTab === "installed") {
-    filteredPacks = filteredPacks.filter((pack) => installedPackIds?.has(pack.id));
-  }
+    let packs = data;
 
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    filteredPacks = filteredPacks.filter((pack) => pack.name.toLowerCase().includes(query));
-  }
+    if (activeTab === "installed") {
+      packs = packs.filter((pack) => installedPackIds?.has(pack.id));
+    } else if (activeTab === "available") {
+      packs = packs.filter((pack) => !installedPackIds?.has(pack.id));
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      packs = packs.filter((pack) => pack.name.toLowerCase().includes(query));
+    }
+
+    return packs;
+  }, [data, activeTab, installedPackIds, searchQuery]);
 
   if (isLoading) {
     return (
@@ -54,7 +62,7 @@ export default function PacksList() {
   const hasInstalledPacks = installedPackIds && installedPackIds.size > 0;
   const showEmptyState = activeTab === "installed" && !hasInstalledPacks;
 
-  const SwipeablePackItem = ({ item }: { item: Pack }) => {
+  const PackItem = ({ item }: { item: Pack }) => {
     const isCurrentlyInstalling = installingId === item.id;
     const isInstalled = installedPackIds?.has(item.id) ?? false;
 
@@ -79,30 +87,38 @@ export default function PacksList() {
       );
     };
 
-    return (
-      <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
-        <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
-          <View style={tw`flex-1`}>
-            <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
-            <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
-          </View>
-          <View style={tw`flex-row items-center`}>
-            <View style={tw`relative`}>
-              <Pressable
-                onPress={() => installPack(item)}
-                disabled={installingId !== null}
-                style={tw`py-2 rounded-lg border border-gray-200`}
-              >
-                <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
-              </Pressable>
-            </View>
+    const content = (
+      <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-gray-900 text-lg font-medium`}>{item.name}</Text>
+          <Text style={tw`text-gray-600 text-sm`}>{item.hotspots.toLocaleString()} hotspots</Text>
+        </View>
+        <View style={tw`flex-row items-center`}>
+          <View style={tw`relative`}>
+            <Pressable
+              onPress={() => installPack(item)}
+              disabled={installingId !== null}
+              style={tw`py-2 rounded-lg border border-gray-200`}
+            >
+              <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
+            </Pressable>
           </View>
         </View>
-      </Swipeable>
+      </View>
     );
+
+    if (activeTab === "installed" && isInstalled) {
+      return (
+        <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
+          {content}
+        </Swipeable>
+      );
+    }
+
+    return content;
   };
 
-  const renderPack = ({ item }: { item: Pack }) => <SwipeablePackItem item={item} />;
+  const renderPack = ({ item }: { item: Pack }) => <PackItem item={item} />;
 
   return (
     <View style={tw`flex-1`}>
@@ -140,12 +156,14 @@ export default function PacksList() {
       </View>
 
       {showEmptyState ? (
-        <View style={tw`flex-1 justify-center items-center px-8`}>
-          <Text style={tw`text-gray-800 text-lg text-center mb-4`}>No packs installed yet</Text>
-          <Text style={tw`text-gray-700 text-center mb-6`}>Download hotspot packs to get started</Text>
-          <Pressable onPress={() => setActiveTab("all")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
-            <Text style={tw`text-white font-medium`}>Download Packs</Text>
-          </Pressable>
+        <View style={tw`flex-1 justify-center items-center px-8 -mt-16`}>
+          <View style={tw`items-center`}>
+            <Text style={tw`text-gray-800 text-lg text-center mb-4`}>No packs installed yet</Text>
+            <Text style={tw`text-gray-700 text-center mb-6`}>Download hotspot packs to get started</Text>
+            <Pressable onPress={() => setActiveTab("available")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
+              <Text style={tw`text-white font-medium`}>Download Packs</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <FlatList
