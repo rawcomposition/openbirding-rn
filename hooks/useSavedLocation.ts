@@ -34,7 +34,6 @@ export function useSavedLocation(): UseSavedLocationReturn {
   }, []);
 
   const updateLocation = useCallback(async (center: [number, number], zoom: number) => {
-    console.log("Updating location:", center, zoom);
     try {
       const location: SavedLocation = { center, zoom };
       await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
@@ -57,9 +56,11 @@ export function useSavedLocation(): UseSavedLocationReturn {
     loadSavedLocation();
   }, [loadSavedLocation]);
 
+  const isInvalidLocation = savedLocation?.center && (savedLocation.center[0] === 0 || savedLocation.center[1] === 0);
+
   return {
     isLoadingLocation: isLoading,
-    savedLocation,
+    savedLocation: isInvalidLocation ? null : savedLocation,
     updateLocation,
     clearLocation,
   };

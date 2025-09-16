@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import { View, Text, TouchableOpacity, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Mapbox from "@rnmapbox/maps";
@@ -17,7 +17,7 @@ type MapboxMapProps = {
   hotspotId?: string | null;
   initialCenter: [number, number];
   initialZoom: number;
-  hasPreviousLocation?: boolean;
+  hasSavedLocation?: boolean;
   onLocationSave?: (center: [number, number], zoom: number) => void;
 };
 
@@ -29,8 +29,8 @@ export default function MapboxMap({
   onHotspotSelect,
   initialCenter,
   initialZoom,
-  hasPreviousLocation = false,
   onLocationSave,
+  hasSavedLocation,
 }: MapboxMapProps) {
   const [isMapReady, setIsMapReady] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
@@ -61,12 +61,41 @@ export default function MapboxMap({
     refetchOnMount: true,
   });
 
-  useEffect(() => {
+  const initializeMap = () => {
     const accessToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
     if (accessToken) {
       Mapbox.setAccessToken(accessToken);
     }
-  }, []);
+  };
+
+  const getBoundsFromMap = async () => {
+    if (!mapRef.current) return null;
+
+    try {
+      const bounds = await mapRef.current.getVisibleBounds();
+      const zoom = await mapRef.current.getZoom();
+
+      if (zoom >= MIN_ZOOM) {
+        return {
+          west: bounds[1][0],
+          south: bounds[1][1],
+          east: bounds[0][0],
+          north: bounds[0][1],
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to get bounds:", error);
+      return null;
+    }
+  };
+
+  const getInitialBounds = async () => {
+    const bounds = await getBoundsFromMap();
+    if (bounds) {
+      setCurrentBounds(bounds);
+    }
+  };
 
   const debouncedSetBoundsRef = useRef(
     debounce((bounds: { west: number; south: number; east: number; north: number }) => {
@@ -82,33 +111,18 @@ export default function MapboxMap({
     }, 1000)
   );
 
-  useEffect(() => {
-    const setBoundsRef = debouncedSetBoundsRef.current;
-    const saveLocationRef = debouncedSaveLocationRef.current;
-
-    return () => {
-      setBoundsRef.cancel();
-      saveLocationRef.cancel();
-    };
-  }, []);
-
   const handleMapMove = async () => {
     if (!mapRef.current || !isMapReady) return;
 
     try {
-      const bounds = await mapRef.current.getVisibleBounds();
-      const zoom = await mapRef.current.getZoom();
+      const bounds = await getBoundsFromMap();
       const center = await mapRef.current.getCenter();
+      const zoom = await mapRef.current.getZoom();
 
       setIsZoomedTooFarOut(zoom < MIN_ZOOM);
 
-      if (zoom >= MIN_ZOOM) {
-        debouncedSetBoundsRef.current({
-          west: bounds[1][0], // southwest longitude
-          south: bounds[1][1], // southwest latitude
-          east: bounds[0][0], // northeast longitude
-          north: bounds[0][1], // northeast latitude
-        });
+      if (bounds) {
+        debouncedSetBoundsRef.current(bounds);
       } else {
         setCurrentBounds(null);
       }
@@ -139,7 +153,12 @@ export default function MapboxMap({
         ref={mapRef}
         style={tw`flex-1`}
         onPress={handleMapPress}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
+        onDidFinishLoadingMap={() => {
+          initializeMap();
+          setIsMapReady(true);
+          handleMapMove();
+          getInitialBounds();
+        }}
         onDidFinishLoadingStyle={() => {
           if (isMapReady) {
             handleMapMove();
@@ -164,7 +183,8 @@ export default function MapboxMap({
             showsUserHeadingIndicator={true}
             animated={true}
             onUpdate={(loc) => {
-              if (!initialSet && !hasPreviousLocation && loc.coords) {
+              if (hasSavedLocation || !loc.coords) return;
+              if (!initialSet) {
                 setCameraCenter([loc.coords.longitude, loc.coords.latitude]);
                 setCameraZoom(14);
                 setCameraKey((prev) => prev + 1);
@@ -238,7 +258,7 @@ export default function MapboxMap({
 
       {isZoomedTooFarOut && (
         <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
-          <View style={tw`bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg`}>
+          <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
             <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
           </View>
         </View>

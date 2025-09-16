@@ -33,7 +33,7 @@ export default function HomeScreen() {
 
   const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
   const initialZoom = savedLocation?.zoom ?? 2;
-  const hasPreviousLocation = savedLocation !== null;
+  const hasSavedLocation = savedLocation !== null;
 
   return (
     <GestureHandlerRootView style={tw`flex-1 bg-white`}>
@@ -44,7 +44,7 @@ export default function HomeScreen() {
           hotspotId={hotspotId}
           initialCenter={initialCenter}
           initialZoom={initialZoom}
-          hasPreviousLocation={hasPreviousLocation}
+          hasSavedLocation={hasSavedLocation}
           onLocationSave={updateLocation}
         />
         <FloatingButton onPress={handleMenuPress}>
