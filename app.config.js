@@ -24,6 +24,7 @@ module.exports = ({ config }) => ({
       },
       edgeToEdgeEnabled: true,
       permissions: ["INTERNET"],
+      package: "com.rawcomposition.openbirding",
     },
     web: {
       bundler: "metro",
