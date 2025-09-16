@@ -67,6 +67,8 @@ export function useInstallPack() {
         }
       });
 
+      queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
+
       Toast.show({
         type: "success",
         text1: wasAlreadyInstalled ? "Pack Updated" : "Pack Installed",
@@ -113,6 +115,8 @@ export function useInstallPack() {
       const db = getDatabase();
       await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
       await db.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
+
+      queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
 
       Toast.show({
         type: "success",

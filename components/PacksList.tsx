@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
@@ -14,6 +15,7 @@ const tabs = [
 export default function PacksList() {
   const [activeTab, setActiveTab] = useState<"all" | "installed">("installed");
   const [searchQuery, setSearchQuery] = useState("");
+  const insets = useSafeAreaInsets();
 
   const { data, isLoading, error } = useQuery<Pack[]>({
     queryKey: ["/packs"],
@@ -89,16 +91,18 @@ export default function PacksList() {
         ))}
       </View>
 
-      <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
-        <TextInput
-          style={tw`bg-gray-100 rounded-lg px-3 py-2 text-gray-900`}
-          placeholder="Search packs..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          clearButtonMode="while-editing"
-        />
-      </View>
+      {activeTab === "all" && (
+        <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
+          <TextInput
+            style={tw`bg-gray-100 rounded-lg px-3 py-2 text-gray-900`}
+            placeholder="Search packs..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            clearButtonMode="while-editing"
+          />
+        </View>
+      )}
 
       {showEmptyState ? (
         <View style={tw`flex-1 justify-center items-center px-8 -mt-16`}>
@@ -111,13 +115,31 @@ export default function PacksList() {
           </View>
         </View>
       ) : (
-        <FlatList
-          data={filteredPacks}
-          renderItem={renderPack}
-          keyExtractor={(item) => item.id.toString()}
-          style={tw`flex-1`}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <FlatList
+            data={filteredPacks}
+            renderItem={renderPack}
+            keyExtractor={(item) => item.id.toString()}
+            style={tw`flex-1`}
+            showsVerticalScrollIndicator={false}
+          />
+          {activeTab === "installed" && (
+            <View
+              style={[
+                tw`px-4 py-4 bg-gray-50 border-t border-gray-200`,
+                { paddingBottom: Math.max(insets.bottom, 16) },
+              ]}
+            >
+              <Pressable
+                onPress={() => setActiveTab("all")}
+                style={tw`bg-blue-500 py-3 px-4 rounded-lg flex-row items-center justify-center`}
+              >
+                <Text style={tw`text-white font-medium text-base mr-2`}>Find More Packs</Text>
+                <Text style={tw`text-blue-100 text-sm`}>→</Text>
+              </Pressable>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
