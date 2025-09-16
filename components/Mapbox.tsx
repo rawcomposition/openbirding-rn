@@ -100,18 +100,15 @@ export default function MapboxMap({
   const handleMapPress = (event: any) => {
     console.log("Map pressed:", event);
 
-    // Handle ShapeSource press (hotspot clicks)
     if (event && event.features && event.features.length > 0) {
       const feature = event.features[0];
       if (feature.properties && feature.properties.id) {
-        console.log("Hotspot clicked:", feature.properties.id);
         const hotspotId = feature.properties.id;
         onHotspotSelect(hotspotId);
         return;
       }
     }
 
-    // Handle general map press
     if (onPress) {
       onPress(event);
     }
