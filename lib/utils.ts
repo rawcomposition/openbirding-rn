@@ -108,3 +108,27 @@ export const getMarkerColorIndex = (count: number) => {
   const color = getMarkerColor(count);
   return markerColors.indexOf(color);
 };
+
+type Bbox = { west: number; south: number; east: number; north: number };
+
+export function padBoundsBySize(bbox: Bbox): Bbox {
+  const width = bbox.east - bbox.west;
+  const height = bbox.north - bbox.south;
+  const span = Math.max(width, height);
+
+  // Big bbox → smaller padding, small bbox → bigger padding
+  let paddingPct = 0.1; // default 10%
+  if (span < 1) paddingPct = 0.4; // zoomed in: 40%
+  else if (span < 5) paddingPct = 0.25;
+  else if (span < 20) paddingPct = 0.15;
+
+  const dx = width * paddingPct;
+  const dy = height * paddingPct;
+
+  return {
+    west: bbox.west - dx,
+    south: bbox.south - dy,
+    east: bbox.east + dx,
+    north: bbox.north + dy,
+  };
+}

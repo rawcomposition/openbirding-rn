@@ -7,7 +7,7 @@ import tw from "twrnc";
 import debounce from "lodash/debounce";
 import { useQuery } from "@tanstack/react-query";
 import InfoModal from "./InfoModal";
-import { getMarkerColorIndex, markerColors } from "@/lib/utils";
+import { getMarkerColorIndex, markerColors, padBoundsBySize } from "@/lib/utils";
 import { getHotspotsWithinBounds } from "@/lib/database";
 
 type Bounds = { west: number; south: number; east: number; north: number };
@@ -58,7 +58,8 @@ export default function MapboxMap({
     queryKey: ["hotspots", bounds],
     queryFn: async () => {
       if (!bounds) return [];
-      return getHotspotsWithinBounds(bounds.west, bounds.south, bounds.east, bounds.north);
+      const paddedBounds = padBoundsBySize(bounds);
+      return getHotspotsWithinBounds(paddedBounds.west, paddedBounds.south, paddedBounds.east, paddedBounds.north);
     },
     enabled: isMapReady && !isZoomedTooFarOut && bounds !== null,
     staleTime: 5 * 60 * 1000,
