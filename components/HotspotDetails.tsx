@@ -112,7 +112,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
       handleIndicatorStyle={tw`bg-gray-300`}
     >
       <BottomSheetView style={tw`flex-1`}>
-        <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
+        <View style={tw`flex-row items-start justify-between p-4 pt-0`}>
           <View style={tw`flex-1 pr-4`}>
             {isLoading ? (
               <Text style={tw`text-gray-600`}>Loading...</Text>
@@ -140,8 +140,8 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
               </View>
             ) : hotspot ? (
               <>
-                <View style={tw`bg-gray-50 rounded-lg p-4 mb-4`}>
-                  <View style={tw`flex-row items-center mb-3`}>
+                <View style={tw`bg-gray-50 rounded-lg p-4 mb-4 gap-3`}>
+                  <View style={tw`flex-row items-center`}>
                     {getOpenAccessIcon()}
                     <Text style={tw`text-gray-900 text-base font-medium ml-2`}>{getOpenAccessText()}</Text>
                   </View>
