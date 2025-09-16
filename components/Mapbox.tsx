@@ -1,14 +1,16 @@
-import React, { useState, useRef, useMemo, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Mapbox from "@rnmapbox/maps";
 import Constants from "expo-constants";
 import tw from "twrnc";
 import debounce from "lodash/debounce";
+import { useQuery } from "@tanstack/react-query";
 import InfoModal from "./InfoModal";
 import { getMarkerColorIndex, markerColors } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { getHotspotsWithinBounds } from "@/lib/database";
+
+type Bounds = { west: number; south: number; east: number; north: number };
 
 type MapboxMapProps = {
   style?: any;
@@ -22,6 +24,7 @@ type MapboxMapProps = {
 };
 
 const MIN_ZOOM = 7;
+const DEFAULT_USER_ZOOM = 11;
 
 export default function MapboxMap({
   style,
@@ -29,170 +32,127 @@ export default function MapboxMap({
   onHotspotSelect,
   initialCenter,
   initialZoom,
-  onLocationSave,
   hasSavedLocation,
+  onLocationSave,
 }: MapboxMapProps) {
+  const insets = useSafeAreaInsets();
+
+  const mapRef = useRef<Mapbox.MapView>(null);
+  const cameraRef = useRef<Mapbox.Camera>(null);
+
+  const firstIdleRef = useRef(false);
+  const centeredToUserRef = useRef(false);
+  const userCoordRef = useRef<[number, number] | null>(null);
+
   const [isMapReady, setIsMapReady] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
-  const [cameraKey, setCameraKey] = useState(0);
-  const [cameraCenter, setCameraCenter] = useState(initialCenter);
-  const [cameraZoom, setCameraZoom] = useState(initialZoom);
-  const [initialSet, setInitialSet] = useState(false);
-  const [currentBounds, setCurrentBounds] = useState<{
-    west: number;
-    south: number;
-    east: number;
-    north: number;
-  } | null>(null);
-  const mapRef = useRef<Mapbox.MapView>(null);
-  const insets = useSafeAreaInsets();
+  const [bounds, setBounds] = useState<Bounds | null>(null);
+
+  useEffect(() => {
+    const token = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
+    if (token) Mapbox.setAccessToken(token);
+  }, []);
 
   const { data: hotspots = [] } = useQuery({
-    queryKey: ["hotspots", currentBounds],
+    queryKey: ["hotspots", bounds],
     queryFn: async () => {
-      if (!currentBounds) return [];
-      return getHotspotsWithinBounds(currentBounds.west, currentBounds.south, currentBounds.east, currentBounds.north);
+      if (!bounds) return [];
+      return getHotspotsWithinBounds(bounds.west, bounds.south, bounds.east, bounds.north);
     },
-    enabled: isMapReady && !isZoomedTooFarOut && currentBounds !== null,
+    enabled: isMapReady && !isZoomedTooFarOut && bounds !== null,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
+    placeholderData: (prev) => prev,
   });
 
-  const initializeMap = () => {
-    const accessToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
-    if (accessToken) {
-      Mapbox.setAccessToken(accessToken);
-    }
-  };
+  const debouncedSetBounds = useMemo(() => debounce((b: Bounds | null) => setBounds(b), 250), []);
+  const debouncedSaveLocation = useMemo(
+    () =>
+      debounce(async () => {
+        if (!mapRef.current) return;
+        const [center, zoom] = await Promise.all([mapRef.current.getCenter(), mapRef.current.getZoom()]);
+        onLocationSave?.(center as [number, number], zoom);
+      }, 800),
+    [onLocationSave]
+  );
 
-  const getBoundsFromMap = async () => {
+  const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
     if (!mapRef.current) return null;
-
-    try {
-      const bounds = await mapRef.current.getVisibleBounds();
-      const zoom = await mapRef.current.getZoom();
-
-      if (zoom >= MIN_ZOOM) {
-        return {
-          west: bounds[1][0],
-          south: bounds[1][1],
-          east: bounds[0][0],
-          north: bounds[0][1],
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Failed to get bounds:", error);
-      return null;
+    const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
+    setIsZoomedTooFarOut(z < MIN_ZOOM);
+    if (z >= MIN_ZOOM && b) {
+      return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
     }
-  };
+    return null;
+  }, []);
 
-  const getInitialBounds = async () => {
-    const bounds = await getBoundsFromMap();
-    if (bounds) {
-      setCurrentBounds(bounds);
-    }
-  };
+  const syncViewport = useCallback(async () => {
+    if (!mapRef.current) return;
+    const b = await readBoundsIfZoomed();
+    debouncedSetBounds(b);
+    debouncedSaveLocation();
+  }, [readBoundsIfZoomed, debouncedSetBounds, debouncedSaveLocation]);
 
-  const debouncedSetBoundsRef = useRef(
-    debounce((bounds: { west: number; south: number; east: number; north: number }) => {
-      setCurrentBounds(bounds);
-    }, 300)
+  const centerMapOnUser = useCallback(() => {
+    if (!isMapReady || hasSavedLocation || centeredToUserRef.current || !firstIdleRef.current) return;
+    const uc = userCoordRef.current;
+    if (!uc) return;
+    centeredToUserRef.current = true;
+    cameraRef.current?.setCamera({
+      centerCoordinate: uc,
+      zoomLevel: DEFAULT_USER_ZOOM,
+    });
+    onLocationSave?.(uc, DEFAULT_USER_ZOOM);
+  }, [isMapReady, hasSavedLocation, onLocationSave]);
+
+  const handleMapPress = useCallback(
+    (event: any) => {
+      const feature = event?.features?.[0];
+      const hotspotId = feature?.properties?.id;
+      if (hotspotId) return onHotspotSelect(hotspotId);
+      onPress?.(event);
+    },
+    [onHotspotSelect, onPress]
   );
-
-  const debouncedSaveLocationRef = useRef(
-    debounce((center: [number, number], zoom: number) => {
-      if (onLocationSave) {
-        onLocationSave(center, zoom);
-      }
-    }, 1000)
-  );
-
-  const handleMapMove = async () => {
-    if (!mapRef.current || !isMapReady) return;
-
-    try {
-      const bounds = await getBoundsFromMap();
-      const center = await mapRef.current.getCenter();
-      const zoom = await mapRef.current.getZoom();
-
-      setIsZoomedTooFarOut(zoom < MIN_ZOOM);
-
-      if (bounds) {
-        debouncedSetBoundsRef.current(bounds);
-      } else {
-        setCurrentBounds(null);
-      }
-      debouncedSaveLocationRef.current(center as [number, number], zoom);
-    } catch (error) {
-      console.error("Failed to get map bounds:", error);
-    }
-  };
-
-  const handleMapPress = (event: any) => {
-    if (event && event.features && event.features.length > 0) {
-      const feature = event.features[0];
-      if (feature.properties && feature.properties.id) {
-        const hotspotId = feature.properties.id;
-        onHotspotSelect(hotspotId);
-        return;
-      }
-    }
-
-    if (onPress) {
-      onPress(event);
-    }
-  };
 
   return (
     <View style={[tw`flex-1`, style]}>
       <Mapbox.MapView
         ref={mapRef}
         style={tw`flex-1`}
+        onDidFinishLoadingMap={() => setIsMapReady(true)}
+        onDidFinishLoadingStyle={syncViewport}
+        onCameraChanged={syncViewport}
+        onMapIdle={() => {
+          firstIdleRef.current = true;
+          syncViewport();
+          centerMapOnUser();
+        }}
         onPress={handleMapPress}
-        onDidFinishLoadingMap={() => {
-          initializeMap();
-          setIsMapReady(true);
-          handleMapMove();
-          getInitialBounds();
-        }}
-        onDidFinishLoadingStyle={() => {
-          if (isMapReady) {
-            handleMapMove();
-          }
-        }}
-        onCameraChanged={handleMapMove}
         scaleBarEnabled={false}
         attributionEnabled={false}
         logoPosition={{ bottom: 4, left: 5 }}
       >
         <Mapbox.Camera
-          key={cameraKey}
-          centerCoordinate={cameraCenter}
-          zoomLevel={cameraZoom}
-          animationMode={cameraKey === 0 ? "none" : "flyTo"}
-          animationDuration={cameraKey === 0 ? 0 : 2000}
+          ref={cameraRef}
+          centerCoordinate={initialCenter}
+          zoomLevel={initialZoom}
+          animationMode="none"
+          animationDuration={0}
         />
 
         {isMapReady && (
           <Mapbox.UserLocation
-            visible={true}
-            showsUserHeadingIndicator={true}
-            animated={true}
+            visible
+            showsUserHeadingIndicator
+            animated
             onUpdate={(loc) => {
-              if (hasSavedLocation || !loc.coords) return;
-              if (!initialSet) {
-                setCameraCenter([loc.coords.longitude, loc.coords.latitude]);
-                setCameraZoom(14);
-                setCameraKey((prev) => prev + 1);
-                setInitialSet(true);
-                if (onLocationSave) {
-                  onLocationSave([loc.coords.longitude, loc.coords.latitude], 14);
-                }
-              }
+              if (!loc?.coords) return;
+              userCoordRef.current = [loc.coords.longitude, loc.coords.latitude];
+              if (firstIdleRef.current) centerMapOnUser();
             }}
           />
         )}
@@ -203,20 +163,11 @@ export default function MapboxMap({
             onPress={handleMapPress}
             shape={{
               type: "FeatureCollection",
-              features: hotspots.map((hotspot) => {
-                const colorIndex = getMarkerColorIndex(hotspot.species || 0);
-                return {
-                  type: "Feature",
-                  geometry: {
-                    type: "Point",
-                    coordinates: [hotspot.lng, hotspot.lat],
-                  },
-                  properties: {
-                    shade: colorIndex,
-                    id: hotspot.id,
-                  },
-                };
-              }),
+              features: hotspots.map((h: any) => ({
+                type: "Feature" as const,
+                geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
+                properties: { id: h.id, shade: getMarkerColorIndex(h.species || 0) },
+              })),
             }}
           >
             <Mapbox.CircleLayer

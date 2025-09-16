@@ -9,6 +9,7 @@ type SavedLocation = {
 type UseSavedLocationReturn = {
   isLoadingLocation: boolean;
   savedLocation: SavedLocation | null;
+  hadSavedLocationOnInit: boolean;
   updateLocation: (center: [number, number], zoom: number) => Promise<void>;
   clearLocation: () => Promise<void>;
 };
@@ -16,6 +17,7 @@ type UseSavedLocationReturn = {
 const LOCATION_STORAGE_KEY = "user_last_location";
 
 export function useSavedLocation(): UseSavedLocationReturn {
+  const [hadSavedLocationOnInit, setHadSavedLocationOnInit] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savedLocation, setSavedLocation] = useState<SavedLocation | null>(null);
 
@@ -25,6 +27,7 @@ export function useSavedLocation(): UseSavedLocationReturn {
       if (stored) {
         const location = JSON.parse(stored) as SavedLocation;
         setSavedLocation(location);
+        setHadSavedLocationOnInit(true);
       }
     } catch (error) {
       console.log("Error loading saved location:", error);
@@ -61,6 +64,7 @@ export function useSavedLocation(): UseSavedLocationReturn {
   return {
     isLoadingLocation: isLoading,
     savedLocation: isInvalidLocation ? null : savedLocation,
+    hadSavedLocationOnInit,
     updateLocation,
     clearLocation,
   };
