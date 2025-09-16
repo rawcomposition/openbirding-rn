@@ -68,7 +68,10 @@ export default function PacksList() {
         {tabs.map((tab) => (
           <Pressable
             key={tab.id}
-            onPress={() => setActiveTab(tab.id)}
+            onPress={() => {
+              setActiveTab(tab.id);
+              setSearchQuery("");
+            }}
             style={tw.style(`flex-1 py-3 px-4 border-b-2`, {
               "border-blue-500": activeTab === tab.id,
               "border-transparent": activeTab !== tab.id,
