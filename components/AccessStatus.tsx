@@ -31,6 +31,7 @@ export default function AccessStatus({ open, notes, updatedAt, lastUpdatedBy }: 
     }
   };
 
+  return null; // TODO: Enable access status
   return (
     <View style={tw`bg-gray-50 rounded-lg p-4 mb-4 gap-3`}>
       <View style={tw`flex-row items-center`}>
