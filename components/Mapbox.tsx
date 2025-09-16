@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, TouchableOpacity, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Mapbox from "@rnmapbox/maps";
@@ -23,7 +23,7 @@ type MapboxMapProps = {
   onHotspotSelect: (hotspotId: string) => void;
   hotspotId?: string | null;
   initialCenter: [number, number];
-  initialZoom?: number;
+  initialZoom: number;
   hasPreviousLocation?: boolean;
   onLocationSave?: (center: [number, number], zoom: number) => void;
 };
@@ -75,23 +75,33 @@ export default function MapboxMap({
     [isLoadingHotspots]
   );
 
-  const debouncedLoadHotspots = useMemo(() => debounce(loadHotspots, 300), [loadHotspots]);
-  const debouncedSaveLocation = useMemo(
-    () =>
-      debounce((center: [number, number], zoom: number) => {
-        if (onLocationSave) {
-          onLocationSave(center, zoom);
-        }
-      }, 1000),
-    [onLocationSave]
+  const debouncedLoadHotspotsRef = useRef(debounce(loadHotspots, 300));
+  const debouncedSaveLocationRef = useRef(
+    debounce((center: [number, number], zoom: number) => {
+      if (onLocationSave) {
+        onLocationSave(center, zoom);
+      }
+    }, 1000)
   );
 
   useEffect(() => {
+    debouncedLoadHotspotsRef.current = debounce(loadHotspots, 300);
+  }, [loadHotspots]);
+
+  useEffect(() => {
+    debouncedSaveLocationRef.current = debounce((center: [number, number], zoom: number) => {
+      if (onLocationSave) {
+        onLocationSave(center, zoom);
+      }
+    }, 1000);
+  }, [onLocationSave]);
+
+  useEffect(() => {
     return () => {
-      debouncedLoadHotspots.cancel();
-      debouncedSaveLocation.cancel();
+      debouncedLoadHotspotsRef.current.cancel();
+      debouncedSaveLocationRef.current.cancel();
     };
-  }, [debouncedLoadHotspots, debouncedSaveLocation]);
+  }, []);
 
   const handleMapMove = async () => {
     if (!mapRef.current || !isMapReady) return;
@@ -104,7 +114,7 @@ export default function MapboxMap({
       setIsZoomedTooFarOut(zoom < MIN_ZOOM);
 
       if (zoom >= MIN_ZOOM) {
-        debouncedLoadHotspots({
+        debouncedLoadHotspotsRef.current({
           west: bounds[1][0], // southwest longitude
           south: bounds[1][1], // southwest latitude
           east: bounds[0][0], // northeast longitude
@@ -113,8 +123,7 @@ export default function MapboxMap({
       } else {
         setHotspots([]);
       }
-
-      debouncedSaveLocation(center as [number, number], zoom);
+      debouncedSaveLocationRef.current(center as [number, number], zoom);
     } catch (error) {
       console.error("Failed to get map bounds:", error);
     }
@@ -156,8 +165,8 @@ export default function MapboxMap({
           key={cameraKey}
           centerCoordinate={cameraCenter}
           zoomLevel={cameraZoom}
-          animationMode="flyTo"
-          animationDuration={2000}
+          animationMode={cameraKey === 0 ? "none" : "flyTo"}
+          animationDuration={cameraKey === 0 ? 0 : 2000}
         />
 
         {isMapReady && (

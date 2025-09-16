@@ -15,10 +15,6 @@ export default function HomeScreen() {
 
   const { isLoadingLocation, savedLocation, updateLocation } = useSavedLocation();
 
-  const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
-  const initialZoom = savedLocation?.zoom ?? 2;
-  const hasPreviousLocation = savedLocation !== null;
-
   const handleMapPress = (feature: any) => {
     if (isMenuOpen) {
       handleCloseBottomSheet();
@@ -35,8 +31,12 @@ export default function HomeScreen() {
 
   if (isLoadingLocation) return null;
 
+  const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
+  const initialZoom = savedLocation?.zoom ?? 2;
+  const hasPreviousLocation = savedLocation !== null;
+
   return (
-    <GestureHandlerRootView style={tw`flex-1 bg-slate-800`}>
+    <GestureHandlerRootView style={tw`flex-1 bg-white`}>
       <View style={tw`flex-1`}>
         <Mapbox
           onPress={handleMapPress}
