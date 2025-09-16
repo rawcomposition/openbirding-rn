@@ -111,6 +111,7 @@ export function useInstallPack() {
       });
 
       const db = getDatabase();
+      await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
       await db.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
 
       Toast.show({
