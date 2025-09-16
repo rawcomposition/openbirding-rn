@@ -83,3 +83,38 @@ export async function getHotspotsWithinBounds(
     open: row.open === 1 ? true : row.open === 0 ? false : null,
   }));
 }
+
+export async function getHotspotById(id: string): Promise<{
+  id: string;
+  name: string;
+  species: number;
+  lat: number;
+  lng: number;
+  open: boolean | null;
+  notes: string | null;
+  lastUpdatedBy: string | null;
+  updatedAt: string | null;
+} | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(
+    `SELECT id, name, species, lat, lng, open, notes, last_updated_by, updated_at 
+     FROM hotspots WHERE id = ?`,
+    [id]
+  );
+
+  if (!result) return null;
+
+  const row = result as any;
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    species: row.species as number,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    open: row.open === 1 ? true : row.open === 0 ? false : null,
+    notes: row.notes as string | null,
+    lastUpdatedBy: row.last_updated_by as string | null,
+    updatedAt: row.updated_at as string | null,
+  };
+}

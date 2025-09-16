@@ -6,6 +6,7 @@ import Constants from "expo-constants";
 import tw from "twrnc";
 import debounce from "lodash/debounce";
 import InfoModal from "./InfoModal";
+import HotspotDetails from "./HotspotDetails";
 import { getHotspotsWithinBounds } from "@/lib/database";
 
 type Hotspot = {
@@ -30,6 +31,8 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [isLoadingHotspots, setIsLoadingHotspots] = useState(false);
   const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
+  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
+  const [showHotspotDetails, setShowHotspotDetails] = useState(false);
   const mapRef = useRef<Mapbox.MapView>(null);
   const insets = useSafeAreaInsets();
 
@@ -89,21 +92,30 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
     }
   };
 
-  const handleMapPress = (feature: any) => {
-    if (feature && feature.properties && feature.properties.id) {
-      const hotspot = hotspots.find((h) => h.id === feature.properties.id);
-      if (hotspot && onPress) {
-        onPress({
-          ...feature,
-          properties: {
-            ...feature.properties,
-            hotspot: hotspot,
-          },
-        });
+  const handleMapPress = (event: any) => {
+    console.log("Map pressed:", event);
+
+    // Handle ShapeSource press (hotspot clicks)
+    if (event && event.features && event.features.length > 0) {
+      const feature = event.features[0];
+      if (feature.properties && feature.properties.id) {
+        console.log("Hotspot clicked:", feature.properties.id);
+        const hotspotId = feature.properties.id;
+        setSelectedHotspotId(hotspotId);
+        setShowHotspotDetails(true);
+        return;
       }
-    } else if (onPress) {
-      onPress(feature);
     }
+
+    // Handle general map press
+    if (onPress) {
+      onPress(event);
+    }
+  };
+
+  const handleCloseHotspotDetails = () => {
+    setShowHotspotDetails(false);
+    setSelectedHotspotId(null);
   };
 
   return (
@@ -135,6 +147,7 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
         {isMapReady && hotspots.length > 0 && (
           <Mapbox.ShapeSource
             id="hotspots-source"
+            onPress={handleMapPress}
             shape={{
               type: "FeatureCollection",
               features: hotspots.map((hotspot) => ({
@@ -171,7 +184,7 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
       </Mapbox.MapView>
 
       {isZoomedTooFarOut && (
-        <View style={tw.style("absolute left-0 right-0 items-center", { top: insets.top + 16 })}>
+        <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
           <View style={tw`bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg`}>
             <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
           </View>
@@ -202,6 +215,8 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
           </View>
         }
       />
+
+      <HotspotDetails isOpen={showHotspotDetails} hotspotId={selectedHotspotId} onClose={handleCloseHotspotDetails} />
     </View>
   );
 }
