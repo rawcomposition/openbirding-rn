@@ -61,3 +61,25 @@ export function getDatabase(): SQLite.SQLiteDatabase {
   if (!db) throw new Error("Database not initialized");
   return db;
 }
+
+export async function getHotspotsWithinBounds(
+  west: number,
+  south: number,
+  east: number,
+  north: number
+): Promise<{ id: string; lat: number; lng: number; open: boolean | null }[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(
+    `SELECT id, lat, lng FROM hotspots 
+     WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ?`,
+    [south, north, west, east]
+  );
+
+  return result.map((row: any) => ({
+    id: row.id,
+    lat: row.lat,
+    lng: row.lng,
+    open: row.open === 1 ? true : row.open === 0 ? false : null,
+  }));
+}

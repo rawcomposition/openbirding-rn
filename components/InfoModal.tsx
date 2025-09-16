@@ -2,12 +2,12 @@ import React from "react";
 import { View, Text, TouchableOpacity, Modal } from "react-native";
 import tw from "twrnc";
 
-interface InfoModalProps {
+type InfoModalProps = {
   visible: boolean;
   onClose: () => void;
   title: string;
   content: React.ReactNode;
-}
+};
 
 export default function InfoModal({ visible, onClose, title, content }: InfoModalProps) {
   return (
