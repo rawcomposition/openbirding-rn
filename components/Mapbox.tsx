@@ -22,8 +22,10 @@ type MapboxMapProps = {
   onPress?: (feature: any) => void;
   onHotspotSelect: (hotspotId: string) => void;
   hotspotId?: string | null;
-  initialCenter?: [number, number];
+  initialCenter: [number, number];
   initialZoom?: number;
+  hasPreviousLocation?: boolean;
+  onLocationSave?: (center: [number, number], zoom: number) => void;
 };
 
 const MIN_ZOOM = 7;
@@ -32,14 +34,20 @@ export default function MapboxMap({
   style,
   onPress,
   onHotspotSelect,
-  initialCenter = [-73.7, 40.6],
-  initialZoom = 10,
+  initialCenter,
+  initialZoom,
+  hasPreviousLocation = false,
+  onLocationSave,
 }: MapboxMapProps) {
   const [isMapReady, setIsMapReady] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [isLoadingHotspots, setIsLoadingHotspots] = useState(false);
   const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraCenter, setCameraCenter] = useState(initialCenter);
+  const [cameraZoom, setCameraZoom] = useState(initialZoom);
+  const [initialSet, setInitialSet] = useState(false);
   const mapRef = useRef<Mapbox.MapView>(null);
   const insets = useSafeAreaInsets();
 
@@ -68,12 +76,22 @@ export default function MapboxMap({
   );
 
   const debouncedLoadHotspots = useMemo(() => debounce(loadHotspots, 300), [loadHotspots]);
+  const debouncedSaveLocation = useMemo(
+    () =>
+      debounce((center: [number, number], zoom: number) => {
+        if (onLocationSave) {
+          onLocationSave(center, zoom);
+        }
+      }, 1000),
+    [onLocationSave]
+  );
 
   useEffect(() => {
     return () => {
       debouncedLoadHotspots.cancel();
+      debouncedSaveLocation.cancel();
     };
-  }, [debouncedLoadHotspots]);
+  }, [debouncedLoadHotspots, debouncedSaveLocation]);
 
   const handleMapMove = async () => {
     if (!mapRef.current || !isMapReady) return;
@@ -81,6 +99,7 @@ export default function MapboxMap({
     try {
       const bounds = await mapRef.current.getVisibleBounds();
       const zoom = await mapRef.current.getZoom();
+      const center = await mapRef.current.getCenter();
 
       setIsZoomedTooFarOut(zoom < MIN_ZOOM);
 
@@ -94,6 +113,8 @@ export default function MapboxMap({
       } else {
         setHotspots([]);
       }
+
+      debouncedSaveLocation(center as [number, number], zoom);
     } catch (error) {
       console.error("Failed to get map bounds:", error);
     }
@@ -132,13 +153,31 @@ export default function MapboxMap({
         logoPosition={{ bottom: 4, left: 5 }}
       >
         <Mapbox.Camera
-          centerCoordinate={initialCenter}
-          zoomLevel={initialZoom}
+          key={cameraKey}
+          centerCoordinate={cameraCenter}
+          zoomLevel={cameraZoom}
           animationMode="flyTo"
           animationDuration={2000}
         />
 
-        {isMapReady && <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} animated={true} />}
+        {isMapReady && (
+          <Mapbox.UserLocation
+            visible={true}
+            showsUserHeadingIndicator={true}
+            animated={true}
+            onUpdate={(loc) => {
+              if (!initialSet && !hasPreviousLocation && loc.coords) {
+                setCameraCenter([loc.coords.longitude, loc.coords.latitude]);
+                setCameraZoom(14);
+                setCameraKey((prev) => prev + 1);
+                setInitialSet(true);
+                if (onLocationSave) {
+                  onLocationSave([loc.coords.longitude, loc.coords.latitude], 14);
+                }
+              }
+            }}
+          />
+        )}
 
         {isMapReady && hotspots.length > 0 && (
           <Mapbox.ShapeSource
