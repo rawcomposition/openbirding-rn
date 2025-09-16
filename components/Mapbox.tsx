@@ -171,10 +171,10 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
       </Mapbox.MapView>
 
       {isZoomedTooFarOut && (
-        <View
-          style={tw`absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg`}
-        >
-          <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
+        <View style={tw.style("absolute left-0 right-0 items-center", { top: insets.top + 16 })}>
+          <View style={tw`bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg`}>
+            <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
+          </View>
         </View>
       )}
 
