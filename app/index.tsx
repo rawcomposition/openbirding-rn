@@ -5,38 +5,46 @@ import Mapbox from "@/components/Mapbox";
 import FloatingMenuButton from "@/components/FloatingMenuButton";
 import PacksBottomSheet from "@/components/PacksBottomSheet";
 import tw from "twrnc";
+import HotspotDetails from "@/components/HotspotDetails";
 
 export default function HomeScreen() {
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hotspotId, setHotspotId] = useState<string | null>(null);
 
   const handleMapPress = (feature: any) => {
-    console.log("Map pressed:", feature);
-    if (isBottomSheetOpen) {
+    if (isMenuOpen) {
       handleCloseBottomSheet();
     }
   };
 
   const handleMenuPress = () => {
-    setIsBottomSheetOpen(true);
+    setIsMenuOpen(true);
   };
 
   const handleCloseBottomSheet = () => {
-    setIsBottomSheetOpen(false);
+    setIsMenuOpen(false);
   };
 
   return (
     <GestureHandlerRootView style={tw`flex-1 bg-slate-800`}>
       <View style={tw`flex-1`}>
-        <Mapbox onPress={handleMapPress} initialCenter={[-74.006, 40.7128]} initialZoom={12} />
+        <Mapbox
+          onPress={handleMapPress}
+          onHotspotSelect={setHotspotId}
+          hotspotId={hotspotId}
+          initialCenter={[-74.006, 40.7128]}
+          initialZoom={12}
+        />
         <FloatingMenuButton onPress={handleMenuPress} />
-        {isBottomSheetOpen && (
+        {isMenuOpen && (
           <TouchableOpacity
             style={tw`absolute inset-0 bg-transparent`}
             onPress={handleCloseBottomSheet}
             activeOpacity={1}
           />
         )}
-        <PacksBottomSheet isOpen={isBottomSheetOpen} onClose={handleCloseBottomSheet} />
+        <PacksBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
+        <HotspotDetails isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
       </View>
     </GestureHandlerRootView>
   );

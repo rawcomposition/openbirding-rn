@@ -6,7 +6,6 @@ import Constants from "expo-constants";
 import tw from "twrnc";
 import debounce from "lodash/debounce";
 import InfoModal from "./InfoModal";
-import HotspotDetails from "./HotspotDetails";
 import { getHotspotsWithinBounds } from "@/lib/database";
 
 type Hotspot = {
@@ -19,20 +18,26 @@ type Hotspot = {
 type MapboxMapProps = {
   style?: any;
   onPress?: (feature: any) => void;
+  onHotspotSelect: (hotspotId: string) => void;
+  hotspotId?: string | null;
   initialCenter?: [number, number];
   initialZoom?: number;
 };
 
 const MIN_ZOOM = 7;
 
-export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6], initialZoom = 10 }: MapboxMapProps) {
+export default function MapboxMap({
+  style,
+  onPress,
+  onHotspotSelect,
+  initialCenter = [-73.7, 40.6],
+  initialZoom = 10,
+}: MapboxMapProps) {
   const [isMapReady, setIsMapReady] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [isLoadingHotspots, setIsLoadingHotspots] = useState(false);
   const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
-  const [selectedHotspotId, setSelectedHotspotId] = useState<string | null>(null);
-  const [showHotspotDetails, setShowHotspotDetails] = useState(false);
   const mapRef = useRef<Mapbox.MapView>(null);
   const insets = useSafeAreaInsets();
 
@@ -101,8 +106,7 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
       if (feature.properties && feature.properties.id) {
         console.log("Hotspot clicked:", feature.properties.id);
         const hotspotId = feature.properties.id;
-        setSelectedHotspotId(hotspotId);
-        setShowHotspotDetails(true);
+        onHotspotSelect(hotspotId);
         return;
       }
     }
@@ -111,11 +115,6 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
     if (onPress) {
       onPress(event);
     }
-  };
-
-  const handleCloseHotspotDetails = () => {
-    setShowHotspotDetails(false);
-    setSelectedHotspotId(null);
   };
 
   return (
@@ -215,8 +214,6 @@ export default function MapboxMap({ style, onPress, initialCenter = [-73.7, 40.6
           </View>
         }
       />
-
-      <HotspotDetails isOpen={showHotspotDetails} hotspotId={selectedHotspotId} onClose={handleCloseHotspotDetails} />
     </View>
   );
 }
