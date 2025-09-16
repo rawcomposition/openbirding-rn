@@ -136,6 +136,7 @@ export default function MapboxMap({
         scaleBarEnabled={false}
         attributionEnabled={false}
         logoPosition={{ bottom: 4, left: 5 }}
+        rotateEnabled={false}
       >
         <Mapbox.Camera
           ref={cameraRef}
