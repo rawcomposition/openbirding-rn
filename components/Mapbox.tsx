@@ -100,8 +100,6 @@ export default function MapboxMap({
   };
 
   const handleMapPress = (event: any) => {
-    console.log("Map pressed:", event);
-
     if (event && event.features && event.features.length > 0) {
       const feature = event.features[0];
       if (feature.properties && feature.properties.id) {
@@ -167,7 +165,7 @@ export default function MapboxMap({
             <Mapbox.CircleLayer
               id="hotspot-points"
               style={{
-                circleRadius: 7,
+                circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
                 circleColor: [
                   "match",
                   ["get", "shade"],
