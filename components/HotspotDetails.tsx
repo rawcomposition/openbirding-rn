@@ -4,6 +4,7 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import { getHotspotById } from "@/lib/database";
+import { getMarkerColor } from "@/lib/utils";
 import AccessStatus from "./AccessStatus";
 
 type HotspotDetailsProps = {
@@ -100,7 +101,15 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
             ) : hotspot ? (
               <>
                 <Text style={tw`text-gray-900 text-xl font-bold`}>{hotspot.name}</Text>
-                <Text style={tw`text-gray-600 text-sm mt-1`}>{hotspot.species} species</Text>
+                <View style={tw`flex-row items-center mt-1`}>
+                  <View
+                    style={[
+                      tw`w-2.5 h-2.5 rounded-full mr-2`,
+                      { backgroundColor: getMarkerColor(hotspot.species || 0) },
+                    ]}
+                  />
+                  <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
+                </View>
               </>
             ) : (
               <Text style={tw`text-gray-600`}>Hotspot not found</Text>

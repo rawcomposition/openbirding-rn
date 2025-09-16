@@ -7,11 +7,13 @@ import tw from "twrnc";
 import debounce from "lodash/debounce";
 import InfoModal from "./InfoModal";
 import { getHotspotsWithinBounds } from "@/lib/database";
+import { getMarkerColorIndex, markerColors } from "@/lib/utils";
 
 type Hotspot = {
   id: string;
   lat: number;
   lng: number;
+  species: number;
   open: boolean | null;
 };
 
@@ -146,17 +148,20 @@ export default function MapboxMap({
             onPress={handleMapPress}
             shape={{
               type: "FeatureCollection",
-              features: hotspots.map((hotspot) => ({
-                type: "Feature",
-                geometry: {
-                  type: "Point",
-                  coordinates: [hotspot.lng, hotspot.lat],
-                },
-                properties: {
-                  id: hotspot.id,
-                  open: hotspot.open,
-                },
-              })),
+              features: hotspots.map((hotspot) => {
+                const colorIndex = getMarkerColorIndex(hotspot.species || 0);
+                return {
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: [hotspot.lng, hotspot.lat],
+                  },
+                  properties: {
+                    shade: colorIndex,
+                    id: hotspot.id,
+                  },
+                };
+              }),
             }}
           >
             <Mapbox.CircleLayer
@@ -164,15 +169,32 @@ export default function MapboxMap({
               style={{
                 circleRadius: 7,
                 circleColor: [
-                  "case",
-                  ["==", ["get", "open"], true],
-                  "#3b82f6",
-                  ["==", ["get", "open"], false],
-                  "#374151",
-                  "#9ca3af",
+                  "match",
+                  ["get", "shade"],
+                  0,
+                  markerColors[0],
+                  1,
+                  markerColors[1],
+                  2,
+                  markerColors[2],
+                  3,
+                  markerColors[3],
+                  4,
+                  markerColors[4],
+                  5,
+                  markerColors[5],
+                  6,
+                  markerColors[6],
+                  7,
+                  markerColors[7],
+                  8,
+                  markerColors[8],
+                  9,
+                  markerColors[9],
+                  markerColors[0],
                 ],
-                circleStrokeWidth: 0.75,
-                circleStrokeColor: "#ffffff",
+                circleStrokeWidth: 0.5,
+                circleStrokeColor: "#555",
               }}
             />
           </Mapbox.ShapeSource>

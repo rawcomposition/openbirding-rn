@@ -76,3 +76,35 @@ export const mutate = async (method: "POST" | "PUT" | "DELETE" | "PATCH", url: s
 
   return json;
 };
+
+export const markerColors = [
+  "#bcbcbc",
+  "#8f9ca0",
+  "#9bc4cf",
+  "#aaddeb",
+  "#c7e466",
+  "#eaeb1f",
+  "#fac500",
+  "#e57701",
+  "#ce0d02",
+  "#ad0002",
+];
+
+export const getMarkerColor = (count: number) => {
+  if (count === 0) return markerColors[0];
+  if (count <= 15) return markerColors[1];
+  if (count <= 50) return markerColors[2];
+  if (count <= 100) return markerColors[3];
+  if (count <= 150) return markerColors[4];
+  if (count <= 200) return markerColors[5];
+  if (count <= 250) return markerColors[6];
+  if (count <= 300) return markerColors[7];
+  if (count <= 400) return markerColors[8];
+  if (count <= 500) return markerColors[9];
+  return markerColors[0];
+};
+
+export const getMarkerColorIndex = (count: number) => {
+  const color = getMarkerColor(count);
+  return markerColors.indexOf(color);
+};
