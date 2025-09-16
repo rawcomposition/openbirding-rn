@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Linking, Alert } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import { getHotspotById } from "@/lib/database";
 
@@ -112,6 +112,26 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
       handleIndicatorStyle={tw`bg-gray-300`}
     >
       <BottomSheetView style={tw`flex-1`}>
+        <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
+          <View style={tw`flex-1 pr-4`}>
+            {isLoading ? (
+              <Text style={tw`text-gray-600`}>Loading...</Text>
+            ) : hotspot ? (
+              <>
+                <Text style={tw`text-gray-900 text-xl font-bold`}>{hotspot.name}</Text>
+                <Text style={tw`text-gray-600 text-sm mt-1`}>{hotspot.species} species</Text>
+              </>
+            ) : (
+              <Text style={tw`text-gray-600`}>Hotspot not found</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+          >
+            <Ionicons name="close" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
         <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
           <View style={[tw`px-4 pb-4`, { minHeight: 350 }]}>
             {isLoading ? (
@@ -120,13 +140,6 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
               </View>
             ) : hotspot ? (
               <>
-                <View style={tw`pb-4`}>
-                  <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{hotspot.name}</Text>
-                  <View style={tw`flex-row items-center justify-center mt-2`}>
-                    <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
-                  </View>
-                </View>
-
                 <View style={tw`bg-gray-50 rounded-lg p-4 mb-4`}>
                   <View style={tw`flex-row items-center mb-3`}>
                     {getOpenAccessIcon()}

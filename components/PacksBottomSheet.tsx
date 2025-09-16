@@ -1,7 +1,8 @@
 import React, { useRef, useMemo, useEffect } from "react";
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import MenuList from "./MenuList";
 
@@ -51,8 +52,16 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
       handleIndicatorStyle={tw`bg-gray-300`}
     >
       <BottomSheetView style={tw`flex-1`}>
-        <View style={tw`px-4 pb-2`}>
-          <Text style={tw`text-gray-900 text-xl font-bold text-center`}>Menu</Text>
+        <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
+          <View style={tw`px-4 pb-2`}>
+            <Text style={tw`text-gray-900 text-xl font-bold text-center`}>Packs & Settings</Text>
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+          >
+            <Ionicons name="close" size={24} color="#6b7280" />
+          </TouchableOpacity>
         </View>
         <View style={tw`flex-1`}>
           <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
