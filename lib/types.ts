@@ -30,3 +30,25 @@ export type BoundingBox = {
   minLng: number;
   maxLng: number;
 };
+
+export type MapFeature = {
+  geometry: {
+    coordinates: [number, number];
+  };
+  properties: {
+    id: string;
+    shade?: number;
+  };
+};
+
+export type OnPressEvent = {
+  features: Array<GeoJSON.Feature>;
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  point: {
+    x: number;
+    y: number;
+  };
+};

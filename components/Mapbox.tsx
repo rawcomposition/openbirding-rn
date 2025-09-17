@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Linking } from "react-native";
+import { View, Text, TouchableOpacity, Linking, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Mapbox from "@rnmapbox/maps";
 import Constants from "expo-constants";
@@ -7,14 +7,15 @@ import tw from "twrnc";
 import debounce from "lodash/debounce";
 import { useQuery } from "@tanstack/react-query";
 import InfoModal from "./InfoModal";
-import { getMarkerColorIndex, markerColors, padBoundsBySize } from "@/lib/utils";
+import { getMarkerColorIndex, markerColors, padBoundsBySize, findClosestFeature } from "@/lib/utils";
 import { getHotspotsWithinBounds } from "@/lib/database";
+import { OnPressEvent } from "@/lib/types";
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
 type MapboxMapProps = {
-  style?: any;
-  onPress?: (feature: any) => void;
+  style?: ViewStyle;
+  onPress?: (event: any) => void;
   onHotspotSelect: (hotspotId: string) => void;
   hotspotId?: string | null;
   initialCenter: [number, number];
@@ -111,8 +112,18 @@ export default function MapboxMap({
 
   const handleMapPress = useCallback(
     (event: any) => {
-      const feature = event?.features?.[0];
-      const hotspotId = feature?.properties?.id;
+      const pressEvent = event as OnPressEvent;
+      const features = pressEvent?.features;
+      const tapLocation = pressEvent?.coordinates
+        ? ([pressEvent.coordinates.longitude, pressEvent.coordinates.latitude] as [number, number])
+        : null;
+      if (!features || features.length === 0 || !tapLocation) {
+        onPress?.(event);
+        return;
+      }
+
+      const closestFeature = findClosestFeature(features, tapLocation);
+      const hotspotId = closestFeature?.feature?.properties?.id;
       if (hotspotId) return onHotspotSelect(hotspotId);
       onPress?.(event);
     },
@@ -124,6 +135,7 @@ export default function MapboxMap({
       <Mapbox.MapView
         ref={mapRef}
         style={tw`flex-1`}
+        styleURL="mapbox://styles/mapbox/outdoors-v12"
         onDidFinishLoadingMap={() => setIsMapReady(true)}
         onDidFinishLoadingStyle={syncViewport}
         onCameraChanged={syncViewport}

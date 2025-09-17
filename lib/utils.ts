@@ -1,3 +1,5 @@
+import { MapFeature } from "./types";
+
 type Params = {
   [key: string]: string | number | boolean;
 };
@@ -131,4 +133,60 @@ export function padBoundsBySize(bbox: Bbox): Bbox {
     east: bbox.east + dx,
     north: bbox.north + dy,
   };
+}
+
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export function findClosestFeature(features: GeoJSON.Feature[], tapLocation: [number, number]) {
+  if (!features || features.length === 0 || !tapLocation) return null;
+
+  return features.reduce((closest: { feature: MapFeature; distance: number } | null, current: GeoJSON.Feature) => {
+    if (!current?.geometry || current.geometry.type !== "Point" || !current.geometry.coordinates) return closest;
+
+    const pointGeometry = current.geometry as GeoJSON.Point;
+    const coordinates = pointGeometry.coordinates as [number, number];
+    const [lng, lat] = coordinates;
+    const currentDistance = calculateDistance(tapLocation[1], tapLocation[0], lat, lng);
+
+    if (!closest) {
+      const mapFeature: MapFeature = {
+        geometry: { coordinates },
+        properties: {
+          id: (current.properties?.id as string) || "",
+          shade: current.properties?.shade as number,
+        },
+      };
+      return { feature: mapFeature, distance: currentDistance };
+    }
+
+    const closestCoordinates = closest.feature.geometry.coordinates;
+    const closestDistance = calculateDistance(
+      tapLocation[1],
+      tapLocation[0],
+      closestCoordinates[1],
+      closestCoordinates[0]
+    );
+
+    if (currentDistance < closestDistance) {
+      const mapFeature: MapFeature = {
+        geometry: { coordinates },
+        properties: {
+          id: (current.properties?.id as string) || "",
+          shade: current.properties?.shade as number,
+        },
+      };
+      return { feature: mapFeature, distance: currentDistance };
+    }
+
+    return closest;
+  }, null);
 }
