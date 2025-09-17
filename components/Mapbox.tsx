@@ -1,236 +1,280 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { View, Text, TouchableOpacity, Linking } from "react-native";
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
+import { View, Text, TouchableOpacity, Linking, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Mapbox from "@rnmapbox/maps";
 import Constants from "expo-constants";
 import tw from "twrnc";
 import debounce from "lodash/debounce";
+import { useQuery } from "@tanstack/react-query";
 import InfoModal from "./InfoModal";
+import { getMarkerColorIndex, markerColors, padBoundsBySize, findClosestFeature } from "@/lib/utils";
 import { getHotspotsWithinBounds } from "@/lib/database";
-import { getMarkerColorIndex, markerColors } from "@/lib/utils";
+import { OnPressEvent } from "@/lib/types";
 
-type Hotspot = {
-  id: string;
-  lat: number;
-  lng: number;
-  species: number;
-  open: boolean | null;
-};
+type Bounds = { west: number; south: number; east: number; north: number };
 
 type MapboxMapProps = {
-  style?: any;
-  onPress?: (feature: any) => void;
+  style?: ViewStyle;
+  onPress?: (event: any) => void;
   onHotspotSelect: (hotspotId: string) => void;
   hotspotId?: string | null;
-  initialCenter?: [number, number];
-  initialZoom?: number;
+  initialCenter: [number, number];
+  initialZoom: number;
+  hasSavedLocation?: boolean;
+  onLocationSave?: (center: [number, number], zoom: number) => void;
+  onCenterToUser?: () => void;
+};
+
+export type MapboxMapRef = {
+  centerOnUser: () => void;
 };
 
 const MIN_ZOOM = 7;
+const DEFAULT_USER_ZOOM = 11;
 
-export default function MapboxMap({
-  style,
-  onPress,
-  onHotspotSelect,
-  initialCenter = [-73.7, 40.6],
-  initialZoom = 10,
-}: MapboxMapProps) {
-  const [isMapReady, setIsMapReady] = useState(false);
-  const [showAttribution, setShowAttribution] = useState(false);
-  const [hotspots, setHotspots] = useState<Hotspot[]>([]);
-  const [isLoadingHotspots, setIsLoadingHotspots] = useState(false);
-  const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
-  const mapRef = useRef<Mapbox.MapView>(null);
-  const insets = useSafeAreaInsets();
+const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
+  (
+    { style, onPress, onHotspotSelect, initialCenter, initialZoom, hasSavedLocation, onLocationSave, onCenterToUser },
+    ref
+  ) => {
+    const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    const accessToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
-    if (accessToken) {
-      Mapbox.setAccessToken(accessToken);
-    }
-  }, []);
+    const mapRef = useRef<Mapbox.MapView>(null);
+    const cameraRef = useRef<Mapbox.Camera>(null);
 
-  const loadHotspots = useCallback(
-    async (bounds: { west: number; south: number; east: number; north: number }) => {
-      if (isLoadingHotspots) return;
+    const firstIdleRef = useRef(false);
+    const centeredToUserRef = useRef(false);
+    const userCoordRef = useRef<[number, number] | null>(null);
 
-      setIsLoadingHotspots(true);
-      try {
-        const hotspotsData = await getHotspotsWithinBounds(bounds.west, bounds.south, bounds.east, bounds.north);
-        setHotspots(hotspotsData);
-      } catch (error) {
-        console.error("Failed to load hotspots:", error);
-      } finally {
-        setIsLoadingHotspots(false);
+    const [isMapReady, setIsMapReady] = useState(false);
+    const [showAttribution, setShowAttribution] = useState(false);
+    const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
+    const [bounds, setBounds] = useState<Bounds | null>(null);
+
+    useEffect(() => {
+      const token = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
+      if (token) Mapbox.setAccessToken(token);
+    }, []);
+
+    const { data: hotspots = [] } = useQuery({
+      queryKey: ["hotspots", bounds],
+      queryFn: async () => {
+        if (!bounds) return [];
+        const paddedBounds = padBoundsBySize(bounds);
+        return getHotspotsWithinBounds(paddedBounds.west, paddedBounds.south, paddedBounds.east, paddedBounds.north);
+      },
+      enabled: isMapReady && !isZoomedTooFarOut && bounds !== null,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      placeholderData: (prev) => prev,
+    });
+
+    const debouncedSetBounds = useMemo(() => debounce((b: Bounds | null) => setBounds(b), 250), []);
+    const debouncedSaveLocation = useMemo(
+      () =>
+        debounce(async () => {
+          if (!mapRef.current) return;
+          const [center, zoom] = await Promise.all([mapRef.current.getCenter(), mapRef.current.getZoom()]);
+          onLocationSave?.(center as [number, number], zoom);
+        }, 800),
+      [onLocationSave]
+    );
+
+    const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
+      if (!mapRef.current) return null;
+      const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
+      setIsZoomedTooFarOut(z < MIN_ZOOM);
+      if (z >= MIN_ZOOM && b) {
+        return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
       }
-    },
-    [isLoadingHotspots]
-  );
+      return null;
+    }, []);
 
-  const debouncedLoadHotspots = useMemo(() => debounce(loadHotspots, 300), [loadHotspots]);
+    const syncViewport = useCallback(async () => {
+      if (!mapRef.current) return;
+      const b = await readBoundsIfZoomed();
+      debouncedSetBounds(b);
+      debouncedSaveLocation();
+    }, [readBoundsIfZoomed, debouncedSetBounds, debouncedSaveLocation]);
 
-  useEffect(() => {
-    return () => {
-      debouncedLoadHotspots.cancel();
-    };
-  }, [debouncedLoadHotspots]);
+    const centerMapOnUser = useCallback(() => {
+      if (!isMapReady) return;
+      const uc = userCoordRef.current;
+      if (!uc) return;
+      cameraRef.current?.setCamera({
+        centerCoordinate: uc,
+        zoomLevel: DEFAULT_USER_ZOOM,
+      });
+      onLocationSave?.(uc, DEFAULT_USER_ZOOM);
+      onCenterToUser?.();
+    }, [isMapReady, onLocationSave, onCenterToUser]);
 
-  const handleMapMove = async () => {
-    if (!mapRef.current || !isMapReady) return;
+    const centerMapOnUserInitial = useCallback(() => {
+      if (!isMapReady || hasSavedLocation || centeredToUserRef.current || !firstIdleRef.current) return;
+      const uc = userCoordRef.current;
+      if (!uc) return;
+      centeredToUserRef.current = true;
+      centerMapOnUser();
+    }, [isMapReady, hasSavedLocation, centerMapOnUser]);
 
-    try {
-      const bounds = await mapRef.current.getVisibleBounds();
-      const zoom = await mapRef.current.getZoom();
+    useImperativeHandle(
+      ref,
+      () => ({
+        centerOnUser: centerMapOnUser,
+      }),
+      [centerMapOnUser]
+    );
 
-      setIsZoomedTooFarOut(zoom < MIN_ZOOM);
+    const handleMapPress = useCallback(
+      (event: any) => {
+        const pressEvent = event as OnPressEvent;
+        const features = pressEvent?.features;
+        const tapLocation = pressEvent?.coordinates
+          ? ([pressEvent.coordinates.longitude, pressEvent.coordinates.latitude] as [number, number])
+          : null;
+        if (!features || features.length === 0 || !tapLocation) {
+          onPress?.(event);
+          return;
+        }
 
-      if (zoom >= MIN_ZOOM) {
-        debouncedLoadHotspots({
-          west: bounds[1][0], // southwest longitude
-          south: bounds[1][1], // southwest latitude
-          east: bounds[0][0], // northeast longitude
-          north: bounds[0][1], // northeast latitude
-        });
-      } else {
-        setHotspots([]);
-      }
-    } catch (error) {
-      console.error("Failed to get map bounds:", error);
-    }
-  };
+        const closestFeature = findClosestFeature(features, tapLocation);
+        const hotspotId = closestFeature?.feature?.properties?.id;
+        if (hotspotId) return onHotspotSelect(hotspotId);
+        onPress?.(event);
+      },
+      [onHotspotSelect, onPress]
+    );
 
-  const handleMapPress = (event: any) => {
-    if (event && event.features && event.features.length > 0) {
-      const feature = event.features[0];
-      if (feature.properties && feature.properties.id) {
-        const hotspotId = feature.properties.id;
-        onHotspotSelect(hotspotId);
-        return;
-      }
-    }
+    return (
+      <View style={[tw`flex-1`, style]}>
+        <Mapbox.MapView
+          ref={mapRef}
+          style={tw`flex-1`}
+          styleURL="mapbox://styles/mapbox/outdoors-v12"
+          onDidFinishLoadingMap={() => setIsMapReady(true)}
+          onDidFinishLoadingStyle={syncViewport}
+          onCameraChanged={syncViewport}
+          onMapIdle={() => {
+            firstIdleRef.current = true;
+            syncViewport();
+            centerMapOnUserInitial();
+          }}
+          onPress={handleMapPress}
+          scaleBarEnabled={false}
+          attributionEnabled={false}
+          logoPosition={{ bottom: 4, left: 5 }}
+          rotateEnabled={false}
+        >
+          <Mapbox.Camera
+            ref={cameraRef}
+            centerCoordinate={initialCenter}
+            zoomLevel={initialZoom}
+            animationMode="none"
+            animationDuration={0}
+          />
 
-    if (onPress) {
-      onPress(event);
-    }
-  };
-
-  return (
-    <View style={[tw`flex-1`, style]}>
-      <Mapbox.MapView
-        ref={mapRef}
-        style={tw`flex-1`}
-        onPress={handleMapPress}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
-        onDidFinishLoadingStyle={() => {
-          if (isMapReady) {
-            handleMapMove();
-          }
-        }}
-        onCameraChanged={handleMapMove}
-        scaleBarEnabled={false}
-        attributionEnabled={false}
-        logoPosition={{ bottom: 4, left: 5 }}
-      >
-        <Mapbox.Camera
-          centerCoordinate={initialCenter}
-          zoomLevel={initialZoom}
-          animationMode="flyTo"
-          animationDuration={2000}
-        />
-
-        {isMapReady && <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} animated={true} />}
-
-        {isMapReady && hotspots.length > 0 && (
-          <Mapbox.ShapeSource
-            id="hotspots-source"
-            onPress={handleMapPress}
-            shape={{
-              type: "FeatureCollection",
-              features: hotspots.map((hotspot) => {
-                const colorIndex = getMarkerColorIndex(hotspot.species || 0);
-                return {
-                  type: "Feature",
-                  geometry: {
-                    type: "Point",
-                    coordinates: [hotspot.lng, hotspot.lat],
-                  },
-                  properties: {
-                    shade: colorIndex,
-                    id: hotspot.id,
-                  },
-                };
-              }),
-            }}
-          >
-            <Mapbox.CircleLayer
-              id="hotspot-points"
-              style={{
-                circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
-                circleColor: [
-                  "match",
-                  ["get", "shade"],
-                  0,
-                  markerColors[0],
-                  1,
-                  markerColors[1],
-                  2,
-                  markerColors[2],
-                  3,
-                  markerColors[3],
-                  4,
-                  markerColors[4],
-                  5,
-                  markerColors[5],
-                  6,
-                  markerColors[6],
-                  7,
-                  markerColors[7],
-                  8,
-                  markerColors[8],
-                  9,
-                  markerColors[9],
-                  markerColors[0],
-                ],
-                circleStrokeWidth: 0.5,
-                circleStrokeColor: "#555",
+          {isMapReady && (
+            <Mapbox.UserLocation
+              visible
+              showsUserHeadingIndicator
+              animated
+              onUpdate={(loc) => {
+                if (!loc?.coords) return;
+                userCoordRef.current = [loc.coords.longitude, loc.coords.latitude];
+                if (firstIdleRef.current) centerMapOnUserInitial();
               }}
             />
-          </Mapbox.ShapeSource>
+          )}
+
+          {isMapReady && hotspots.length > 0 && (
+            <Mapbox.ShapeSource
+              id="hotspots-source"
+              onPress={handleMapPress}
+              shape={{
+                type: "FeatureCollection",
+                features: hotspots.map((h: any) => ({
+                  type: "Feature" as const,
+                  geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
+                  properties: { id: h.id, shade: getMarkerColorIndex(h.species || 0) },
+                })),
+              }}
+            >
+              <Mapbox.CircleLayer
+                id="hotspot-points"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
+                  circleColor: [
+                    "match",
+                    ["get", "shade"],
+                    0,
+                    markerColors[0],
+                    1,
+                    markerColors[1],
+                    2,
+                    markerColors[2],
+                    3,
+                    markerColors[3],
+                    4,
+                    markerColors[4],
+                    5,
+                    markerColors[5],
+                    6,
+                    markerColors[6],
+                    7,
+                    markerColors[7],
+                    8,
+                    markerColors[8],
+                    9,
+                    markerColors[9],
+                    markerColors[0],
+                  ],
+                  circleStrokeWidth: 0.5,
+                  circleStrokeColor: "#555",
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+        </Mapbox.MapView>
+
+        {isZoomedTooFarOut && (
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+            <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
+              <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
+            </View>
+          </View>
         )}
-      </Mapbox.MapView>
 
-      {isZoomedTooFarOut && (
-        <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
-          <View style={tw`bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg`}>
-            <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
-          </View>
-        </View>
-      )}
+        <TouchableOpacity
+          style={[
+            tw`absolute left-24 w-5 h-5 bg-white/80 border border-black/40 rounded-full items-center justify-center`,
+            { bottom: insets.bottom + 5 },
+          ]}
+          onPress={() => setShowAttribution(true)}
+        >
+          <Text style={tw`text-xs text-gray-600 font-bold`}>i</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[
-          tw`absolute left-24 w-5 h-5 bg-white/80 border border-black/40 rounded-full items-center justify-center`,
-          { bottom: insets.bottom + 5 },
-        ]}
-        onPress={() => setShowAttribution(true)}
-      >
-        <Text style={tw`text-xs text-gray-600 font-bold`}>i</Text>
-      </TouchableOpacity>
+        <InfoModal
+          visible={showAttribution}
+          onClose={() => setShowAttribution(false)}
+          title="Map Attribution"
+          content={
+            <View>
+              <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
+              <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>
+              <TouchableOpacity onPress={() => Linking.openURL("https://www.openstreetmap.org/edit")} style={tw`mb-2`}>
+                <Text style={tw`text-sm text-blue-500 underline`}>Improve this map</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      </View>
+    );
+  }
+);
 
-      <InfoModal
-        visible={showAttribution}
-        onClose={() => setShowAttribution(false)}
-        title="Map Attribution"
-        content={
-          <View>
-            <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
-            <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>
-            <TouchableOpacity onPress={() => Linking.openURL("https://www.openstreetmap.org/edit")} style={tw`mb-2`}>
-              <Text style={tw`text-sm text-blue-500 underline`}>Improve this map</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-    </View>
-  );
-}
+MapboxMap.displayName = "MapboxMap";
+
+export default MapboxMap;

@@ -1,14 +1,14 @@
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "twrnc";
 
-type FloatingMenuButtonProps = {
+type FloatingButtonProps = {
   onPress: () => void;
+  children: React.ReactNode;
 };
 
-export default function FloatingMenuButton({ onPress }: FloatingMenuButtonProps) {
+export default function FloatingButton({ onPress, children }: FloatingButtonProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -26,7 +26,7 @@ export default function FloatingMenuButton({ onPress }: FloatingMenuButtonProps)
         style={tw`bg-white w-14 h-14 rounded-full items-center justify-center shadow-lg`}
         activeOpacity={0.8}
       >
-        <Ionicons name="menu" size={24} color="#1f2937" />
+        {children}
       </TouchableOpacity>
     </View>
   );
