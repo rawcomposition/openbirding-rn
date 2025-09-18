@@ -166,6 +166,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           attributionEnabled={false}
           logoPosition={{ bottom: 4, left: 5 }}
           rotateEnabled={false}
+          pitchEnabled={false}
         >
           <Mapbox.Camera
             ref={cameraRef}
