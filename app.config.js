@@ -39,7 +39,7 @@ module.exports = ({ config }) => ({
           image: "./assets/images/logo.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: "#ffffff",
+          backgroundColor: "#1b2336",
         },
       ],
       [
