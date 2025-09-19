@@ -27,7 +27,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
 
   const handleNavigateToPacks = () => {
     onClose();
-    router.push("/packs");
+    router.push("/packs?from=map");
   };
 
   const handleNavigateToSettings = () => {

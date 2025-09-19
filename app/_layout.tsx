@@ -73,9 +73,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
           <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="packs" options={{ headerShown: false }} />
-            <Stack.Screen name="settings" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
+            <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
+            <Stack.Screen name="settings" options={{ title: "Settings" }} />
             <Stack.Screen name="+not-found" />
           </Stack>
           <Toast
