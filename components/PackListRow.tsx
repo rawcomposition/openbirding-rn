@@ -49,7 +49,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
           <Pressable
             onPress={() => installPack({ id, name, hotspots })}
             disabled={isCurrentlyInstalling}
-            style={tw`py-2 rounded-lg border border-gray-200`}
+            style={[tw`py-2 rounded-lg border border-gray-200`, isCurrentlyInstalling && tw`opacity-60`]}
           >
             <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
           </Pressable>
