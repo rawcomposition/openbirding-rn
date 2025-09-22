@@ -25,44 +25,40 @@ export function useManagePack(packId: number) {
       const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(packId) ?? false;
 
       const response = await fetch(`${API_URL}/packs/${packId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pack data: ${response.status}`);
+      }
       const hotspots: ApiHotspot[] = await response.json();
       const db = getDatabase();
 
-      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
-        const newSet = new Set(oldData || []);
-        newSet.add(packId);
-        return newSet;
-      });
+      await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
-      await db.withTransactionAsync(async () => {
-        await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
-          packId,
-          pack.name,
-          hotspots.length,
-          new Date().toISOString(),
-        ]);
+      await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
+        packId,
+        pack.name,
+        hotspots.length,
+        new Date().toISOString(),
+      ]);
 
-        await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
+      for (const hotspot of hotspots) {
+        await db.runAsync(
+          `INSERT INTO hotspots (id, name, species, lat, lng, open, notes, last_updated_by, pack_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            hotspot.id,
+            hotspot.name,
+            hotspot.species,
+            hotspot.lat,
+            hotspot.lng,
+            hotspot.open,
+            hotspot.notes,
+            hotspot.lastUpdatedBy,
+            packId,
+            hotspot.updatedAt,
+          ]
+        );
+      }
 
-        for (const hotspot of hotspots) {
-          await db.runAsync(
-            `INSERT INTO hotspots (id, name, species, lat, lng, open, notes, last_updated_by, pack_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              hotspot.id,
-              hotspot.name,
-              hotspot.species,
-              hotspot.lat,
-              hotspot.lng,
-              hotspot.open,
-              hotspot.notes,
-              hotspot.lastUpdatedBy,
-              packId,
-              hotspot.updatedAt,
-            ]
-          );
-        }
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
 
       Toast.show({
@@ -71,12 +67,6 @@ export function useManagePack(packId: number) {
       });
     } catch (error) {
       console.error("Failed to install pack:", error);
-
-      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
-        const newSet = new Set(oldData || []);
-        newSet.delete(packId);
-        return newSet;
-      });
 
       Toast.show({
         type: "error",
@@ -99,16 +89,11 @@ export function useManagePack(packId: number) {
     try {
       setIsUninstalling(true);
 
-      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
-        const newSet = new Set(oldData || []);
-        newSet.delete(packId);
-        return newSet;
-      });
-
       const db = getDatabase();
       await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
       await db.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
 
+      queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
 
       Toast.show({
@@ -117,12 +102,6 @@ export function useManagePack(packId: number) {
       });
     } catch (error) {
       console.error("Failed to uninstall pack:", error);
-
-      queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
-        const newSet = new Set(oldData || []);
-        newSet.add(packId);
-        return newSet;
-      });
 
       Toast.show({
         type: "error",
