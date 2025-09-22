@@ -21,7 +21,7 @@ export default function PacksList() {
     queryKey: ["/packs"],
   });
 
-  const { data: installedPackIds } = useInstalledPacks();
+  const installedPackIds = useInstalledPacks();
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];

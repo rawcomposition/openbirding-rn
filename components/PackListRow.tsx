@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { View, Text, Pressable } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import tw from "twrnc";
-import { useInstallPack } from "@/hooks/useInstallPack";
+import { useManagePack } from "@/hooks/useManagePack";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 type PackListRowProps = {
@@ -12,17 +12,14 @@ type PackListRowProps = {
 };
 
 const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
-  const { installPack, uninstallPack, installingId, operationType } = useInstallPack();
-  const { data: installedPackIds } = useInstalledPacks();
+  const { install, uninstall, isInstalling, isUninstalling } = useManagePack(id);
+  const installedPackIds = useInstalledPacks();
 
   const isInstalled = installedPackIds?.has(id) ?? false;
-  const isCurrentlyInstalling = installingId === id;
-  const isUninstalling = isCurrentlyInstalling && operationType === "uninstall";
-  const isDownloading = isCurrentlyInstalling && operationType === "install";
 
   const getButtonText = () => {
-    if (isUninstalling) return "Updating";
-    if (isDownloading) return "Downloading";
+    if (isUninstalling) return "Uninstalling";
+    if (isInstalling) return "Installing";
     return isInstalled ? "Update" : "Install";
   };
 
@@ -31,7 +28,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
 
     return (
       <View style={tw`w-20 bg-red-500 justify-center items-center`}>
-        <Pressable onPress={() => uninstallPack(id)} style={tw`w-full h-full justify-center items-center`}>
+        <Pressable onPress={uninstall} style={tw`w-full h-full justify-center items-center`}>
           <Text style={tw`text-white font-medium text-sm`}>Uninstall</Text>
         </Pressable>
       </View>
@@ -47,9 +44,9 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
       <View style={tw`flex-row items-center`}>
         <View style={tw`relative`}>
           <Pressable
-            onPress={() => installPack({ id, name, hotspots })}
-            disabled={isCurrentlyInstalling}
-            style={[tw`py-2 rounded-lg border border-gray-200`, isCurrentlyInstalling && tw`opacity-60`]}
+            onPress={() => install({ id, name, hotspots })}
+            disabled={isInstalling || isUninstalling}
+            style={[tw`py-2 rounded-lg border border-gray-200`, (isInstalling || isUninstalling) && tw`opacity-60`]}
           >
             <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
           </Pressable>

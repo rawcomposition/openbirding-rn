@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDatabase } from "@/lib/database";
 
 export function useInstalledPacks() {
-  return useQuery({
+  const { data } = useQuery({
     queryKey: ["installed-packs"],
     queryFn: async () => {
       const db = getDatabase();
@@ -10,4 +10,6 @@ export function useInstalledPacks() {
       return new Set(result.map((pack) => pack.id));
     },
   });
+
+  return data || new Set();
 }

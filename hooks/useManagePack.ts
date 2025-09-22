@@ -5,48 +5,44 @@ import { getDatabase } from "@/lib/database";
 import { ApiHotspot, ApiPack } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
-export function useInstallPack() {
-  const [installingId, setInstallingId] = useState<number | null>(null);
+export function useManagePack(packId: number) {
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
-  const [operationType, setOperationType] = useState<"install" | "uninstall" | null>(null);
+  const [isUninstalling, setIsUninstalling] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
-  const installPack = async (pack: ApiPack) => {
-    if (installingId !== null) {
+  const install = async (pack: ApiPack) => {
+    if (isInstalling || isUninstalling) {
       Toast.show({
         type: "info",
-        text1: "Installation in Progress",
+        text1: "Operation in Progress",
       });
       return;
     }
 
     try {
-      setInstallingId(pack.id);
-      setOperationType("install");
+      setIsInstalling(true);
 
-      const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(pack.id) ?? false;
+      const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(packId) ?? false;
 
-      const response = await fetch(`${API_URL}/packs/${pack.id}`);
+      const response = await fetch(`${API_URL}/packs/${packId}`);
       const hotspots: ApiHotspot[] = await response.json();
       const db = getDatabase();
 
-      setIsInstalling(true);
-
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
-        newSet.add(pack.id);
+        newSet.add(packId);
         return newSet;
       });
 
       await db.withTransactionAsync(async () => {
         await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
-          pack.id,
+          packId,
           pack.name,
           hotspots.length,
           new Date().toISOString(),
         ]);
 
-        await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [pack.id]);
+        await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
         for (const hotspot of hotspots) {
           await db.runAsync(
@@ -60,7 +56,7 @@ export function useInstallPack() {
               hotspot.open,
               hotspot.notes,
               hotspot.lastUpdatedBy,
-              pack.id,
+              packId,
               hotspot.updatedAt,
             ]
           );
@@ -78,7 +74,7 @@ export function useInstallPack() {
 
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
-        newSet.delete(pack.id);
+        newSet.delete(packId);
         return newSet;
       });
 
@@ -87,14 +83,12 @@ export function useInstallPack() {
         text1: "Installation Failed",
       });
     } finally {
-      setInstallingId(null);
       setIsInstalling(false);
-      setOperationType(null);
     }
   };
 
-  const uninstallPack = async (packId: number) => {
-    if (installingId !== null) {
+  const uninstall = async () => {
+    if (isInstalling || isUninstalling) {
       Toast.show({
         type: "info",
         text1: "Operation in Progress",
@@ -103,8 +97,7 @@ export function useInstallPack() {
     }
 
     try {
-      setInstallingId(packId);
-      setOperationType("uninstall");
+      setIsUninstalling(true);
 
       queryClient.setQueryData(["installed-packs"], (oldData: Set<number> | undefined) => {
         const newSet = new Set(oldData || []);
@@ -136,17 +129,14 @@ export function useInstallPack() {
         text1: "Uninstall Failed",
       });
     } finally {
-      setInstallingId(null);
-      setIsInstalling(false);
-      setOperationType(null);
+      setIsUninstalling(false);
     }
   };
 
   return {
-    installPack,
-    uninstallPack,
-    installingId,
+    install,
+    uninstall,
     isInstalling,
-    operationType,
+    isUninstalling,
   };
 }
