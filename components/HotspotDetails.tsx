@@ -6,6 +6,10 @@ import tw from "twrnc";
 import { getHotspotById } from "@/lib/database";
 import { getMarkerColor } from "@/lib/utils";
 import AccessStatus from "./AccessStatus";
+import InfoIcon from "./icons/InfoIcon";
+import TargetsIcon from "./icons/TargetsIcon";
+import DirectionsIcon from "./icons/DirectionsIcon";
+import ExternalLinkIcon from "./icons/ExternalLinkIcon";
 
 type HotspotDetailsProps = {
   isOpen: boolean;
@@ -83,6 +87,14 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
     });
   };
 
+  const handleViewDetails = () => {
+    if (!hotspot) return;
+    const url = `https://ebird.org/hotspot/${hotspot.id}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Error", "Could not open eBird hotspot page");
+    });
+  };
+
   return (
     <BottomSheet
       ref={bottomSheetRef}
@@ -139,25 +151,35 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
 
                 <View style={tw`pt-2`}>
                   <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
-                  <View style={tw`gap-3 flex-row w-full`}>
+                  <View style={tw`gap-3 w-full`}>
                     <TouchableOpacity
-                      style={tw`flex-row items-center p-3 bg-blue-50 rounded-lg flex-1`}
-                      onPress={handleOpenTargets}
+                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
+                      onPress={handleViewDetails}
                       activeOpacity={0.7}
                     >
-                      <FontAwesome name="external-link" size={20} color="#3b82f6" />
-                      <Text style={tw`text-blue-800/90 text-[16px] font-medium ml-3 flex-1`}>View Targets</Text>
-                      <FontAwesome name="chevron-right" size={16} color="#3b82f6" />
+                      <InfoIcon color="#3b82f6" size={20} />
+                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Details</Text>
+                      <ExternalLinkIcon color="#9ca3af" size={16} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={tw`flex-row items-center p-3 bg-green-50 rounded-lg flex-1`}
+                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
+                      onPress={handleOpenTargets}
+                      activeOpacity={0.7}
+                    >
+                      <TargetsIcon color="#059669" size={20} />
+                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Targets</Text>
+                      <ExternalLinkIcon color="#9ca3af" size={16} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
                       onPress={handleGetDirections}
                       activeOpacity={0.7}
                     >
-                      <FontAwesome name="map-marker" size={20} color="#059669" />
-                      <Text style={tw`text-green-800/90 text-[16px] font-medium ml-3 flex-1`}>Get Directions</Text>
-                      <FontAwesome name="chevron-right" size={16} color="#059669" />
+                      <DirectionsIcon color="#c2410d" size={20} />
+                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>Get Directions</Text>
+                      <ExternalLinkIcon color="#9ca3af" size={16} />
                     </TouchableOpacity>
                   </View>
                 </View>
