@@ -43,7 +43,7 @@ export default function PacksList() {
   if (isLoading) {
     return (
       <View style={tw`flex-1 justify-center items-center`}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color={tw.color("blue-500")} />
         <Text style={tw`mt-4 text-gray-900`}>Loading packs...</Text>
       </View>
     );
@@ -94,9 +94,8 @@ export default function PacksList() {
       {activeTab === "all" && (
         <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
           <TextInput
-            style={tw`bg-gray-100 rounded-lg px-3 py-2 text-gray-900`}
+            style={tw`bg-gray-100 rounded-lg px-3 py-2`}
             placeholder="Search packs..."
-            placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"

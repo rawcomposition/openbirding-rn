@@ -1,11 +1,10 @@
 import React, { useRef, useMemo, useEffect, useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Linking, Alert } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import { getHotspotById } from "@/lib/database";
 import { getMarkerColor } from "@/lib/utils";
-import AccessStatus from "./AccessStatus";
 import InfoIcon from "./icons/InfoIcon";
 import TargetsIcon from "./icons/TargetsIcon";
 import DirectionsIcon from "./icons/DirectionsIcon";
@@ -131,7 +130,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
             onPress={onClose}
             style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
           >
-            <Ionicons name="close" size={24} color="#6b7280" />
+            <Ionicons name="close" size={24} color={tw.color("gray-500")} />
           </TouchableOpacity>
         </View>
         <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
@@ -141,49 +140,40 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
                 <Text style={tw`text-gray-600`}>Loading hotspot details...</Text>
               </View>
             ) : hotspot ? (
-              <>
-                <AccessStatus
-                  open={hotspot.open}
-                  notes={hotspot.notes}
-                  updatedAt={hotspot.updatedAt}
-                  lastUpdatedBy={hotspot.lastUpdatedBy}
-                />
+              <View style={tw`pt-2`}>
+                <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
+                <View style={tw`gap-3 w-full`}>
+                  <TouchableOpacity
+                    style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
+                    onPress={handleViewDetails}
+                    activeOpacity={0.7}
+                  >
+                    <InfoIcon color={tw.color("blue-500")} size={20} />
+                    <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Details</Text>
+                    <ExternalLinkIcon color={tw.color("gray-400")} size={16} />
+                  </TouchableOpacity>
 
-                <View style={tw`pt-2`}>
-                  <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
-                  <View style={tw`gap-3 w-full`}>
-                    <TouchableOpacity
-                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
-                      onPress={handleViewDetails}
-                      activeOpacity={0.7}
-                    >
-                      <InfoIcon color="#3b82f6" size={20} />
-                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Details</Text>
-                      <ExternalLinkIcon color="#9ca3af" size={16} />
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
+                    onPress={handleOpenTargets}
+                    activeOpacity={0.7}
+                  >
+                    <TargetsIcon color={tw.color("green-600")} size={20} />
+                    <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Targets</Text>
+                    <ExternalLinkIcon color={tw.color("gray-400")} size={16} />
+                  </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
-                      onPress={handleOpenTargets}
-                      activeOpacity={0.7}
-                    >
-                      <TargetsIcon color="#059669" size={20} />
-                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>View Targets</Text>
-                      <ExternalLinkIcon color="#9ca3af" size={16} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
-                      onPress={handleGetDirections}
-                      activeOpacity={0.7}
-                    >
-                      <DirectionsIcon color="#c2410d" size={20} />
-                      <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>Get Directions</Text>
-                      <ExternalLinkIcon color="#9ca3af" size={16} />
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
+                    onPress={handleGetDirections}
+                    activeOpacity={0.7}
+                  >
+                    <DirectionsIcon color={tw.color("orange-600")} size={20} />
+                    <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>Get Directions</Text>
+                    <ExternalLinkIcon color={tw.color("gray-400")} size={16} />
+                  </TouchableOpacity>
                 </View>
-              </>
+              </View>
             ) : (
               <View style={tw`py-8 items-center`}>
                 <Text style={tw`text-gray-600`}>Hotspot not found</Text>

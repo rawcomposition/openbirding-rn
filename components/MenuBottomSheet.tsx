@@ -67,7 +67,7 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
             onPress={onClose}
             style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
           >
-            <Ionicons name="close" size={24} color="#6b7280" />
+            <Ionicons name="close" size={24} color={tw.color("gray-500")} />
           </TouchableOpacity>
         </View>
         <View style={tw`flex-1`}>
