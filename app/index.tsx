@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import FloatingButton from "@/components/FloatingButton";
-import PacksBottomSheet from "@/components/PacksBottomSheet";
+import MenuBottomSheet from "@/components/MenuBottomSheet";
 import tw from "twrnc";
 import HotspotDetails from "@/components/HotspotDetails";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
@@ -76,7 +76,7 @@ export default function HomeScreen() {
             activeOpacity={1}
           />
         )}
-        <PacksBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
+        <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDetails isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
       </View>
     </GestureHandlerRootView>

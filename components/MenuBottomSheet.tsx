@@ -8,12 +8,12 @@ import MenuList from "./MenuList";
 import MapLayerSwitcher from "./MapLayerSwitcher";
 import { useMapStore } from "@/stores/mapStore";
 
-type PacksBottomSheetProps = {
+type MenuBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetProps) {
+export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const router = useRouter();
   const { currentLayer, setCurrentLayer } = useMapStore();
