@@ -10,6 +10,7 @@ import InfoModal from "./InfoModal";
 import { getMarkerColorIndex, markerColors, padBoundsBySize, findClosestFeature } from "@/lib/utils";
 import { getHotspotsWithinBounds } from "@/lib/database";
 import { OnPressEvent } from "@/lib/types";
+import { useMapStore } from "@/stores/mapStore";
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
@@ -38,6 +39,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     ref
   ) => {
     const insets = useSafeAreaInsets();
+    const { currentLayer } = useMapStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -50,6 +52,12 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const [showAttribution, setShowAttribution] = useState(false);
     const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
+
+    const mapStyle = useMemo(() => {
+      return currentLayer === "satellite"
+        ? "mapbox://styles/mapbox/satellite-v9"
+        : "mapbox://styles/mapbox/outdoors-v12";
+    }, [currentLayer]);
 
     useEffect(() => {
       const token = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
@@ -152,7 +160,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         <Mapbox.MapView
           ref={mapRef}
           style={tw`flex-1`}
-          styleURL="mapbox://styles/mapbox/outdoors-v12"
+          styleURL={mapStyle}
           onDidFinishLoadingMap={() => setIsMapReady(true)}
           onDidFinishLoadingStyle={syncViewport}
           onCameraChanged={syncViewport}

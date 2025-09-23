@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect, useState } from "react";
+import React, { useRef, useMemo, useEffect } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import MenuList from "./MenuList";
 import MapLayerSwitcher from "./MapLayerSwitcher";
+import { useMapStore } from "@/stores/mapStore";
 
 type PacksBottomSheetProps = {
   isOpen: boolean;
@@ -15,7 +16,7 @@ type PacksBottomSheetProps = {
 export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const router = useRouter();
-  const [currentMapLayer, setCurrentMapLayer] = useState<"default" | "satellite">("default");
+  const { currentLayer, setCurrentLayer } = useMapStore();
 
   const snapPoints = useMemo(() => ["45%", "90%"], []);
 
@@ -44,7 +45,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
   };
 
   const handleMapLayerChange = (layer: "default" | "satellite") => {
-    setCurrentMapLayer(layer);
+    setCurrentLayer(layer);
   };
 
   return (
@@ -70,7 +71,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
           </TouchableOpacity>
         </View>
         <View style={tw`flex-1`}>
-          <MapLayerSwitcher currentLayer={currentMapLayer} onLayerChange={handleMapLayerChange} />
+          <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
           <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
         </View>
       </BottomSheetView>
