@@ -1,10 +1,11 @@
-import React, { useRef, useMemo, useEffect } from "react";
+import React, { useRef, useMemo, useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import tw from "twrnc";
 import MenuList from "./MenuList";
+import MapLayerSwitcher from "./MapLayerSwitcher";
 
 type PacksBottomSheetProps = {
   isOpen: boolean;
@@ -14,8 +15,9 @@ type PacksBottomSheetProps = {
 export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const router = useRouter();
+  const [currentMapLayer, setCurrentMapLayer] = useState<"default" | "satellite">("default");
 
-  const snapPoints = useMemo(() => ["25%", "50%", "90%"], []);
+  const snapPoints = useMemo(() => ["45%", "90%"], []);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +43,10 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
     }
   };
 
+  const handleMapLayerChange = (layer: "default" | "satellite") => {
+    setCurrentMapLayer(layer);
+  };
+
   return (
     <BottomSheet
       ref={bottomSheetRef}
@@ -54,7 +60,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
       <BottomSheetView style={tw`flex-1`}>
         <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
           <View style={tw`px-4 pb-2`}>
-            <Text style={tw`text-gray-900 text-xl font-bold text-center`}>Packs & Settings</Text>
+            <Text style={tw`text-gray-900 text-xl font-bold text-center`}>Map Options</Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
@@ -64,6 +70,7 @@ export default function PacksBottomSheet({ isOpen, onClose }: PacksBottomSheetPr
           </TouchableOpacity>
         </View>
         <View style={tw`flex-1`}>
+          <MapLayerSwitcher currentLayer={currentMapLayer} onLayerChange={handleMapLayerChange} />
           <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
         </View>
       </BottomSheetView>
