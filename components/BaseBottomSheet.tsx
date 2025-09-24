@@ -50,14 +50,14 @@ export default function BaseBottomSheet({
 
     return (
       <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
-        <View style={tw`px-4 pb-2`}>
+        <View style={tw`pl-1 pr-4 pb-2`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
         <TouchableOpacity
           onPress={onClose}
-          style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+          style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
         >
-          <Ionicons name="close" size={24} color={tw.color("gray-500")} />
+          <Ionicons name="close" size={26} color={tw.color("gray-500")} />
         </TouchableOpacity>
       </View>
     );
@@ -70,7 +70,7 @@ export default function BaseBottomSheet({
       snapPoints={memoizedSnapPoints}
       onChange={handleSheetChanges}
       enablePanDownToClose
-      backgroundStyle={tw`bg-white`}
+      backgroundStyle={tw`bg-white rounded-t-3xl`}
       handleIndicatorStyle={tw`bg-gray-300`}
     >
       <BottomSheetView style={tw`flex-1`}>

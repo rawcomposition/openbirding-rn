@@ -30,20 +30,16 @@ type Hotspot = {
 
 export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
   const [hotspot, setHotspot] = useState<Hotspot | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const loadHotspot = useCallback(async () => {
     if (!hotspotId) return;
 
-    setIsLoading(true);
     try {
       const hotspotData = await getHotspotById(hotspotId);
       setHotspot(hotspotData);
     } catch (error) {
       console.error("Failed to load hotspot:", error);
       Alert.alert("Error", "Failed to load hotspot details");
-    } finally {
-      setIsLoading(false);
     }
   }, [hotspotId]);
 
@@ -79,10 +75,8 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
 
   const customHeader = (
     <View style={tw`flex-row items-start justify-between p-4 pt-0`}>
-      <View style={tw`flex-1 pr-4`}>
-        {isLoading ? (
-          <Text style={tw`text-gray-600`}>Loading...</Text>
-        ) : hotspot ? (
+      <View style={tw`flex-1 pr-4 pl-1`}>
+        {hotspot ? (
           <>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{hotspot.name}</Text>
             <View style={tw`flex-row items-center mt-1`}>
@@ -98,9 +92,9 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
       </View>
       <TouchableOpacity
         onPress={onClose}
-        style={tw`w-8 h-8 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+        style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
       >
-        <Ionicons name="close" size={24} color={tw.color("gray-500")} />
+        <Ionicons name="close" size={26} color={tw.color("gray-500")} />
       </TouchableOpacity>
     </View>
   );
@@ -109,11 +103,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[200, 400, 600]} headerContent={customHeader}>
       <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
         <View style={[tw`px-4 pb-4`, { minHeight: 350 }]}>
-          {isLoading ? (
-            <View style={tw`py-8 items-center`}>
-              <Text style={tw`text-gray-600`}>Loading hotspot details...</Text>
-            </View>
-          ) : hotspot ? (
+          {hotspot ? (
             <View style={tw`pt-2`}>
               <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
               <View style={tw`gap-3 w-full`}>
