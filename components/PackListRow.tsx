@@ -4,6 +4,7 @@ import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import tw from "twrnc";
 import { useManagePack } from "@/hooks/useManagePack";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { UPDATE_INTERVAL_LIMIT } from "@/lib/config";
 
 type PackListRowProps = {
   id: number;
@@ -13,9 +14,12 @@ type PackListRowProps = {
 
 const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
   const { install, uninstall, isInstalling, isUninstalling } = useManagePack(id);
-  const installedPackIds = useInstalledPacks();
+  const installedPacks = useInstalledPacks();
+  const installedPack = installedPacks.get(id);
 
-  const isInstalled = installedPackIds?.has(id) ?? false;
+  const isInstalled = installedPack !== undefined;
+  const canInstall = !installedPack || new Date(installedPack).getTime() + UPDATE_INTERVAL_LIMIT < Date.now();
+  const installDisabled = isInstalling || isUninstalling || !canInstall;
 
   const getButtonText = () => {
     if (isUninstalling) return "Uninstalling";
@@ -48,17 +52,19 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
           )}
         </View>
       </View>
-      <View style={tw`flex-row items-center`}>
-        <View style={tw`relative`}>
-          <Pressable
-            onPress={() => install({ id, name, hotspots })}
-            disabled={isInstalling || isUninstalling}
-            style={[tw`py-2 rounded-lg border border-gray-200`, (isInstalling || isUninstalling) && tw`opacity-60`]}
-          >
-            <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
-          </Pressable>
+      {canInstall && (
+        <View style={tw`flex-row items-center`}>
+          <View style={tw`relative`}>
+            <Pressable
+              onPress={() => install({ id, name, hotspots })}
+              disabled={installDisabled}
+              style={[tw`py-2 rounded-lg border border-gray-200`, installDisabled && tw`opacity-60`]}
+            >
+              <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 

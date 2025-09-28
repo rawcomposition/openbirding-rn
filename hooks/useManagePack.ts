@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { getDatabase } from "@/lib/database";
+import { getDatabase, getPackById } from "@/lib/database";
 import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
@@ -10,7 +10,7 @@ export function useManagePack(packId: number) {
   const [isUninstalling, setIsUninstalling] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
-  const install = async (pack: ApiPack) => {
+  const install = async (apiPack: ApiPack) => {
     if (isInstalling || isUninstalling) {
       Toast.show({
         type: "info",
@@ -22,20 +22,21 @@ export function useManagePack(packId: number) {
     try {
       setIsInstalling(true);
 
-      const wasAlreadyInstalled = queryClient.getQueryData<Set<number>>(["installed-packs"])?.has(packId) ?? false;
+      const currentPack = await getPackById(packId);
+
+      const db = getDatabase();
 
       const response = await fetch(`${API_URL}/packs/${packId}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch pack data: ${response.status}`);
       }
       const { hotspots }: ApiPackResponse = await response.json();
-      const db = getDatabase();
 
       await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
       await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
         packId,
-        pack.name,
+        apiPack.name,
         hotspots.length,
         new Date().toISOString(),
       ]);
@@ -51,12 +52,12 @@ export function useManagePack(packId: number) {
         ]);
       }
 
-      queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
+      await queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
 
       Toast.show({
         type: "success",
-        text1: wasAlreadyInstalled ? "Pack Updated" : "Pack Installed",
+        text1: currentPack ? "Pack Updated" : "Pack Installed",
       });
     } catch (error) {
       console.error("Failed to install pack:", error);

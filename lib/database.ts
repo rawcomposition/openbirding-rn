@@ -106,3 +106,24 @@ export async function getHotspotById(id: string): Promise<{
     lng: row.lng as number,
   };
 }
+
+export async function getPackById(id: number): Promise<{
+  id: number;
+  name: string;
+  hotspots: number;
+  installed_at: string;
+} | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(`SELECT id, name, hotspots, installed_at FROM packs WHERE id = ?`, [id]);
+
+  if (!result) return null;
+
+  const row = result as any;
+  return {
+    id: row.id as number,
+    name: row.name as string,
+    hotspots: row.hotspots as number,
+    installed_at: row.installed_at as string,
+  };
+}
