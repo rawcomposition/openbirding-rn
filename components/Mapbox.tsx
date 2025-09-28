@@ -167,7 +167,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           onPress={handleMapPress}
           scaleBarEnabled={false}
           attributionEnabled={false}
-          logoPosition={{ bottom: 4, left: 5 }}
+          logoPosition={insets.bottom > 0 ? { bottom: -insets.bottom + 15, left: 25 } : { bottom: 4, left: 5 }}
           rotateEnabled={false}
           pitchEnabled={false}
         >
@@ -252,8 +252,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
         <TouchableOpacity
           style={[
-            tw`absolute left-24 w-5 h-5 bg-white/80 border border-black/40 rounded-full items-center justify-center`,
-            { bottom: insets.bottom + 5 },
+            tw`absolute w-5 h-5 bg-white/80 border border-black/40 rounded-full items-center justify-center`,
+            insets.bottom > 0 ? { bottom: 17, left: 114 } : { bottom: 5, left: 5 },
           ]}
           onPress={() => setShowAttribution(true)}
         >
