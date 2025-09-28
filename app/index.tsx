@@ -64,10 +64,10 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <FloatingButton onPress={handleCenterOnUser}>
+          <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
-          <FloatingButton onPress={handleMenuPress}>
+          <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
             <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
         </View>
