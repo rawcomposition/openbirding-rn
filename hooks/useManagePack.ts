@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 import { getDatabase } from "@/lib/database";
-import { ApiHotspot, ApiPack } from "@/lib/types";
+import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
 export function useManagePack(packId: number) {
@@ -28,7 +28,7 @@ export function useManagePack(packId: number) {
       if (!response.ok) {
         throw new Error(`Failed to fetch pack data: ${response.status}`);
       }
-      const hotspots: ApiHotspot[] = await response.json();
+      const { hotspots }: ApiPackResponse = await response.json();
       const db = getDatabase();
 
       await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
@@ -41,21 +41,14 @@ export function useManagePack(packId: number) {
       ]);
 
       for (const hotspot of hotspots) {
-        await db.runAsync(
-          `INSERT INTO hotspots (id, name, species, lat, lng, open, notes, last_updated_by, pack_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            hotspot.id,
-            hotspot.name,
-            hotspot.species,
-            hotspot.lat,
-            hotspot.lng,
-            hotspot.open,
-            hotspot.notes,
-            hotspot.lastUpdatedBy,
-            packId,
-            hotspot.updatedAt,
-          ]
-        );
+        await db.runAsync(`INSERT INTO hotspots (id, name, species, lat, lng, pack_id) VALUES (?, ?, ?, ?, ?, ?)`, [
+          hotspot.id,
+          hotspot.name,
+          hotspot.species,
+          hotspot.lat,
+          hotspot.lng,
+          packId,
+        ]);
       }
 
       queryClient.invalidateQueries({ queryKey: ["installed-packs"] });

@@ -33,11 +33,7 @@ async function createTables(): Promise<void> {
       species INTEGER NOT NULL DEFAULT 0,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
-      open INTEGER CHECK (open IN (0, 1) OR open IS NULL),
-      notes TEXT,
-      last_updated_by TEXT,
       pack_id INTEGER,
-      updated_at TEXT,
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
   `);
@@ -67,7 +63,7 @@ export async function getHotspotsWithinBounds(
   south: number,
   east: number,
   north: number
-): Promise<{ id: string; lat: number; lng: number; species: number; open: boolean | null }[]> {
+): Promise<{ id: string; lat: number; lng: number; species: number }[]> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getAllAsync(
@@ -81,7 +77,6 @@ export async function getHotspotsWithinBounds(
     lat: row.lat,
     lng: row.lng,
     species: row.species,
-    open: row.open === 1 ? true : row.open === 0 ? false : null,
   }));
 }
 
@@ -91,15 +86,11 @@ export async function getHotspotById(id: string): Promise<{
   species: number;
   lat: number;
   lng: number;
-  open: boolean | null;
-  notes: string | null;
-  lastUpdatedBy: string | null;
-  updatedAt: string | null;
 } | null> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
-    `SELECT id, name, species, lat, lng, open, notes, last_updated_by, updated_at 
+    `SELECT id, name, species, lat, lng 
      FROM hotspots WHERE id = ?`,
     [id]
   );
@@ -113,9 +104,5 @@ export async function getHotspotById(id: string): Promise<{
     species: row.species as number,
     lat: row.lat as number,
     lng: row.lng as number,
-    open: row.open === 1 ? true : row.open === 0 ? false : null,
-    notes: row.notes as string | null,
-    lastUpdatedBy: row.last_updated_by as string | null,
-    updatedAt: row.updated_at as string | null,
   };
 }

@@ -1,14 +1,11 @@
-export type ApiHotspot = {
-  id: string;
-  name: string;
-  region: string;
-  species: number;
-  lat: number;
-  lng: number;
-  open: number | null;
-  notes: string | null;
-  lastUpdatedBy: string | null;
-  updatedAt: string | null;
+export type ApiPackResponse = {
+  hotspots: {
+    id: string;
+    name: string;
+    species: number;
+    lat: number;
+    lng: number;
+  }[];
 };
 
 export type ApiPack = {
