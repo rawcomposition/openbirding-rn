@@ -21,9 +21,8 @@ export default function HomeScreen() {
   const { currentLayer } = useMapStore();
 
   const handleMapPress = (feature: any) => {
-    if (isMenuOpen) {
-      handleCloseBottomSheet();
-    }
+    if (isMenuOpen) handleCloseBottomSheet();
+    if (hotspotId) setHotspotId(null);
   };
 
   const handleMenuPress = () => {
