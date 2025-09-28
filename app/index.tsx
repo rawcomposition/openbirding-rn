@@ -9,6 +9,7 @@ import tw from "twrnc";
 import HotspotDetails from "@/components/HotspotDetails";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useMapStore } from "@/stores/mapStore";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,6 +18,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
+  const { currentLayer } = useMapStore();
 
   const handleMapPress = (feature: any) => {
     if (isMenuOpen) {
@@ -63,10 +65,18 @@ export default function HomeScreen() {
           ]}
         >
           <FloatingButton onPress={handleCenterOnUser}>
-            <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
+            <Ionicons
+              name="locate"
+              size={24}
+              color={currentLayer === "satellite" ? tw.color("white") : tw.color("gray-700")}
+            />
           </FloatingButton>
           <FloatingButton onPress={handleMenuPress}>
-            <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
+            <Ionicons
+              name="menu"
+              size={24}
+              color={currentLayer === "satellite" ? tw.color("white") : tw.color("gray-700")}
+            />
           </FloatingButton>
         </View>
         {isMenuOpen && (
