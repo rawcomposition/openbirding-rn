@@ -99,6 +99,10 @@ export default function PacksList() {
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
+            autoCorrect={false}
+            autoCapitalize="none"
+            autoComplete="off"
+            returnKeyType="search"
           />
         </View>
       )}
@@ -121,6 +125,7 @@ export default function PacksList() {
             keyExtractor={(item) => item.id.toString()}
             style={tw`flex-1`}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           />
           {activeTab === "installed" && (
             <View
