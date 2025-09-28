@@ -23,7 +23,6 @@ type MapboxMapProps = {
   initialZoom: number;
   hasSavedLocation?: boolean;
   onLocationSave?: (center: [number, number], zoom: number) => void;
-  onCenterToUser?: () => void;
 };
 
 export type MapboxMapRef = {
@@ -31,13 +30,10 @@ export type MapboxMapRef = {
 };
 
 const MIN_ZOOM = 7;
-const DEFAULT_USER_ZOOM = 11;
+const DEFAULT_USER_ZOOM = 14;
 
 const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
-  (
-    { style, onPress, onHotspotSelect, initialCenter, initialZoom, hasSavedLocation, onLocationSave, onCenterToUser },
-    ref
-  ) => {
+  ({ style, onPress, onHotspotSelect, initialCenter, initialZoom, hasSavedLocation, onLocationSave }, ref) => {
     const insets = useSafeAreaInsets();
     const { currentLayer } = useMapStore();
 
@@ -116,8 +112,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         zoomLevel: DEFAULT_USER_ZOOM,
       });
       onLocationSave?.(uc, DEFAULT_USER_ZOOM);
-      onCenterToUser?.();
-    }, [isMapReady, onLocationSave, onCenterToUser]);
+    }, [isMapReady, onLocationSave]);
 
     const centerMapOnUserInitial = useCallback(() => {
       if (!isMapReady || hasSavedLocation || centeredToUserRef.current || !firstIdleRef.current) return;
