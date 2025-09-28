@@ -39,7 +39,14 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
     <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-lg font-medium`}>{name}</Text>
-        <Text style={tw`text-gray-600 text-sm`}>{hotspots.toLocaleString()} hotspots</Text>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 text-sm`}>{hotspots.toLocaleString()} hotspots</Text>
+          {isInstalled && (
+            <View style={tw`ml-2 px-1.5 py-0.5 bg-green-100 rounded border border-green-200`}>
+              <Text style={tw`text-green-700 text-xs font-medium`}>Installed</Text>
+            </View>
+          )}
+        </View>
       </View>
       <View style={tw`flex-row items-center`}>
         <View style={tw`relative`}>
