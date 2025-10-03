@@ -1,16 +1,16 @@
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
-import { View, Text, TouchableOpacity, Linking, ViewStyle } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Mapbox from "@rnmapbox/maps";
-import Constants from "expo-constants";
-import tw from "twrnc";
-import debounce from "lodash/debounce";
-import { useQuery } from "@tanstack/react-query";
-import InfoModal from "./InfoModal";
-import { getMarkerColorIndex, markerColors, padBoundsBySize, findClosestFeature } from "@/lib/utils";
 import { getHotspotsWithinBounds } from "@/lib/database";
 import { OnPressEvent } from "@/lib/types";
+import { findClosestFeature, getMarkerColorIndex, markerColors, padBoundsBySize } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
+import Mapbox from "@rnmapbox/maps";
+import { useQuery } from "@tanstack/react-query";
+import Constants from "expo-constants";
+import debounce from "lodash/debounce";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import tw from "twrnc";
+import InfoModal from "./InfoModal";
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
@@ -39,6 +39,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       style,
       onPress,
       onHotspotSelect,
+      hotspotId,
       initialCenter,
       initialZoom,
       hasSavedLocation,
@@ -214,12 +215,70 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 features: hotspots.map((h: any) => ({
                   type: "Feature" as const,
                   geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
-                  properties: { id: h.id, shade: getMarkerColorIndex(h.species || 0) },
+                  properties: {
+                    id: h.id,
+                    shade: getMarkerColorIndex(h.species || 0),
+                    isSelected: h.id === hotspotId,
+                  },
                 })),
               }}
             >
               <Mapbox.CircleLayer
                 id="hotspot-points"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
+                  circleColor: [
+                    "match",
+                    ["get", "shade"],
+                    0,
+                    markerColors[0],
+                    1,
+                    markerColors[1],
+                    2,
+                    markerColors[2],
+                    3,
+                    markerColors[3],
+                    4,
+                    markerColors[4],
+                    5,
+                    markerColors[5],
+                    6,
+                    markerColors[6],
+                    7,
+                    markerColors[7],
+                    8,
+                    markerColors[8],
+                    9,
+                    markerColors[9],
+                    markerColors[0],
+                  ],
+                  circleStrokeWidth: 0.5,
+                  circleStrokeColor: "#555",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="hotspot-halo"
+                filter={["==", ["get", "isSelected"], true]}
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5, 12, 10],
+                  circleColor: "transparent",
+                  circleStrokeWidth: 7,
+                  circleStrokeColor: "rgba(255, 255, 255, 0.5)",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="hotspot-halo-outer"
+                filter={["==", ["get", "isSelected"], true]}
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 17],
+                  circleColor: "transparent",
+                  circleStrokeWidth: 1,
+                  circleStrokeColor: "rgba(255, 255, 255, 0.7)",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="selected-hotspot-point"
+                filter={["==", ["get", "isSelected"], true]}
                 style={{
                   circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
                   circleColor: [
