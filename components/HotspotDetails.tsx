@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Linking, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import tw from "twrnc";
 import { getHotspotById } from "@/lib/database";
 import { getMarkerColor } from "@/lib/utils";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
-import InfoIcon from "./icons/InfoIcon";
-import TargetsIcon from "./icons/TargetsIcon";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import ExternalLinkIcon from "./icons/ExternalLinkIcon";
+import InfoIcon from "./icons/InfoIcon";
+import TargetsIcon from "./icons/TargetsIcon";
 
 type HotspotDetailsProps = {
   isOpen: boolean;
@@ -22,10 +22,6 @@ type Hotspot = {
   species: number;
   lat: number;
   lng: number;
-  open: boolean | null;
-  notes: string | null;
-  lastUpdatedBy: string | null;
-  updatedAt: string | null;
 };
 
 export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
