@@ -1,3 +1,4 @@
+import { useSavedHotspots } from "@/hooks/useSavedHotspots";
 import { getHotspotById } from "@/lib/database";
 import { getMarkerColor } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +9,7 @@ import BaseBottomSheet from "./BaseBottomSheet";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import ExternalLinkIcon from "./icons/ExternalLinkIcon";
 import InfoIcon from "./icons/InfoIcon";
+import StarIcon from "./icons/StarIcon";
 import TargetsIcon from "./icons/TargetsIcon";
 
 type HotspotDetailsProps = {
@@ -26,6 +28,9 @@ type Hotspot = {
 
 export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
   const [hotspot, setHotspot] = useState<Hotspot | null>(null);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [isLoadingSave, setIsLoadingSave] = useState<boolean>(false);
+  const { isSaved: checkIsSaved, toggleSave } = useSavedHotspots();
 
   const loadHotspot = useCallback(async () => {
     if (!hotspotId) return;
@@ -33,11 +38,16 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
     try {
       const hotspotData = await getHotspotById(hotspotId);
       setHotspot(hotspotData);
+
+      if (hotspotData) {
+        const saved = await checkIsSaved(hotspotId);
+        setIsSaved(saved);
+      }
     } catch (error) {
       console.error("Failed to load hotspot:", error);
       Alert.alert("Error", "Failed to load hotspot details");
     }
-  }, [hotspotId]);
+  }, [hotspotId, checkIsSaved]);
 
   useEffect(() => {
     if (hotspotId && isOpen) {
@@ -69,6 +79,21 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
     });
   };
 
+  const handleToggleSave = async () => {
+    if (!hotspot || isLoadingSave) return;
+
+    setIsLoadingSave(true);
+    try {
+      const newSavedState = await toggleSave(hotspot.id);
+      setIsSaved(newSavedState);
+    } catch (error) {
+      console.error("Failed to toggle save:", error);
+      Alert.alert("Error", "Failed to save/unsave hotspot");
+    } finally {
+      setIsLoadingSave(false);
+    }
+  };
+
   const customHeader = (
     <View style={tw`flex-row items-start justify-between p-4 pt-0`}>
       <View style={tw`flex-1 pr-4 pl-1`}>
@@ -86,12 +111,23 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
           <Text style={tw`text-gray-600`}>Hotspot not found</Text>
         )}
       </View>
-      <TouchableOpacity
-        onPress={onClose}
-        style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
-      >
-        <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-      </TouchableOpacity>
+      <View style={tw`flex-row items-center gap-2`}>
+        {hotspot && (
+          <TouchableOpacity
+            onPress={handleToggleSave}
+            disabled={isLoadingSave}
+            style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+          >
+            <StarIcon size={20} color={isSaved ? tw.color("yellow-500") : tw.color("gray-500")} filled={isSaved} />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          onPress={onClose}
+          style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
+        >
+          <Ionicons name="close" size={26} color={tw.color("gray-500")} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 

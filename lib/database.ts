@@ -37,6 +37,15 @@ async function createTables(): Promise<void> {
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS saved_hotspots (
+      hotspot_id TEXT PRIMARY KEY NOT NULL,
+      saved_at TEXT NOT NULL,
+      notes TEXT,
+      FOREIGN KEY (hotspot_id) REFERENCES hotspots (id) ON DELETE CASCADE
+    );
+  `);
 }
 
 async function createIndexes(): Promise<void> {
@@ -50,6 +59,11 @@ async function createIndexes(): Promise<void> {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_hotspots_pack_id 
     ON hotspots (pack_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_saved_hotspots_saved_at 
+    ON saved_hotspots (saved_at);
   `);
 }
 
@@ -126,4 +140,47 @@ export async function getPackById(id: number): Promise<{
     hotspots: row.hotspots as number,
     installed_at: row.installed_at as string,
   };
+}
+
+export async function saveHotspot(hotspotId: string, notes?: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const savedAt = new Date().toISOString();
+  await db.runAsync(`INSERT OR REPLACE INTO saved_hotspots (hotspot_id, saved_at, notes) VALUES (?, ?, ?)`, [
+    hotspotId,
+    savedAt,
+    notes || null,
+  ]);
+}
+
+export async function unsaveHotspot(hotspotId: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  await db.runAsync(`DELETE FROM saved_hotspots WHERE hotspot_id = ?`, [hotspotId]);
+}
+
+export async function isHotspotSaved(hotspotId: string): Promise<boolean> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(`SELECT 1 FROM saved_hotspots WHERE hotspot_id = ?`, [hotspotId]);
+
+  return !!result;
+}
+
+export async function getSavedHotspots(): Promise<
+  {
+    hotspot_id: string;
+    saved_at: string;
+    notes: string | null;
+  }[]
+> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(`SELECT hotspot_id, saved_at, notes FROM saved_hotspots ORDER BY saved_at DESC`);
+
+  return result.map((row: any) => ({
+    hotspot_id: row.hotspot_id as string,
+    saved_at: row.saved_at as string,
+    notes: row.notes as string | null,
+  }));
 }
