@@ -2,10 +2,12 @@ import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import PackListRow from "./PackListRow";
+import PacksNotice from "./PacksNotice";
 
 const tabs = [
   { id: "installed", label: "Installed" },
@@ -13,7 +15,8 @@ const tabs = [
 ] as const;
 
 export default function PacksList() {
-  const [activeTab, setActiveTab] = useState<"all" | "installed">("installed");
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<"all" | "installed">(tab === "all" ? "all" : "installed");
   const [searchQuery, setSearchQuery] = useState("");
   const insets = useSafeAreaInsets();
 
@@ -109,13 +112,7 @@ export default function PacksList() {
 
       {showEmptyState ? (
         <View style={tw`flex-1 justify-center items-center px-8 -mt-16`}>
-          <View style={tw`items-center`}>
-            <Text style={tw`text-gray-800 text-lg text-center mb-4`}>No packs installed yet</Text>
-            <Text style={tw`text-gray-700 text-center mb-6`}>Download hotspot packs to get started</Text>
-            <Pressable onPress={() => setActiveTab("all")} style={tw`bg-blue-500 px-6 py-3 rounded-lg`}>
-              <Text style={tw`text-white font-medium`}>Download Packs</Text>
-            </Pressable>
-          </View>
+          <PacksNotice variant="card" onPress={() => setActiveTab("all")} />
         </View>
       ) : (
         <>

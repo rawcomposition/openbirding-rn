@@ -5,11 +5,13 @@ import { Ionicons } from "@expo/vector-icons";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import FloatingButton from "@/components/FloatingButton";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
+import PacksNotice from "@/components/PacksNotice";
 import tw from "twrnc";
 import HotspotDetails from "@/components/HotspotDetails";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMapStore } from "@/stores/mapStore";
+import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,6 +21,7 @@ export default function HomeScreen() {
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
   const { currentLayer } = useMapStore();
+  const installedPacks = useInstalledPacks();
 
   const handleMapPress = (feature: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -42,6 +45,8 @@ export default function HomeScreen() {
   const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
   const initialZoom = savedLocation?.zoom ?? 2;
 
+  const hasInstalledPacks = installedPacks && installedPacks.size > 0;
+
   return (
     <GestureHandlerRootView style={tw`flex-1 bg-white`}>
       <View style={tw`flex-1`}>
@@ -54,7 +59,20 @@ export default function HomeScreen() {
           initialZoom={initialZoom}
           hasSavedLocation={hadSavedLocationOnInit}
           onLocationSave={updateLocation}
+          hasInstalledPacks={hasInstalledPacks}
         />
+        {!hasInstalledPacks && (
+          <View
+            style={[
+              tw`absolute left-0 right-0`,
+              {
+                top: insets.top + 16,
+              },
+            ]}
+          >
+            <PacksNotice variant="banner" />
+          </View>
+        )}
         <View
           style={[
             tw`absolute right-6 gap-5`,

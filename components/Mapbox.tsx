@@ -23,6 +23,7 @@ type MapboxMapProps = {
   initialZoom: number;
   hasSavedLocation?: boolean;
   onLocationSave?: (center: [number, number], zoom: number) => void;
+  hasInstalledPacks?: boolean;
 };
 
 export type MapboxMapRef = {
@@ -33,7 +34,19 @@ const MIN_ZOOM = 7;
 const DEFAULT_USER_ZOOM = 14;
 
 const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
-  ({ style, onPress, onHotspotSelect, initialCenter, initialZoom, hasSavedLocation, onLocationSave }, ref) => {
+  (
+    {
+      style,
+      onPress,
+      onHotspotSelect,
+      initialCenter,
+      initialZoom,
+      hasSavedLocation,
+      onLocationSave,
+      hasInstalledPacks,
+    },
+    ref
+  ) => {
     const insets = useSafeAreaInsets();
     const { currentLayer } = useMapStore();
 
@@ -242,7 +255,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           )}
         </Mapbox.MapView>
 
-        {isZoomedTooFarOut && (
+        {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
               <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
