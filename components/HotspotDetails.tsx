@@ -112,7 +112,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
             disabled={saveMutation.isPending || unsaveMutation.isPending}
             style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
           >
-            <StarIcon size={20} color={isSaved ? tw.color("yellow-500") : tw.color("gray-500")} filled={isSaved} />
+            <StarIcon size={20} color={isSaved ? tw.color("yellow-400") : tw.color("gray-500")} filled={isSaved} />
           </TouchableOpacity>
         )}
         <TouchableOpacity
