@@ -1,4 +1,4 @@
-import { getHotspotsWithinBounds } from "@/lib/database";
+import { getHotspotsWithinBounds, getSavedHotspots } from "@/lib/database";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, markerColors, padBoundsBySize } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -88,6 +88,15 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       refetchOnMount: true,
       placeholderData: (prev) => prev,
     });
+
+    const { data: savedHotspots = [] } = useQuery({
+      queryKey: ["savedHotspots"],
+      queryFn: getSavedHotspots,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+    });
+
+    const savedHotspotsSet = new Set(savedHotspots.map((s) => s.hotspot_id));
 
     const debouncedSetBounds = useMemo(() => debounce((b: Bounds | null) => setBounds(b), 250), []);
     const debouncedSaveLocation = useMemo(
@@ -212,15 +221,19 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
               onPress={handleMapPress}
               shape={{
                 type: "FeatureCollection",
-                features: hotspots.map((h: any) => ({
-                  type: "Feature" as const,
-                  geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
-                  properties: {
-                    id: h.id,
-                    shade: getMarkerColorIndex(h.species || 0),
-                    isSelected: h.id === hotspotId,
-                  },
-                })),
+                features: hotspots.map((h: any) => {
+                  const isSaved = savedHotspotsSet.has(h.id);
+                  return {
+                    type: "Feature" as const,
+                    geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
+                    properties: {
+                      id: h.id,
+                      shade: getMarkerColorIndex(h.species || 0),
+                      isSelected: h.id === hotspotId,
+                      isSaved,
+                    },
+                  };
+                }),
               }}
             >
               <Mapbox.CircleLayer
@@ -254,6 +267,58 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ],
                   circleStrokeWidth: 0.5,
                   circleStrokeColor: "#555",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="saved-hotspot-point"
+                filter={["==", ["get", "isSaved"], true]}
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
+                  circleColor: [
+                    "match",
+                    ["get", "shade"],
+                    0,
+                    markerColors[0],
+                    1,
+                    markerColors[1],
+                    2,
+                    markerColors[2],
+                    3,
+                    markerColors[3],
+                    4,
+                    markerColors[4],
+                    5,
+                    markerColors[5],
+                    6,
+                    markerColors[6],
+                    7,
+                    markerColors[7],
+                    8,
+                    markerColors[8],
+                    9,
+                    markerColors[9],
+                    markerColors[0],
+                  ],
+                  circleStrokeWidth: 0.5,
+                  circleStrokeColor: "#555",
+                }}
+              />
+              <Mapbox.SymbolLayer
+                id="saved-hotspot-stars"
+                filter={["==", ["get", "isSaved"], true]}
+                style={{
+                  textField: "★",
+                  textSize: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 16],
+                  textColor: [
+                    "case",
+                    ["all", [">=", ["get", "shade"], 3], ["<=", ["get", "shade"], 6]],
+                    "#666",
+                    "#eee",
+                  ],
+                  textAllowOverlap: true,
+                  textIgnorePlacement: true,
+                  textAnchor: "center",
+                  textOffset: [0, -0.03],
                 }}
               />
               <Mapbox.CircleLayer
@@ -308,6 +373,24 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ],
                   circleStrokeWidth: 0.5,
                   circleStrokeColor: "#555",
+                }}
+              />
+              <Mapbox.SymbolLayer
+                id="selected-saved-hotspot-stars"
+                filter={["all", ["==", ["get", "isSelected"], true], ["==", ["get", "isSaved"], true]]}
+                style={{
+                  textField: "★",
+                  textSize: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 16],
+                  textColor: [
+                    "case",
+                    ["all", [">=", ["get", "shade"], 3], ["<=", ["get", "shade"], 6]],
+                    "#666",
+                    "#eee",
+                  ],
+                  textAllowOverlap: true,
+                  textIgnorePlacement: true,
+                  textAnchor: "center",
+                  textOffset: [0, -0.03],
                 }}
               />
             </Mapbox.ShapeSource>

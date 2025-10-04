@@ -1,8 +1,8 @@
-import { useSavedHotspots } from "@/hooks/useSavedHotspots";
-import { getHotspotById } from "@/lib/database";
+import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import { getMarkerColor } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React from "react";
 import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -18,42 +18,36 @@ type HotspotDetailsProps = {
   onClose: () => void;
 };
 
-type Hotspot = {
-  id: string;
-  name: string;
-  species: number;
-  lat: number;
-  lng: number;
-};
-
 export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
-  const [hotspot, setHotspot] = useState<Hotspot | null>(null);
-  const [isSaved, setIsSaved] = useState<boolean>(false);
-  const [isLoadingSave, setIsLoadingSave] = useState<boolean>(false);
-  const { isSaved: checkIsSaved, toggleSave } = useSavedHotspots();
+  const queryClient = useQueryClient();
 
-  const loadHotspot = useCallback(async () => {
-    if (!hotspotId) return;
+  const { data: hotspot } = useQuery({
+    queryKey: ["hotspot", hotspotId],
+    queryFn: () => (hotspotId ? getHotspotById(hotspotId) : Promise.resolve(null)),
+    enabled: !!hotspotId && isOpen,
+  });
 
-    try {
-      const hotspotData = await getHotspotById(hotspotId);
-      setHotspot(hotspotData);
+  const { data: isSaved = false } = useQuery({
+    queryKey: ["isHotspotSaved", hotspotId],
+    queryFn: () => (hotspotId ? isHotspotSaved(hotspotId) : Promise.resolve(false)),
+    enabled: !!hotspotId,
+  });
 
-      if (hotspotData) {
-        const saved = await checkIsSaved(hotspotId);
-        setIsSaved(saved);
-      }
-    } catch (error) {
-      console.error("Failed to load hotspot:", error);
-      Alert.alert("Error", "Failed to load hotspot details");
-    }
-  }, [hotspotId, checkIsSaved]);
+  const saveMutation = useMutation({
+    mutationFn: ({ hotspotId, notes }: { hotspotId: string; notes?: string }) => saveHotspot(hotspotId, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["isHotspotSaved", hotspotId] });
+    },
+  });
 
-  useEffect(() => {
-    if (hotspotId && isOpen) {
-      loadHotspot();
-    }
-  }, [hotspotId, isOpen, loadHotspot]);
+  const unsaveMutation = useMutation({
+    mutationFn: (hotspotId: string) => unsaveHotspot(hotspotId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["savedHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["isHotspotSaved", hotspotId] });
+    },
+  });
 
   const handleOpenTargets = () => {
     if (!hotspot) return;
@@ -80,17 +74,17 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
   };
 
   const handleToggleSave = async () => {
-    if (!hotspot || isLoadingSave) return;
+    if (!hotspot) return;
 
-    setIsLoadingSave(true);
     try {
-      const newSavedState = await toggleSave(hotspot.id);
-      setIsSaved(newSavedState);
+      if (isSaved) {
+        await unsaveMutation.mutateAsync(hotspot.id);
+      } else {
+        await saveMutation.mutateAsync({ hotspotId: hotspot.id });
+      }
     } catch (error) {
       console.error("Failed to toggle save:", error);
       Alert.alert("Error", "Failed to save/unsave hotspot");
-    } finally {
-      setIsLoadingSave(false);
     }
   };
 
@@ -115,7 +109,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
         {hotspot && (
           <TouchableOpacity
             onPress={handleToggleSave}
-            disabled={isLoadingSave}
+            disabled={saveMutation.isPending || unsaveMutation.isPending}
             style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
           >
             <StarIcon size={20} color={isSaved ? tw.color("yellow-500") : tw.color("gray-500")} filled={isSaved} />
