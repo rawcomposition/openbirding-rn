@@ -1,9 +1,21 @@
+import { useDefaultMapProvider } from "@/hooks/useDefaultMapProvider";
 import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
-import { getMarkerColor } from "@/lib/utils";
+import { getDirections, getExternalMapProviders, getMarkerColor } from "@/lib/utils";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React from "react";
-import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useRef } from "react";
+import {
+  ActionSheetIOS,
+  Alert,
+  findNodeHandle,
+  Linking,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DirectionsIcon from "./icons/DirectionsIcon";
@@ -20,6 +32,9 @@ type HotspotDetailsProps = {
 
 export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
   const queryClient = useQueryClient();
+  const directionsButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  const { showActionSheetWithOptions } = useActionSheet();
+  const { defaultProvider } = useDefaultMapProvider();
 
   const { data: hotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -59,10 +74,55 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
 
   const handleGetDirections = () => {
     if (!hotspot) return;
-    const url = `https://www.google.com/maps?q=${hotspot.lat},${hotspot.lng}`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Error", "Could not open directions");
-    });
+
+    if (defaultProvider && defaultProvider !== "") {
+      const url = getDirections(defaultProvider, hotspot.lat, hotspot.lng);
+      Linking.openURL(url).catch(() => {
+        Alert.alert("Error", "Could not open directions");
+      });
+    } else {
+      handleShowMapProviders();
+    }
+  };
+
+  const handleShowMapProviders = () => {
+    if (!hotspot) return;
+
+    const providers = getExternalMapProviders();
+    const options = [...providers.map((provider) => provider.name), "Cancel"];
+    const cancelButtonIndex = options.length - 1;
+
+    const handleProviderSelection = (buttonIndex: number | undefined) => {
+      if (buttonIndex !== undefined && buttonIndex < providers.length) {
+        const selectedProvider = providers[buttonIndex];
+        const url = getDirections(selectedProvider.id, hotspot.lat, hotspot.lng);
+        Linking.openURL(url).catch(() => {
+          Alert.alert("Error", `Could not open ${selectedProvider.name}`);
+        });
+      }
+    };
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          title: "Choose Map Provider",
+          anchor: findNodeHandle(directionsButtonRef.current) || undefined,
+        },
+        handleProviderSelection
+      );
+    } else {
+      showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          title: "Choose Map Provider",
+          useModal: true,
+        },
+        handleProviderSelection
+      );
+    }
   };
 
   const handleViewDetails = () => {
@@ -154,8 +214,10 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  ref={directionsButtonRef}
                   style={tw`flex-row items-center p-3 bg-gray-50 rounded-lg flex-1`}
                   onPress={handleGetDirections}
+                  onLongPress={handleShowMapProviders}
                   activeOpacity={0.7}
                 >
                   <DirectionsIcon color={tw.color("orange-600")} size={20} />

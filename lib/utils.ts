@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { MapFeature } from "./types";
 
 type Params = {
@@ -190,3 +191,33 @@ export function findClosestFeature(features: GeoJSON.Feature[], tapLocation: [nu
     return closest;
   }, null);
 }
+
+type MapProvider = {
+  id: string;
+  name: string;
+};
+
+export const getExternalMapProviders = (): MapProvider[] => {
+  const providers: MapProvider[] = [{ id: "google", name: "Google Maps" }];
+
+  if (Platform.OS === "ios") {
+    providers.push({ id: "apple", name: "Apple Maps" });
+  }
+
+  providers.push({ id: "organic", name: "Organic Maps" });
+
+  return providers;
+};
+
+export const getDirections = (provider: string, lat: number, lng: number): string => {
+  switch (provider) {
+    case "google":
+      return `comgooglemaps://?q=${lat},${lng}`;
+    case "apple":
+      return `maps://?q=${lat},${lng}`;
+    case "organic":
+      return `om://map?ll=${lat},${lng}`;
+    default:
+      throw new Error(`Unsupported map provider: ${provider}`);
+  }
+};
