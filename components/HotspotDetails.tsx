@@ -153,7 +153,9 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
       <View style={tw`flex-1 pr-4 pl-1`}>
         {hotspot ? (
           <>
-            <Text style={tw`text-gray-900 text-xl font-bold`}>{hotspot.name}</Text>
+            <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
+              {hotspot.name}
+            </Text>
             <View style={tw`flex-row items-center mt-1`}>
               <View
                 style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.species || 0) }]}
