@@ -18,7 +18,7 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
     if (onPress) {
       onPress();
     } else {
-      router.push("/packs?tab=all");
+      router.push("/packs?tab=nearby");
     }
   };
 

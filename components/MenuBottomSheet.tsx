@@ -18,7 +18,7 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
 
   const handleNavigateToPacks = () => {
     onClose();
-    router.push("/packs?from=map");
+    router.push("/packs?tab=installed");
   };
 
   const handleNavigateToSettings = () => {

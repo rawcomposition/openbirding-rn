@@ -1,30 +1,40 @@
 import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import tw from "twrnc";
 import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { useCurrentLocation } from "@/hooks/useCurrentLocation";
+import { calculateDistance } from "@/lib/utils";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
 
+type Tab = "all" | "installed" | "nearby";
+
 const tabs = [
   { id: "installed", label: "Installed" },
-  { id: "all", label: "All Packs" },
+  { id: "nearby", label: "Nearby" },
+  { id: "all", label: "All" },
 ] as const;
 
+const NEARBY_PACKS_LIMIT = 6;
+
 export default function PacksList() {
-  const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const [activeTab, setActiveTab] = useState<"all" | "installed">(tab === "all" ? "all" : "installed");
+  const { tab } = useLocalSearchParams<{ tab?: Tab }>();
+  const [activeTab, setActiveTab] = useState<Tab>(tab || "nearby");
   const [searchQuery, setSearchQuery] = useState("");
-  const insets = useSafeAreaInsets();
 
   const { data, isLoading, error } = useQuery<Pack[]>({
     queryKey: ["/packs"],
   });
 
   const installedPackIds = useInstalledPacks();
+  const {
+    location: userLocation,
+    error: locationError,
+    isLoading: isLoadingLocation,
+  } = useCurrentLocation(activeTab === "nearby");
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];
@@ -35,13 +45,25 @@ export default function PacksList() {
       packs = packs.filter((pack) => installedPackIds?.has(pack.id));
     }
 
+    if (activeTab === "nearby") {
+      if (!userLocation) return [];
+
+      const packsWithLocation = packs.filter((pack) => pack.lat != null && pack.lng != null);
+      const packsWithDistance = packsWithLocation.map((pack) => ({
+        pack,
+        distance: calculateDistance(userLocation.lat, userLocation.lng, pack.lat!, pack.lng!),
+      }));
+      packsWithDistance.sort((a, b) => a.distance - b.distance);
+      return packsWithDistance.slice(0, NEARBY_PACKS_LIMIT).map((item) => item.pack);
+    }
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       packs = packs.filter((pack) => pack.name.toLowerCase().includes(query));
     }
 
     return packs;
-  }, [data, activeTab, installedPackIds, searchQuery]);
+  }, [data, activeTab, installedPackIds, searchQuery, userLocation]);
 
   if (isLoading) {
     return (
@@ -62,6 +84,8 @@ export default function PacksList() {
 
   const hasInstalledPacks = installedPackIds && installedPackIds.size > 0;
   const showEmptyState = activeTab === "installed" && !hasInstalledPacks;
+  const showNoResults =
+    activeTab === "nearby" && (isLoadingLocation || locationError !== null || filteredPacks.length === 0);
 
   const renderPack = ({ item }: { item: Pack }) => (
     <PackListRow id={item.id} name={item.name} hotspots={item.hotspots} />
@@ -114,33 +138,21 @@ export default function PacksList() {
         <View style={tw`flex-1 justify-center items-center px-8 -mt-16`}>
           <PacksNotice variant="card" onPress={() => setActiveTab("all")} />
         </View>
+      ) : showNoResults ? (
+        <View style={tw`flex-1 justify-center items-center px-8`}>
+          <Text style={tw`text-gray-500`}>
+            {isLoadingLocation ? "Getting your location..." : locationError ? locationError : "No Results"}
+          </Text>
+        </View>
       ) : (
-        <>
-          <FlatList
-            data={filteredPacks}
-            renderItem={renderPack}
-            keyExtractor={(item) => item.id.toString()}
-            style={tw`flex-1`}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          />
-          {activeTab === "installed" && (
-            <View
-              style={[
-                tw`px-4 py-4 bg-gray-50 border-t border-gray-200`,
-                { paddingBottom: Math.max(insets.bottom, 16) },
-              ]}
-            >
-              <Pressable
-                onPress={() => setActiveTab("all")}
-                style={tw`bg-blue-500 py-3 px-4 rounded-lg flex-row items-center justify-center`}
-              >
-                <Text style={tw`text-white font-medium text-base mr-2`}>Find More Packs</Text>
-                <Text style={tw`text-blue-100 text-sm`}>→</Text>
-              </Pressable>
-            </View>
-          )}
-        </>
+        <FlatList
+          data={filteredPacks}
+          renderItem={renderPack}
+          keyExtractor={(item) => item.id.toString()}
+          style={tw`flex-1`}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
       )}
     </View>
   );

@@ -19,6 +19,8 @@ export type Pack = {
   name: string;
   hotspots: number;
   installed_at: string | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export type BoundingBox = {
