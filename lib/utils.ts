@@ -103,7 +103,7 @@ export const getMarkerColor = (count: number) => {
   if (count <= 250) return markerColors[6];
   if (count <= 300) return markerColors[7];
   if (count <= 400) return markerColors[8];
-  if (count <= 500) return markerColors[9];
+  if (count <= 1000) return markerColors[9];
   return markerColors[0];
 };
 
