@@ -1,16 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as Location from "expo-location";
 
-type UseCurrentLocationReturn = {
+type UseApproxLocationReturn = {
   location: { lat: number; lng: number } | null;
   error: string | null;
   isLoading: boolean;
 };
 
-export function useCurrentLocation(enabled: boolean = true): UseCurrentLocationReturn {
+const LOCATION_CACHE_DURATION = 300000;
+
+export function useApproxLocation(enabled: boolean = true): UseApproxLocationReturn {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const lastFetchTime = useRef<number | null>(null);
 
   useEffect(() => {
     if (!enabled) {
@@ -18,6 +21,16 @@ export function useCurrentLocation(enabled: boolean = true): UseCurrentLocationR
       return;
     }
 
+    const now = Date.now();
+    const hasRecentLocation =
+      location && lastFetchTime.current && now - lastFetchTime.current < LOCATION_CACHE_DURATION;
+
+    if (hasRecentLocation) {
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("Fetching location");
     setIsLoading(true);
     setError(null);
 
@@ -30,11 +43,15 @@ export function useCurrentLocation(enabled: boolean = true): UseCurrentLocationR
           return;
         }
 
-        const currentLocation = await Location.getCurrentPositionAsync({});
-        setLocation({
+        const currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const locationData = {
           lat: currentLocation.coords.latitude,
           lng: currentLocation.coords.longitude,
-        });
+        };
+        setLocation(locationData);
+        lastFetchTime.current = now;
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to get location");
@@ -46,4 +63,3 @@ export function useCurrentLocation(enabled: boolean = true): UseCurrentLocationR
 
   return { location, error, isLoading };
 }
-
