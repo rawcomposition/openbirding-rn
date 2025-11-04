@@ -4,6 +4,7 @@ import QuestionMarkIcon from "@/components/icons/QuestionMarkIcon";
 import { useDefaultMapProvider } from "@/hooks/useDefaultMapProvider";
 import { getExternalMapProviders } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import React from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import tw from "twrnc";
@@ -83,6 +84,12 @@ export default function SettingsPage() {
               {!defaultProvider && <Ionicons name="checkmark-circle" size={24} color={tw.color("blue-500")} />}
             </TouchableOpacity>
           </View>
+        </View>
+        <View style={tw`mt-6 mb-4 items-center`}>
+          <Text style={tw`text-gray-500 text-xs`}>
+            Version {Constants.expoConfig?.version || "Unknown"}
+            {Constants.nativeBuildVersion && ` (${Constants.nativeBuildVersion})`}
+          </Text>
         </View>
       </View>
     </ScrollView>
