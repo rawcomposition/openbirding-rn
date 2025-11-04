@@ -205,6 +205,7 @@ export const getExternalMapProviders = (): MapProvider[] => {
   }
 
   providers.push({ id: "organic", name: "Organic Maps" });
+  providers.push({ id: "waze", name: "Waze" });
 
   return providers;
 };
@@ -215,6 +216,8 @@ export const getDirections = (provider: string, lat: number, lng: number): strin
       return `comgooglemaps://?q=${lat},${lng}`;
     case "apple":
       return `maps://?q=${lat},${lng}`;
+    case "waze":
+      return `waze://?ll=${lat},${lng}&navigate=yes`;
     case "organic":
       return `om://map?ll=${lat},${lng}`;
     default:

@@ -1,6 +1,7 @@
 import GoogleMapsIcon from "@/components/icons/GoogleMapsIcon";
 import OrganicMapsIcon from "@/components/icons/OrganicMapsIcon";
 import QuestionMarkIcon from "@/components/icons/QuestionMarkIcon";
+import WazeIcon from "@/components/icons/WazeIcon";
 import { useDefaultMapProvider } from "@/hooks/useDefaultMapProvider";
 import { getExternalMapProviders } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +22,8 @@ export default function SettingsPage() {
         return <Ionicons name="logo-apple" size={26} color={getProviderColor(providerId)} />;
       case "organic":
         return <OrganicMapsIcon size={30} />;
+      case "waze":
+        return <WazeIcon size={26} />;
       default:
         return <Ionicons name="map" size={26} color={getProviderColor(providerId)} />;
     }
@@ -34,6 +37,8 @@ export default function SettingsPage() {
         return tw.color("gray-800");
       case "organic":
         return tw.color("green-600");
+      case "waze":
+        return tw.color("gray-700");
       default:
         return tw.color("gray-500");
     }
