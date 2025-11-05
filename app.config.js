@@ -58,6 +58,7 @@ module.exports = ({ config }) => ({
         },
       ],
       "expo-sqlite",
+      "expo-web-browser",
     ],
     experiments: { typedRoutes: true },
     extra: {
