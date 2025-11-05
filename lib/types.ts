@@ -5,6 +5,9 @@ export type ApiPackResponse = {
     species: number;
     lat: number;
     lng: number;
+    country?: string;
+    state?: string;
+    county?: string;
   }[];
 };
 

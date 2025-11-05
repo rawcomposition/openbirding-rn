@@ -68,7 +68,7 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
           </View>
           <Text style={tw`text-gray-900 font-semibold text-lg mb-2`}>No Hotspot Packs Installed</Text>
           <Text style={tw`text-gray-600 text-center mb-6`}>Get started by downloading hotspot packs for your area</Text>
-          <Pressable style={tw`bg-blue-500 px-6 py-3 rounded-lg flex-row items-center`}>
+          <Pressable style={tw`bg-blue-500 px-6 py-3 rounded-lg flex-row items-center`} onPress={handlePress}>
             <Ionicons name="download" size={16} color="white" style={tw`mr-2`} />
             <Text style={tw`text-white font-medium`}>Browse Packs</Text>
           </Pressable>

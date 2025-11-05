@@ -136,7 +136,7 @@ export default function PacksList() {
 
       {showEmptyState ? (
         <View style={tw`flex-1 justify-center items-center px-8 -mt-16`}>
-          <PacksNotice variant="card" onPress={() => setActiveTab("all")} />
+          <PacksNotice variant="card" onPress={() => setActiveTab("nearby")} />
         </View>
       ) : showNoResults ? (
         <View style={tw`flex-1 justify-center items-center px-8`}>

@@ -35,6 +35,9 @@ async function createTables(): Promise<void> {
       species INTEGER NOT NULL DEFAULT 0,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
+      country TEXT,
+      state TEXT,
+      county TEXT,
       pack_id INTEGER,
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
@@ -218,17 +221,23 @@ export async function installPack(
       const batchSize = 500;
       for (let i = 0; i < hotspots.length; i += batchSize) {
         const batch = hotspots.slice(i, i + batchSize);
-        const values = batch.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
+        const values = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
         const params = batch.flatMap((hotspot) => [
           hotspot.id,
           hotspot.name,
           hotspot.species,
           hotspot.lat,
           hotspot.lng,
+          hotspot.country || null,
+          hotspot.state || null,
+          hotspot.county || null,
           packId,
         ]);
 
-        await database.runAsync(`INSERT INTO hotspots (id, name, species, lat, lng, pack_id) VALUES ${values}`, params);
+        await database.runAsync(
+          `INSERT INTO hotspots (id, name, species, lat, lng, country, state, county, pack_id) VALUES ${values}`,
+          params
+        );
       }
     });
   } finally {
