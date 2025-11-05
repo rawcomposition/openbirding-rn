@@ -1,6 +1,8 @@
 import * as SQLite from "expo-sqlite";
+import { ApiPackResponse } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
+let isInstallingPack = false;
 
 export async function initializeDatabase(): Promise<void> {
   try {
@@ -183,4 +185,63 @@ export async function getSavedHotspots(): Promise<
     saved_at: row.saved_at as string,
     notes: row.notes as string | null,
   }));
+}
+
+export function checkIsPackInstalling(): boolean {
+  return isInstallingPack;
+}
+
+export async function installPack(
+  packId: number,
+  packName: string,
+  hotspots: ApiPackResponse["hotspots"]
+): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  isInstallingPack = true;
+  try {
+    const database = db;
+    await database.withTransactionAsync(async () => {
+      await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
+
+      await database.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
+        packId,
+        packName,
+        hotspots.length,
+        new Date().toISOString(),
+      ]);
+
+      if (hotspots.length === 0) {
+        return;
+      }
+
+      const batchSize = 500;
+      for (let i = 0; i < hotspots.length; i += batchSize) {
+        const batch = hotspots.slice(i, i + batchSize);
+        const values = batch.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
+        const params = batch.flatMap((hotspot) => [
+          hotspot.id,
+          hotspot.name,
+          hotspot.species,
+          hotspot.lat,
+          hotspot.lng,
+          packId,
+        ]);
+
+        await database.runAsync(`INSERT INTO hotspots (id, name, species, lat, lng, pack_id) VALUES ${values}`, params);
+      }
+    });
+  } finally {
+    isInstallingPack = false;
+  }
+}
+
+export async function uninstallPack(packId: number): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const database = db;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
+    await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
+  });
 }

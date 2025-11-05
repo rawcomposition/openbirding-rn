@@ -1,17 +1,19 @@
 import { useState } from "react";
+import { Alert } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
-import { getDatabase, getPackById } from "@/lib/database";
+import { getPackById, installPack, uninstallPack, checkIsPackInstalling } from "@/lib/database";
 import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 
 export function useManagePack(packId: number) {
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
   const [isUninstalling, setIsUninstalling] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
   const install = async (apiPack: ApiPack) => {
-    if (isInstalling || isUninstalling) {
+    if (isInstalling || isUninstalling || isDownloading) {
       Toast.show({
         type: "info",
         text1: "Operation in Progress",
@@ -19,12 +21,15 @@ export function useManagePack(packId: number) {
       return;
     }
 
+    if (checkIsPackInstalling()) {
+      Alert.alert("Installation in Progress", "Please wait for the current pack to finish installing");
+      return;
+    }
+
     try {
-      setIsInstalling(true);
+      setIsDownloading(true);
 
       const currentPack = await getPackById(packId);
-
-      const db = getDatabase();
 
       const response = await fetch(`${API_URL}/packs/${packId}`);
       if (!response.ok) {
@@ -32,25 +37,10 @@ export function useManagePack(packId: number) {
       }
       const { hotspots }: ApiPackResponse = await response.json();
 
-      await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
+      setIsDownloading(false);
+      setIsInstalling(true);
 
-      await db.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
-        packId,
-        apiPack.name,
-        hotspots.length,
-        new Date().toISOString(),
-      ]);
-
-      for (const hotspot of hotspots) {
-        await db.runAsync(`INSERT INTO hotspots (id, name, species, lat, lng, pack_id) VALUES (?, ?, ?, ?, ?, ?)`, [
-          hotspot.id,
-          hotspot.name,
-          hotspot.species,
-          hotspot.lat,
-          hotspot.lng,
-          packId,
-        ]);
-      }
+      await installPack(packId, apiPack.name, hotspots);
 
       await queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
@@ -67,12 +57,13 @@ export function useManagePack(packId: number) {
         text1: "Installation Failed",
       });
     } finally {
+      setIsDownloading(false);
       setIsInstalling(false);
     }
   };
 
   const uninstall = async () => {
-    if (isInstalling || isUninstalling) {
+    if (isInstalling || isUninstalling || isDownloading) {
       Toast.show({
         type: "info",
         text1: "Operation in Progress",
@@ -83,9 +74,7 @@ export function useManagePack(packId: number) {
     try {
       setIsUninstalling(true);
 
-      const db = getDatabase();
-      await db.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
-      await db.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
+      await uninstallPack(packId);
 
       queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
@@ -109,6 +98,7 @@ export function useManagePack(packId: number) {
   return {
     install,
     uninstall,
+    isDownloading,
     isInstalling,
     isUninstalling,
   };

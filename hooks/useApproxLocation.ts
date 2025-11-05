@@ -30,7 +30,6 @@ export function useApproxLocation(enabled: boolean = true): UseApproxLocationRet
       return;
     }
 
-    console.log("Fetching location");
     setIsLoading(true);
     setError(null);
 

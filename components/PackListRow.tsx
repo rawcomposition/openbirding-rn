@@ -13,16 +13,17 @@ type PackListRowProps = {
 };
 
 const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
-  const { install, uninstall, isInstalling, isUninstalling } = useManagePack(id);
+  const { install, uninstall, isDownloading, isInstalling, isUninstalling } = useManagePack(id);
   const installedPacks = useInstalledPacks();
   const installedPack = installedPacks.get(id);
 
   const isInstalled = installedPack !== undefined;
   const canInstall = !installedPack || new Date(installedPack).getTime() + UPDATE_INTERVAL_LIMIT < Date.now();
-  const installDisabled = isInstalling || isUninstalling || !canInstall;
+  const installDisabled = isInstalling || isUninstalling || isDownloading || !canInstall;
 
   const getButtonText = () => {
     if (isUninstalling) return "Uninstalling";
+    if (isDownloading) return "Downloading";
     if (isInstalling) return "Installing";
     return isInstalled ? "Update" : "Install";
   };
