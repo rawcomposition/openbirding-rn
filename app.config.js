@@ -63,8 +63,13 @@ module.exports = ({ config }) => ({
     extra: {
       router: {},
       eas: { projectId: "2944a151-98b6-4d2a-9104-65facf9def35" },
-      // Runtime token you'll read in JS
       MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN,
+    },
+    updates: {
+      url: "https://u.expo.dev/2944a151-98b6-4d2a-9104-65facf9def35",
+    },
+    runtimeVersion: {
+      policy: "appVersion",
     },
   },
 });
