@@ -36,7 +36,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
   const { showActionSheetWithOptions } = useActionSheet();
   const { defaultProvider } = useDefaultMapProvider();
 
-  const { data: hotspot } = useQuery({
+  const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
     queryFn: () => (hotspotId ? getHotspotById(hotspotId) : Promise.resolve(null)),
     enabled: !!hotspotId && isOpen,
@@ -151,7 +151,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
   const customHeader = (
     <View style={tw`flex-row items-start justify-between p-4 pt-0`}>
       <View style={tw`flex-1 pr-4 pl-1`}>
-        {hotspot ? (
+        {hotspot && (
           <>
             <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
               {hotspot.name}
@@ -163,8 +163,6 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
               <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
             </View>
           </>
-        ) : (
-          <Text style={tw`text-gray-600`}>Hotspot not found</Text>
         )}
       </View>
       <View style={tw`flex-row items-center gap-2`}>
@@ -228,7 +226,7 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
+          ) : isLoadingHotspot ? null : (
             <View style={tw`py-8 items-center`}>
               <Text style={tw`text-gray-600`}>Hotspot not found</Text>
             </View>

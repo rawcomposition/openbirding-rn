@@ -105,11 +105,14 @@ export async function getHotspotById(id: string): Promise<{
   species: number;
   lat: number;
   lng: number;
+  country: string;
+  state: string;
+  county: string;
 } | null> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
-    `SELECT id, name, species, lat, lng 
+    `SELECT id, name, species, lat, lng, country, state, county
      FROM hotspots WHERE id = ?`,
     [id]
   );
@@ -123,6 +126,9 @@ export async function getHotspotById(id: string): Promise<{
     species: row.species as number,
     lat: row.lat as number,
     lng: row.lng as number,
+    country: row.country as string,
+    state: row.state as string,
+    county: row.county as string,
   };
 }
 
