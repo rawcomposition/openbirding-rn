@@ -38,6 +38,9 @@ async function createTables(): Promise<void> {
       country TEXT,
       state TEXT,
       county TEXT,
+      country_name TEXT,
+      state_name TEXT,
+      county_name TEXT,
       pack_id INTEGER,
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
@@ -108,11 +111,14 @@ export async function getHotspotById(id: string): Promise<{
   country: string;
   state: string;
   county: string;
+  countryName: string | null;
+  stateName: string | null;
+  countyName: string | null;
 } | null> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
-    `SELECT id, name, species, lat, lng, country, state, county
+    `SELECT id, name, species, lat, lng, country, state, county, country_name, state_name, county_name
      FROM hotspots WHERE id = ?`,
     [id]
   );
@@ -129,6 +135,9 @@ export async function getHotspotById(id: string): Promise<{
     country: row.country as string,
     state: row.state as string,
     county: row.county as string,
+    countryName: row.country_name as string | null,
+    stateName: row.state_name as string | null,
+    countyName: row.county_name as string | null,
   };
 }
 
@@ -227,7 +236,7 @@ export async function installPack(
       const batchSize = 500;
       for (let i = 0; i < hotspots.length; i += batchSize) {
         const batch = hotspots.slice(i, i + batchSize);
-        const values = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+        const values = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
         const params = batch.flatMap((hotspot) => [
           hotspot.id,
           hotspot.name,
@@ -237,11 +246,14 @@ export async function installPack(
           hotspot.country || null,
           hotspot.state || null,
           hotspot.county || null,
+          hotspot.countryName || null,
+          hotspot.stateName || null,
+          hotspot.countyName || null,
           packId,
         ]);
 
         await database.runAsync(
-          `INSERT INTO hotspots (id, name, species, lat, lng, country, state, county, pack_id) VALUES ${values}`,
+          `INSERT INTO hotspots (id, name, species, lat, lng, country, state, county, country_name, state_name, county_name, pack_id) VALUES ${values}`,
           params
         );
       }

@@ -5,9 +5,12 @@ export type ApiPackResponse = {
     species: number;
     lat: number;
     lng: number;
-    country?: string;
-    state?: string;
-    county?: string;
+    country?: string | null;
+    state?: string | null;
+    county?: string | null;
+    countryName?: string | null;
+    stateName?: string | null;
+    countyName?: string | null;
   }[];
 };
 
