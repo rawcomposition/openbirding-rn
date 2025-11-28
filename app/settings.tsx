@@ -7,7 +7,7 @@ import { getExternalMapProviders } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import tw from "twrnc";
 
 export default function SettingsPage() {
@@ -41,6 +41,24 @@ export default function SettingsPage() {
         return tw.color("gray-700");
       default:
         return tw.color("gray-500");
+    }
+  };
+
+  const handlePrivacyPolicyPress = async () => {
+    const url = "https://openbirding.org/privacy-policy";
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    }
+  };
+
+  const handleContactPress = async () => {
+    const email = "adam@openbirding.org";
+    const subject = encodeURIComponent("OpenBirding App Feedback");
+    const url = `mailto:${email}?subject=${subject}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
     }
   };
 
@@ -89,6 +107,26 @@ export default function SettingsPage() {
               {!defaultProvider && <Ionicons name="checkmark-circle" size={24} color={tw.color("blue-500")} />}
             </TouchableOpacity>
           </View>
+        </View>
+        <View style={tw`bg-white rounded-lg shadow-sm mb-4`}>
+          <TouchableOpacity
+            style={tw`flex-row items-center px-4 py-4`}
+            onPress={handlePrivacyPolicyPress}
+            activeOpacity={0.7}
+          >
+            <Text style={tw`text-gray-800 text-base font-medium flex-1`}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={20} color={tw.color("gray-400")} />
+          </TouchableOpacity>
+        </View>
+        <View style={tw`bg-white rounded-lg shadow-sm mb-4`}>
+          <TouchableOpacity
+            style={tw`flex-row items-center px-4 py-4`}
+            onPress={handleContactPress}
+            activeOpacity={0.7}
+          >
+            <Text style={tw`text-gray-800 text-base font-medium flex-1`}>Contact & Feedback</Text>
+            <Ionicons name="chevron-forward" size={20} color={tw.color("gray-400")} />
+          </TouchableOpacity>
         </View>
         <View style={tw`mt-6 mb-4 items-center`}>
           <Text style={tw`text-gray-500 text-xs`}>

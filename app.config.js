@@ -14,6 +14,7 @@ module.exports = ({ config }) => ({
       supportsTablet: true,
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        LSApplicationQueriesSchemes: ["mailto"],
       },
       bundleIdentifier: "com.rawcomposition.openbirding",
     },
