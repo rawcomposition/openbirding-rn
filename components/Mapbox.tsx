@@ -24,6 +24,7 @@ type MapboxMapProps = {
   hasSavedLocation?: boolean;
   onLocationSave?: (center: [number, number], zoom: number) => void;
   hasInstalledPacks?: boolean;
+  onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
 };
 
 export type MapboxMapRef = {
@@ -45,6 +46,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       hasSavedLocation,
       onLocationSave,
       hasInstalledPacks,
+      onLongPressCoordinates,
     },
     ref
   ) => {
@@ -173,6 +175,17 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onHotspotSelect, onPress]
     );
 
+    const handleMapLongPress = useCallback(
+      (event: any) => {
+        if (!onLongPressCoordinates) return;
+        const pressEvent = event as OnPressEvent;
+        const coords = pressEvent?.coordinates;
+        if (!coords) return;
+        onLongPressCoordinates({ latitude: coords.latitude, longitude: coords.longitude });
+      },
+      [onLongPressCoordinates]
+    );
+
     return (
       <View style={[tw`flex-1`, style]}>
         <Mapbox.MapView
@@ -188,6 +201,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             centerMapOnUserInitial();
           }}
           onPress={handleMapPress}
+          onLongPress={handleMapLongPress}
           scaleBarEnabled={false}
           attributionEnabled={false}
           logoPosition={insets.bottom > 0 ? { bottom: -insets.bottom + 15, left: 25 } : { bottom: 4, left: 5 }}
