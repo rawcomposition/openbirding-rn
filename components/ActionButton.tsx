@@ -1,16 +1,16 @@
 import React, { ReactNode, forwardRef } from "react";
 import { Text, TouchableOpacity, TouchableOpacityProps } from "react-native";
 import tw from "twrnc";
+import ExternalLinkIcon from "./icons/ExternalLinkIcon";
 
-type DialogActionRowProps = {
+type ActionButtonProps = {
   icon: ReactNode;
   label: string;
-  accessory?: ReactNode;
   style?: TouchableOpacityProps["style"];
 } & Pick<TouchableOpacityProps, "onPress" | "onLongPress" | "activeOpacity" | "disabled">;
 
-const DialogActionRow = forwardRef<TouchableOpacity, DialogActionRowProps>(
-  ({ icon, label, accessory, style, ...touchableProps }, ref) => {
+const ActionButton = forwardRef<TouchableOpacity, ActionButtonProps>(
+  ({ icon, label, style, ...touchableProps }, ref) => {
     return (
       <TouchableOpacity
         ref={ref}
@@ -20,12 +20,12 @@ const DialogActionRow = forwardRef<TouchableOpacity, DialogActionRowProps>(
       >
         {icon}
         <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>{label}</Text>
-        {accessory}
+        <ExternalLinkIcon color={tw.color("gray-400")} size={16} />
       </TouchableOpacity>
     );
   }
 );
 
-DialogActionRow.displayName = "DialogActionRow";
+ActionButton.displayName = "ActionButton";
 
-export default DialogActionRow;
+export default ActionButton;

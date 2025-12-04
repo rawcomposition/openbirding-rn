@@ -1,4 +1,4 @@
-import DialogActionRow from "./DialogActionRow";
+import ActionButton from "./ActionButton";
 import DialogHeader from "./DialogHeader";
 import { useDirections } from "@/hooks/useDirections";
 import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
@@ -16,7 +16,6 @@ import type { TouchableOpacity } from "react-native";
 import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DirectionsIcon from "./icons/DirectionsIcon";
-import ExternalLinkIcon from "./icons/ExternalLinkIcon";
 import InfoIcon from "./icons/InfoIcon";
 import TargetsIcon from "./icons/TargetsIcon";
 
@@ -135,27 +134,24 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
             <View style={tw`pt-2`}>
               <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
               <View style={tw`gap-3 w-full`}>
-                <DialogActionRow
+                <ActionButton
                   icon={<InfoIcon color={tw.color("blue-500")} size={20} />}
                   label="View Details"
                   onPress={handleViewDetails}
-                  accessory={<ExternalLinkIcon color={tw.color("gray-400")} size={16} />}
                 />
 
-                <DialogActionRow
+                <ActionButton
                   icon={<TargetsIcon color={tw.color("green-600")} size={20} />}
                   label="View Targets"
                   onPress={handleOpenTargets}
-                  accessory={<ExternalLinkIcon color={tw.color("gray-400")} size={16} />}
                 />
 
-                <DialogActionRow
+                <ActionButton
                   ref={directionsButtonRef}
                   icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
                   label="Get Directions"
                   onPress={handleGetDirections}
                   onLongPress={handleShowMapProviders}
-                  accessory={<ExternalLinkIcon color={tw.color("gray-400")} size={16} />}
                 />
               </View>
             </View>
