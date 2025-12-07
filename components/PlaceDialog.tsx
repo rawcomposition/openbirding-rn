@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import { Alert, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
 import tw from "twrnc";
@@ -8,39 +8,29 @@ import ActionButton from "./ActionButton";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import { useDirections } from "@/hooks/useDirections";
 
-type Coordinates = {
-  latitude: number;
-  longitude: number;
-};
-
-type LongPressCoordinatesDialogProps = {
+type Props = {
   isOpen: boolean;
-  coordinates: Coordinates | null;
+  lat: number | null;
+  lng: number | null;
   onClose: () => void;
 };
 
-const formatCoordinatePair = (coords: Coordinates | null) => {
-  if (!coords) return "Coordinates";
-  return `${coords.latitude.toFixed(5)}°, ${coords.longitude.toFixed(5)}°`;
-};
-
-export default function LongPressCoordinatesDialog({ isOpen, coordinates, onClose }: LongPressCoordinatesDialogProps) {
-  const directionsButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+export default function PlaceDialog({ isOpen, lat, lng, onClose }: Props) {
+  const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
-  const coordinateLabel = useMemo(() => formatCoordinatePair(coordinates), [coordinates]);
 
   const handleGetDirections = () => {
-    if (!coordinates) return;
+    if (!lat || !lng) return;
     openDirections({
-      coordinates: { latitude: coordinates.latitude, longitude: coordinates.longitude },
+      coordinates: { latitude: lat, longitude: lng },
       anchorRef: directionsButtonRef,
     });
   };
 
   const handleShowProviders = () => {
-    if (!coordinates) return;
+    if (!lat || !lng) return;
     showProviderPicker({
-      coordinates: { latitude: coordinates.latitude, longitude: coordinates.longitude },
+      coordinates: { latitude: lat, longitude: lng },
       anchorRef: directionsButtonRef,
     });
   };
@@ -52,16 +42,16 @@ export default function LongPressCoordinatesDialog({ isOpen, coordinates, onClos
   const headerContent = (
     <DialogHeader onClose={onClose} onSavePress={handleSavePress}>
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
-        {coordinateLabel}
+        {lat && lng ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Unknown Location"}
       </Text>
-      <Text style={tw`text-gray-600 text-sm mt-1`}>Long-press location</Text>
+      <Text style={tw`text-gray-600 text-sm mt-1`}>Dropped Pin</Text>
     </DialogHeader>
   );
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[220, 320]} headerContent={headerContent}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[300, 400]} headerContent={headerContent}>
       <View style={tw`px-4 pb-4 pt-2`}>
-        <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>Actions</Text>
+        <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
         <ActionButton
           ref={directionsButtonRef}
           icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}

@@ -9,7 +9,7 @@ type ActionButtonProps = {
   style?: TouchableOpacityProps["style"];
 } & Pick<TouchableOpacityProps, "onPress" | "onLongPress" | "activeOpacity" | "disabled">;
 
-const ActionButton = forwardRef<TouchableOpacity, ActionButtonProps>(
+const ActionButton = forwardRef<React.ComponentRef<typeof TouchableOpacity>, ActionButtonProps>(
   ({ icon, label, style, ...touchableProps }, ref) => {
     return (
       <TouchableOpacity

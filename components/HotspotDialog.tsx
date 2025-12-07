@@ -5,13 +5,7 @@ import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/li
 import { getMarkerColor } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
-import {
-  Alert,
-  Linking,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Linking, ScrollView, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
 import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -19,15 +13,15 @@ import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
 import TargetsIcon from "./icons/TargetsIcon";
 
-type HotspotDetailsProps = {
+type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
   onClose: () => void;
 };
 
-export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDetailsProps) {
+export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
-  const directionsButtonRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
@@ -118,7 +112,9 @@ export default function HotspotDetails({ isOpen, hotspotId, onClose }: HotspotDe
             {hotspot.name}
           </Text>
           <View style={tw`flex-row items-center mt-1`}>
-            <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.species || 0) }]} />
+            <View
+              style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.species || 0) }]}
+            />
             <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
           </View>
         </>

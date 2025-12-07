@@ -175,16 +175,18 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onHotspotSelect, onPress]
     );
 
-    const handleMapLongPress = useCallback(
-      (event: any) => {
-        if (!onLongPressCoordinates) return;
-        const pressEvent = event as OnPressEvent;
-        const coords = pressEvent?.coordinates;
-        if (!coords) return;
-        onLongPressCoordinates({ latitude: coords.latitude, longitude: coords.longitude });
-      },
-      [onLongPressCoordinates]
-    );
+    const handleMapLongPress = (event: any) => {
+      if (!onLongPressCoordinates) return;
+      if (
+        event?.geometry?.coordinates &&
+        Array.isArray(event.geometry.coordinates) &&
+        event.geometry.coordinates.length >= 2
+      ) {
+        const longitude = event.geometry.coordinates[0];
+        const latitude = event.geometry.coordinates[1];
+        onLongPressCoordinates({ latitude, longitude });
+      }
+    };
 
     return (
       <View style={[tw`flex-1`, style]}>
