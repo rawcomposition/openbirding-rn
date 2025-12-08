@@ -75,6 +75,7 @@ export default function HomeScreen() {
           onLocationSave={updateLocation}
           hasInstalledPacks={hasInstalledPacks}
           onLongPressCoordinates={handleMapLongPress}
+          placeCoordinates={placeCoordinates}
         />
         {!hasInstalledPacks && (
           <View

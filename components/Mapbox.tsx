@@ -25,6 +25,7 @@ type MapboxMapProps = {
   onLocationSave?: (center: [number, number], zoom: number) => void;
   hasInstalledPacks?: boolean;
   onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
+  placeCoordinates?: { latitude: number; longitude: number } | null;
 };
 
 export type MapboxMapRef = {
@@ -47,6 +48,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       onLocationSave,
       hasInstalledPacks,
       onLongPressCoordinates,
+      placeCoordinates,
     },
     ref
   ) => {
@@ -407,6 +409,43 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   textIgnorePlacement: true,
                   textAnchor: "center",
                   textOffset: [0, -0.03],
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+
+          {isMapReady && placeCoordinates && (
+            <Mapbox.ShapeSource
+              id="place-marker-source"
+              shape={{
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature" as const,
+                    geometry: {
+                      type: "Point" as const,
+                      coordinates: [placeCoordinates.longitude, placeCoordinates.latitude],
+                    },
+                    properties: {},
+                  },
+                ],
+              }}
+            >
+              <Mapbox.CircleLayer
+                id="place-marker-outer"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 9],
+                  circleColor: "transparent",
+                  circleStrokeWidth: 2,
+                  circleStrokeColor: "#444",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="place-marker"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 3.5, 12, 4],
+                  circleColor: "#444",
+                  circleStrokeWidth: 0,
                 }}
               />
             </Mapbox.ShapeSource>
