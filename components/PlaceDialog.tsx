@@ -1,12 +1,14 @@
 import React, { useRef } from "react";
 import { Alert, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import tw from "twrnc";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import ActionButton from "./ActionButton";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import { useDirections } from "@/hooks/useDirections";
+import { setPlaceEditCallback } from "@/lib/placeEditCallbacks";
 
 type Props = {
   isOpen: boolean;
@@ -16,6 +18,7 @@ type Props = {
 };
 
 export default function PlaceDialog({ isOpen, lat, lng, onClose }: Props) {
+  const router = useRouter();
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
 
@@ -36,7 +39,17 @@ export default function PlaceDialog({ isOpen, lat, lng, onClose }: Props) {
   };
 
   const handleSavePress = () => {
-    Alert.alert("Not yet", "Saving custom coordinates isn't implemented yet.");
+    setPlaceEditCallback((title: string, notes: string) => {
+      Alert.alert("Not yet", "Saving custom coordinates isn't implemented yet.");
+    });
+
+    router.push({
+      pathname: "/place-edit",
+      params: {
+        initialTitle: "",
+        initialNotes: "",
+      },
+    });
   };
 
   const headerContent = (

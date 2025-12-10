@@ -78,6 +78,16 @@ export default function RootLayout() {
               <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
               <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
               <Stack.Screen name="settings" options={{ title: "Settings" }} />
+              <Stack.Screen
+                name="place-edit"
+                options={{
+                  title: "Edit Place",
+                  presentation: "modal",
+                  gestureEnabled: true,
+                  animation: "slide_from_bottom",
+                  headerShown: false,
+                }}
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
             <Toast
