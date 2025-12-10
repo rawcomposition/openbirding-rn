@@ -1,6 +1,6 @@
 import React from "react";
 import { Platform, TouchableOpacity, ViewStyle } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Ionicons } from "@expo/vector-icons";
 

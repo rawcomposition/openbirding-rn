@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { initializeDatabase } from "@/lib/database";
@@ -62,7 +62,7 @@ export default function RootLayout() {
     return (
       <View style={tw`flex-1 justify-center items-center bg-gray-50 p-4`}>
         <Text style={tw`text-red-500 text-center text-lg font-semibold`}>Database Error</Text>
-        <Text style={tw`text-gray-600 text-center mt-2`}>{dbError}</Text>
+        <Text style={tw`text-gray-600 text-center mt-2 text-base`}>{dbError}</Text>
       </View>
     );
   }
@@ -97,7 +97,7 @@ export default function RootLayout() {
                     <View style={tw`mr-1.5`}>
                       <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
                     </View>
-                    <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
                   </View>
                 ),
                 error: ({ text1 }) => (
@@ -105,7 +105,7 @@ export default function RootLayout() {
                     <View style={tw`mr-1.5`}>
                       <Ionicons name="alert-circle" size={20} color="#DC2626" />
                     </View>
-                    <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
                   </View>
                 ),
                 info: ({ text1 }) => (
@@ -113,7 +113,7 @@ export default function RootLayout() {
                     <View style={tw`mr-1.5`}>
                       <Ionicons name="information-circle" size={20} color="#2563EB" />
                     </View>
-                    <Text style={tw`text-gray-800 font-medium`}>{text1}</Text>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
                   </View>
                 ),
               }}

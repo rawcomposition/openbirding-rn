@@ -13,4 +13,3 @@ export function getPlaceEditCallback(): PlaceEditCallback | null {
 export function clearPlaceEditCallback() {
   placeEditCallback = null;
 }
-

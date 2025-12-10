@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 import { TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import StarIcon from "./icons/StarIcon";
 
 type DialogHeaderProps = {

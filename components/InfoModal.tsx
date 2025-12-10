@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 type InfoModalProps = {
   visible: boolean;
@@ -21,7 +21,7 @@ export default function InfoModal({ visible, onClose, title, content }: InfoModa
           <Text style={tw`text-lg font-bold mb-4 text-center`}>{title}</Text>
           {content}
           <TouchableOpacity style={tw`mt-4 bg-blue-500 py-2 px-4 rounded`} onPress={onClose}>
-            <Text style={tw`text-white text-center font-medium`}>Close</Text>
+            <Text style={tw`text-white text-center font-medium text-base`}>Close</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

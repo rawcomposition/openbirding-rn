@@ -6,7 +6,7 @@ import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import FloatingButton from "@/components/FloatingButton";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import HotspotDialog from "@/components/HotspotDialog";
 import PlaceDialog from "@/components/PlaceDialog";
 import { useSavedLocation } from "@/hooks/useSavedLocation";

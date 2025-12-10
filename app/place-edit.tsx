@@ -1,10 +1,11 @@
 import React, { useCallback, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import ModalHeader from "@/components/ModalHeader";
 import IconButton from "@/components/IconButton";
 import { getPlaceEditCallback, clearPlaceEditCallback } from "@/lib/placeEditCallbacks";
+import Input from "@/components/Input";
 
 export default function PlaceEditScreen() {
   const router = useRouter();
@@ -41,36 +42,20 @@ export default function PlaceEditScreen() {
       />
       <ScrollView style={tw`flex-1`} contentContainerStyle={tw`px-4 py-6`} keyboardShouldPersistTaps="handled">
         <View style={tw`mb-6`}>
-          <Text style={tw`text-gray-700 text-sm font-medium mb-2`}>Title</Text>
-          <TextInput
-            style={tw`bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-base text-gray-900`}
-            placeholder="Enter place title"
-            placeholderTextColor={tw.color("gray-400")}
-            value={title}
-            onChangeText={setTitle}
-            autoFocus
-            returnKeyType="next"
-            clearButtonMode="while-editing"
-            autoCorrect={false}
-          />
+          <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>
+          <Input placeholder="Enter place title" value={title} onChangeText={setTitle} autoFocus returnKeyType="next" />
         </View>
 
         <View>
-          <Text style={tw`text-gray-700 text-sm font-medium mb-2`}>Notes</Text>
-          <TextInput
-            style={[
-              tw`bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-base text-gray-900`,
-              { minHeight: 120, textAlignVertical: "top" },
-            ]}
+          <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Notes</Text>
+          <Input
             placeholder="Add notes (optional)"
-            placeholderTextColor={tw.color("gray-400")}
             value={notes}
             onChangeText={setNotes}
             multiline
             numberOfLines={5}
-            returnKeyType="default"
+            returnKeyType="done"
             clearButtonMode="while-editing"
-            autoCorrect
           />
         </View>
       </ScrollView>

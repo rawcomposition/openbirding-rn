@@ -1,6 +1,6 @@
 import React from "react";
 import { Platform, TouchableOpacity, StyleProp, ViewStyle } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 type FloatingButtonProps = {

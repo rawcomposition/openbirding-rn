@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Alert, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import ActionButton from "./ActionButton";

@@ -9,7 +9,7 @@ import debounce from "lodash/debounce";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import InfoModal from "./InfoModal";
 
 type Bounds = { west: number; south: number; east: number; north: number };

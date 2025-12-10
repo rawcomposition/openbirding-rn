@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import React from "react";
 import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 export default function SettingsPage() {
   const { defaultProvider, setDefaultProvider, isLoading } = useDefaultMapProvider();
@@ -65,7 +65,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <View style={tw`flex-1 bg-gray-50 justify-center items-center`}>
-        <Text style={tw`text-gray-600`}>Loading settings...</Text>
+        <Text style={tw`text-gray-600 text-base`}>Loading settings...</Text>
       </View>
     );
   }

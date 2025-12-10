@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import BaseBottomSheet from "./BaseBottomSheet";
 import MenuList from "./MenuList";
 import MapLayerSwitcher from "./MapLayerSwitcher";

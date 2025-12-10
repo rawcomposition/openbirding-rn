@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
 import { Alert, Linking, ScrollView, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
@@ -153,7 +153,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
             </View>
           ) : isLoadingHotspot ? null : (
             <View style={tw`py-8 items-center`}>
-              <Text style={tw`text-gray-600`}>Hotspot not found</Text>
+              <Text style={tw`text-gray-600 text-base`}>Hotspot not found</Text>
             </View>
           )}
         </View>

@@ -1,6 +1,6 @@
 import React, { ReactNode, forwardRef } from "react";
 import { Text, TouchableOpacity, TouchableOpacityProps } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import ExternalLinkIcon from "./icons/ExternalLinkIcon";
 
 type ActionButtonProps = {
@@ -19,7 +19,7 @@ const ActionButton = forwardRef<React.ComponentRef<typeof TouchableOpacity>, Act
         {...touchableProps}
       >
         {icon}
-        <Text style={tw`text-gray-700 text-[16px] font-medium ml-3 flex-1`}>{label}</Text>
+        <Text style={tw`text-gray-700 text-base font-medium ml-3 flex-1`}>{label}</Text>
         <ExternalLinkIcon color={tw.color("gray-400")} size={16} />
       </TouchableOpacity>
     );
