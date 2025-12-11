@@ -1,15 +1,16 @@
-import React, { useCallback, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import tw from "@/lib/tw";
 import ModalHeader from "@/components/ModalHeader";
 import IconButton from "@/components/IconButton";
-import { getPlaceEditCallback, clearPlaceEditCallback } from "@/lib/placeEditCallbacks";
 import Input from "@/components/Input";
 
 export default function PlaceEditScreen() {
-  const router = useRouter();
   const params = useLocalSearchParams<{
+    id?: string;
+    lat?: string;
+    lng?: string;
     initialTitle?: string;
     initialNotes?: string;
   }>();
@@ -19,14 +20,9 @@ export default function PlaceEditScreen() {
 
   const canSave = title.trim().length > 0;
 
-  const handleSave = useCallback(() => {
-    const callback = getPlaceEditCallback();
-    if (callback) {
-      callback(title, notes);
-      clearPlaceEditCallback();
-    }
-    router.back();
-  }, [title, notes, router]);
+  const handleSave = () => {
+    Alert.alert("Not yet", "Saving custom coordinates isn't implemented yet.");
+  };
 
   return (
     <KeyboardAvoidingView
@@ -35,7 +31,7 @@ export default function PlaceEditScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
       <ModalHeader
-        title="Edit Place"
+        title={params.id ? "Edit Place" : "Add Place"}
         buttons={[
           <IconButton key="save" icon="checkmark" variant="primary" onPress={handleSave} disabled={!canSave} />,
         ]}

@@ -184,9 +184,9 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         Array.isArray(event.geometry.coordinates) &&
         event.geometry.coordinates.length >= 2
       ) {
-        const longitude = event.geometry.coordinates[0];
-        const latitude = event.geometry.coordinates[1];
-        onLongPressCoordinates({ latitude, longitude });
+        const longitude = event.geometry.coordinates[0].toFixed(6);
+        const latitude = event.geometry.coordinates[1].toFixed(6);
+        onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
       }
     };
 

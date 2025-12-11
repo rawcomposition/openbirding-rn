@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import tw from "@/lib/tw";
@@ -8,7 +8,6 @@ import DialogHeader from "./DialogHeader";
 import ActionButton from "./ActionButton";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import { useDirections } from "@/hooks/useDirections";
-import { setPlaceEditCallback } from "@/lib/placeEditCallbacks";
 
 type Props = {
   isOpen: boolean;
@@ -39,13 +38,12 @@ export default function PlaceDialog({ isOpen, lat, lng, onClose }: Props) {
   };
 
   const handleSavePress = () => {
-    setPlaceEditCallback((title: string, notes: string) => {
-      Alert.alert("Not yet", "Saving custom coordinates isn't implemented yet.");
-    });
-
     router.push({
       pathname: "/place-edit",
       params: {
+        id: "",
+        lat: lat?.toString() ?? "",
+        lng: lng?.toString() ?? "",
         initialTitle: "",
         initialNotes: "",
       },
@@ -55,7 +53,7 @@ export default function PlaceDialog({ isOpen, lat, lng, onClose }: Props) {
   const headerContent = (
     <DialogHeader onClose={onClose} onSavePress={handleSavePress}>
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
-        {lat && lng ? `${lat.toFixed(5)}, ${lng.toFixed(5)}` : "Unknown Location"}
+        {lat && lng ? `${lat}, ${lng}` : "Unknown Location"}
       </Text>
       <Text style={tw`text-gray-600 text-sm mt-1`}>Dropped Pin</Text>
     </DialogHeader>
