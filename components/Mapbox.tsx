@@ -1,6 +1,6 @@
 import { getHotspotsWithinBounds, getSavedHotspots } from "@/lib/database";
 import { OnPressEvent } from "@/lib/types";
-import { findClosestFeature, getMarkerColorIndex, markerColors, padBoundsBySize } from "@/lib/utils";
+import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
