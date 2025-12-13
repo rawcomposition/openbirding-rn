@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { ApiPackResponse } from "./types";
+import { ApiPackResponse, SavedPlace } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let isInstallingPack = false;
@@ -54,6 +54,18 @@ async function createTables(): Promise<void> {
       FOREIGN KEY (hotspot_id) REFERENCES hotspots (id) ON DELETE CASCADE
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS saved_places (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      notes TEXT,
+      color TEXT NOT NULL,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      saved_at TEXT NOT NULL
+    );
+  `);
 }
 
 async function createIndexes(): Promise<void> {
@@ -72,6 +84,11 @@ async function createIndexes(): Promise<void> {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_saved_hotspots_saved_at 
     ON saved_hotspots (saved_at);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_saved_places_saved_at 
+    ON saved_places (saved_at);
   `);
 }
 
@@ -271,4 +288,37 @@ export async function uninstallPack(packId: number): Promise<void> {
     await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
   });
+}
+
+export async function savePlace({ id, name, notes, color, lat, lng }: Omit<SavedPlace, "saved_at">): Promise<string> {
+  if (!db) throw new Error("Database not initialized");
+
+  const savedAt = new Date().toISOString();
+  await db.runAsync(
+    `INSERT OR REPLACE INTO saved_places (id, name, notes, color, lat, lng, saved_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, notes, color, lat, lng, savedAt]
+  );
+  return id;
+}
+
+export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(
+    `SELECT id, name, notes, color, lat, lng, saved_at FROM saved_places WHERE id = ?`,
+    [id]
+  );
+
+  if (!result) return null;
+
+  const row = result as any;
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    notes: row.notes as string,
+    color: row.color as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    saved_at: row.saved_at as string,
+  };
 }
