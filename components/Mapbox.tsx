@@ -11,9 +11,7 @@ import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import InfoModal from "./InfoModal";
-import CircleLayer from "@/components/layers/CircleLayer";
-import StarLayer from "@/components/layers/StarLayer";
-import Halo from "@/components/layers/Halo";
+import { haloInnerStyle, haloOuterStyle, hotspotCircleStyle, starLayerStyle } from "@/lib/layers";
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
@@ -257,14 +255,36 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 }),
               }}
             >
-              <CircleLayer id="hotspot-points" shaded />
-              <CircleLayer id="saved-hotspot-point" filter={["==", ["get", "isSaved"], true]} shaded />
-              <StarLayer id="saved-hotspot-stars" filter={["==", ["get", "isSaved"], true]} />
-              <Halo />
-              <CircleLayer id="selected-hotspot-point" filter={["==", ["get", "isSelected"], true]} shaded />
-              <StarLayer
+              <Mapbox.CircleLayer id="hotspot-points" style={hotspotCircleStyle} />
+              <Mapbox.CircleLayer
+                id="saved-hotspot-point"
+                filter={["==", ["get", "isSaved"], true]}
+                style={hotspotCircleStyle}
+              />
+              <Mapbox.SymbolLayer
+                id="saved-hotspot-stars"
+                filter={["==", ["get", "isSaved"], true]}
+                style={starLayerStyle}
+              />
+              <Mapbox.CircleLayer
+                id="hotspot-halo"
+                filter={["==", ["get", "isSelected"], true]}
+                style={haloInnerStyle}
+              />
+              <Mapbox.CircleLayer
+                id="hotspot-halo-outer"
+                filter={["==", ["get", "isSelected"], true]}
+                style={haloOuterStyle}
+              />
+              <Mapbox.CircleLayer
+                id="selected-hotspot-point"
+                filter={["==", ["get", "isSelected"], true]}
+                style={hotspotCircleStyle}
+              />
+              <Mapbox.SymbolLayer
                 id="selected-saved-hotspot-stars"
                 filter={["all", ["==", ["get", "isSelected"], true], ["==", ["get", "isSaved"], true]]}
+                style={starLayerStyle}
               />
             </Mapbox.ShapeSource>
           )}
