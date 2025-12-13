@@ -11,6 +11,9 @@ import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import InfoModal from "./InfoModal";
+import CircleLayer from "@/components/layers/CircleLayer";
+import StarLayer from "@/components/layers/StarLayer";
+import Halo from "@/components/layers/Halo";
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
@@ -254,162 +257,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 }),
               }}
             >
-              <Mapbox.CircleLayer
-                id="hotspot-points"
-                style={{
-                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
-                  circleColor: [
-                    "match",
-                    ["get", "shade"],
-                    0,
-                    markerColors[0],
-                    1,
-                    markerColors[1],
-                    2,
-                    markerColors[2],
-                    3,
-                    markerColors[3],
-                    4,
-                    markerColors[4],
-                    5,
-                    markerColors[5],
-                    6,
-                    markerColors[6],
-                    7,
-                    markerColors[7],
-                    8,
-                    markerColors[8],
-                    9,
-                    markerColors[9],
-                    markerColors[0],
-                  ],
-                  circleStrokeWidth: 0.5,
-                  circleStrokeColor: "#555",
-                }}
-              />
-              <Mapbox.CircleLayer
-                id="saved-hotspot-point"
-                filter={["==", ["get", "isSaved"], true]}
-                style={{
-                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
-                  circleColor: [
-                    "match",
-                    ["get", "shade"],
-                    0,
-                    markerColors[0],
-                    1,
-                    markerColors[1],
-                    2,
-                    markerColors[2],
-                    3,
-                    markerColors[3],
-                    4,
-                    markerColors[4],
-                    5,
-                    markerColors[5],
-                    6,
-                    markerColors[6],
-                    7,
-                    markerColors[7],
-                    8,
-                    markerColors[8],
-                    9,
-                    markerColors[9],
-                    markerColors[0],
-                  ],
-                  circleStrokeWidth: 0.5,
-                  circleStrokeColor: "#555",
-                }}
-              />
-              <Mapbox.SymbolLayer
-                id="saved-hotspot-stars"
-                filter={["==", ["get", "isSaved"], true]}
-                style={{
-                  textField: "★",
-                  textSize: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 16],
-                  textColor: [
-                    "case",
-                    ["all", [">=", ["get", "shade"], 3], ["<=", ["get", "shade"], 6]],
-                    "#666",
-                    "#eee",
-                  ],
-                  textAllowOverlap: true,
-                  textIgnorePlacement: true,
-                  textAnchor: "center",
-                  textOffset: [0, -0.03],
-                }}
-              />
-              <Mapbox.CircleLayer
-                id="hotspot-halo"
-                filter={["==", ["get", "isSelected"], true]}
-                style={{
-                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5, 12, 10],
-                  circleColor: "transparent",
-                  circleStrokeWidth: 7,
-                  circleStrokeColor: "rgba(255, 255, 255, 0.5)",
-                }}
-              />
-              <Mapbox.CircleLayer
-                id="hotspot-halo-outer"
-                filter={["==", ["get", "isSelected"], true]}
-                style={{
-                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 17],
-                  circleColor: "transparent",
-                  circleStrokeWidth: 1,
-                  circleStrokeColor: "rgba(255, 255, 255, 0.7)",
-                }}
-              />
-              <Mapbox.CircleLayer
-                id="selected-hotspot-point"
-                filter={["==", ["get", "isSelected"], true]}
-                style={{
-                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
-                  circleColor: [
-                    "match",
-                    ["get", "shade"],
-                    0,
-                    markerColors[0],
-                    1,
-                    markerColors[1],
-                    2,
-                    markerColors[2],
-                    3,
-                    markerColors[3],
-                    4,
-                    markerColors[4],
-                    5,
-                    markerColors[5],
-                    6,
-                    markerColors[6],
-                    7,
-                    markerColors[7],
-                    8,
-                    markerColors[8],
-                    9,
-                    markerColors[9],
-                    markerColors[0],
-                  ],
-                  circleStrokeWidth: 0.5,
-                  circleStrokeColor: "#555",
-                }}
-              />
-              <Mapbox.SymbolLayer
+              <CircleLayer id="hotspot-points" shaded />
+              <CircleLayer id="saved-hotspot-point" filter={["==", ["get", "isSaved"], true]} shaded />
+              <StarLayer id="saved-hotspot-stars" filter={["==", ["get", "isSaved"], true]} />
+              <Halo />
+              <CircleLayer id="selected-hotspot-point" filter={["==", ["get", "isSelected"], true]} shaded />
+              <StarLayer
                 id="selected-saved-hotspot-stars"
                 filter={["all", ["==", ["get", "isSelected"], true], ["==", ["get", "isSaved"], true]]}
-                style={{
-                  textField: "★",
-                  textSize: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 16],
-                  textColor: [
-                    "case",
-                    ["all", [">=", ["get", "shade"], 3], ["<=", ["get", "shade"], 6]],
-                    "#666",
-                    "#eee",
-                  ],
-                  textAllowOverlap: true,
-                  textIgnorePlacement: true,
-                  textAnchor: "center",
-                  textOffset: [0, -0.03],
-                }}
               />
             </Mapbox.ShapeSource>
           )}
