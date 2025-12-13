@@ -16,13 +16,12 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [hotspotId, setHotspotId] = useState<string | null>(null);
   const [placeCoordinates, setPlaceCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
-  const { currentLayer } = useMapStore();
+  const { currentLayer, hotspotId, setHotspotId, placeId, setPlaceId } = useMapStore();
   const installedPacks = useInstalledPacks();
 
   const handleMapPress = (_event: any) => {
@@ -114,10 +113,14 @@ export default function HomeScreen() {
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
         <PlaceDialog
-          isOpen={placeCoordinates !== null}
+          isOpen={placeCoordinates !== null || placeId !== null}
+          placeId={placeId}
           lat={placeCoordinates?.latitude ?? null}
           lng={placeCoordinates?.longitude ?? null}
-          onClose={() => setPlaceCoordinates(null)}
+          onClose={() => {
+            setPlaceCoordinates(null);
+            setPlaceId(null);
+          }}
         />
       </View>
     </GestureHandlerRootView>

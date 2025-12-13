@@ -9,10 +9,12 @@ import Input from "@/components/Input";
 import { savePlace, getSavedPlaceById } from "@/lib/database";
 import Toast from "react-native-toast-message";
 import { generateId } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
 
 export default function PlaceEditScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { setPlaceId, setHotspotId } = useMapStore();
   const params = useLocalSearchParams<{
     id?: string;
     lat?: string;
@@ -45,6 +47,8 @@ export default function PlaceEditScreen() {
     mutationFn: savePlace,
     onSuccess: (savedId) => {
       queryClient.invalidateQueries({ queryKey: ["savedPlace", placeId] });
+      setPlaceId(savedId);
+      setHotspotId(null);
       router.back();
     },
     onError: (error) => {

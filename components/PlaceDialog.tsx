@@ -71,7 +71,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
         {savedPlace?.name}
       </Text>
-      <Text style={tw`text-gray-600 text-sm mt-1`}>{savedPlace ? "Saved Place" : "Dropped Pin"}</Text>
+      <Text style={tw`text-gray-600 text-sm mt-1`}>{savedPlace ? "Saved Pin" : "Dropped Pin"}</Text>
     </DialogHeader>
   );
 
