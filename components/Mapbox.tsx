@@ -11,7 +11,10 @@ import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import InfoModal from "./InfoModal";
-import { haloInnerStyle, haloOuterStyle, hotspotCircleStyle, starLayerStyle } from "@/lib/layers";
+import { haloInnerStyle, haloOuterStyle, hotspotCircleStyle, savedHotspotLayerStyle } from "@/lib/layers";
+
+const starImage = require("@/assets/images/star.png");
+const starLightImage = require("@/assets/images/star-light.png");
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
@@ -221,6 +224,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             animationDuration={0}
           />
 
+          <Mapbox.Images images={{ star: starImage, "star-light": starLightImage }} />
+
           {isMapReady && (
             <Mapbox.UserLocation
               visible
@@ -255,36 +260,62 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 }),
               }}
             >
-              <Mapbox.CircleLayer id="hotspot-points" style={hotspotCircleStyle} />
+              {/* Hotspot */}
               <Mapbox.CircleLayer
-                id="saved-hotspot-point"
+                id="hotspot"
+                filter={["all", ["==", ["get", "isSaved"], false]]}
+                style={hotspotCircleStyle()}
+              />
+
+              {/* Saved hotspot */}
+              <Mapbox.CircleLayer
+                id="saved-hotspot"
                 filter={["==", ["get", "isSaved"], true]}
-                style={hotspotCircleStyle}
+                style={hotspotCircleStyle(1.3)}
               />
               <Mapbox.SymbolLayer
                 id="saved-hotspot-stars"
                 filter={["==", ["get", "isSaved"], true]}
-                style={starLayerStyle}
+                style={savedHotspotLayerStyle()}
               />
+
+              {/* Selected hotspot */}
               <Mapbox.CircleLayer
                 id="hotspot-halo"
-                filter={["==", ["get", "isSelected"], true]}
-                style={haloInnerStyle}
+                filter={["all", ["==", ["get", "isSaved"], false], ["==", ["get", "isSelected"], true]]}
+                style={haloInnerStyle()}
               />
               <Mapbox.CircleLayer
                 id="hotspot-halo-outer"
-                filter={["==", ["get", "isSelected"], true]}
-                style={haloOuterStyle}
+                filter={["all", ["==", ["get", "isSaved"], false], ["==", ["get", "isSelected"], true]]}
+                style={haloOuterStyle()}
               />
               <Mapbox.CircleLayer
-                id="selected-hotspot-point"
-                filter={["==", ["get", "isSelected"], true]}
-                style={hotspotCircleStyle}
+                id="selected-hotspot"
+                filter={["all", ["==", ["get", "isSaved"], false], ["==", ["get", "isSelected"], true]]}
+                style={hotspotCircleStyle()}
+              />
+
+              {/* Selected saved hotspot */}
+              <Mapbox.CircleLayer
+                id="saved-hotspot-halo"
+                filter={["all", ["==", ["get", "isSaved"], true], ["==", ["get", "isSelected"], true]]}
+                style={haloInnerStyle(1.2)}
+              />
+              <Mapbox.CircleLayer
+                id="saved-hotspot-halo-outer"
+                filter={["all", ["==", ["get", "isSaved"], true], ["==", ["get", "isSelected"], true]]}
+                style={haloOuterStyle(1.2)}
+              />
+              <Mapbox.CircleLayer
+                id="selected-saved-hotspot"
+                filter={["all", ["==", ["get", "isSaved"], true], ["==", ["get", "isSelected"], true]]}
+                style={hotspotCircleStyle(1.3)}
               />
               <Mapbox.SymbolLayer
                 id="selected-saved-hotspot-stars"
                 filter={["all", ["==", ["get", "isSelected"], true], ["==", ["get", "isSaved"], true]]}
-                style={starLayerStyle}
+                style={savedHotspotLayerStyle()}
               />
             </Mapbox.ShapeSource>
           )}

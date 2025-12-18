@@ -1,21 +1,21 @@
 import { markerColors } from "@/lib/utils";
 
-export const haloInnerStyle = {
-  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5, 12, 10],
+export const haloInnerStyle = (size: number = 1) => ({
+  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5 * size, 12, 10 * size],
   circleColor: "transparent",
   circleStrokeWidth: 7,
   circleStrokeColor: "rgba(255, 255, 255, 0.5)",
-};
+});
 
-export const haloOuterStyle = {
-  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 17],
+export const haloOuterStyle = (size: number = 1) => ({
+  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 12 * size, 12, 17 * size],
   circleColor: "transparent",
   circleStrokeWidth: 1,
   circleStrokeColor: "rgba(255, 255, 255, 0.7)",
-};
+});
 
-export const hotspotCircleStyle = {
-  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 10],
+export const hotspotCircleStyle = (size: number = 1) => ({
+  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7 * size, 12, 10 * size],
   circleColor: [
     "match",
     ["get", "shade"],
@@ -43,14 +43,13 @@ export const hotspotCircleStyle = {
   ],
   circleStrokeWidth: 0.5,
   circleStrokeColor: "#555",
-};
+});
 
-export const starLayerStyle = {
-  textField: "★",
-  textSize: ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 16],
-  textColor: ["case", ["all", [">=", ["get", "shade"], 3], ["<=", ["get", "shade"], 6]], "#666", "#eee"],
-  textAllowOverlap: true,
-  textIgnorePlacement: true,
-  textAnchor: "center",
-  textOffset: [0, -0.03],
-};
+export const savedHotspotLayerStyle = () => ({
+  iconImage: ["case", ["all", [">=", ["get", "shade"], 2], ["<=", ["get", "shade"], 6]], "star", "star-light"],
+  iconSize: ["interpolate", ["linear"], ["zoom"], 7, 0.25, 12, 0.35],
+  iconAllowOverlap: true,
+  iconIgnorePlacement: true,
+  iconAnchor: "center",
+  iconOffset: [0, -0.03],
+});
