@@ -1,4 +1,4 @@
-import { markerColors } from "@/lib/utils";
+import { hotspotColor, placeColor } from "@/lib/utils";
 
 export const haloInnerStyle = (size: number = 1) => ({
   circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5 * size, 12, 10 * size],
@@ -20,26 +20,26 @@ export const hotspotCircleStyle = (size: number = 1) => ({
     "match",
     ["get", "shade"],
     0,
-    markerColors[0],
+    hotspotColor[0],
     1,
-    markerColors[1],
+    hotspotColor[1],
     2,
-    markerColors[2],
+    hotspotColor[2],
     3,
-    markerColors[3],
+    hotspotColor[3],
     4,
-    markerColors[4],
+    hotspotColor[4],
     5,
-    markerColors[5],
+    hotspotColor[5],
     6,
-    markerColors[6],
+    hotspotColor[6],
     7,
-    markerColors[7],
+    hotspotColor[7],
     8,
-    markerColors[8],
+    hotspotColor[8],
     9,
-    markerColors[9],
-    markerColors[0],
+    hotspotColor[9],
+    hotspotColor[0],
   ],
   circleStrokeWidth: 0.5,
   circleStrokeColor: "#555",
@@ -47,6 +47,22 @@ export const hotspotCircleStyle = (size: number = 1) => ({
 
 export const savedHotspotLayerStyle = () => ({
   iconImage: ["case", ["all", [">=", ["get", "shade"], 2], ["<=", ["get", "shade"], 6]], "star", "star-light"],
+  iconSize: ["interpolate", ["linear"], ["zoom"], 7, 0.25, 12, 0.35],
+  iconAllowOverlap: true,
+  iconIgnorePlacement: true,
+  iconAnchor: "center",
+  iconOffset: [0, -0.03],
+});
+
+export const savedPlaceCircleStyle = (size: number = 1) => ({
+  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 9.1 * size, 12, 13 * size],
+  circleColor: ["match", ["get", "color"], ...Object.entries(placeColor).flat(), ["get", "color"]],
+  circleStrokeWidth: 0.5,
+  circleStrokeColor: "#555",
+});
+
+export const savedPlaceLayerStyle = () => ({
+  iconImage: "star-light",
   iconSize: ["interpolate", ["linear"], ["zoom"], 7, 0.25, 12, 0.35],
   iconAllowOverlap: true,
   iconIgnorePlacement: true,

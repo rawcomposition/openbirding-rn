@@ -301,6 +301,24 @@ export async function savePlace({ id, name, notes, color, lat, lng }: Omit<Saved
   return id;
 }
 
+export async function getSavedPlaces(): Promise<SavedPlace[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(
+    `SELECT id, name, notes, color, lat, lng, saved_at FROM saved_places ORDER BY saved_at DESC`
+  );
+
+  return result.map((row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    notes: row.notes as string,
+    color: row.color as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    saved_at: row.saved_at as string,
+  }));
+}
+
 export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> {
   if (!db) throw new Error("Database not initialized");
 

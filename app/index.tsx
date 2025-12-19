@@ -27,17 +27,26 @@ export default function HomeScreen() {
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
     if (hotspotId) setHotspotId(null);
+    if (placeId) setPlaceId(null);
     if (placeCoordinates) setPlaceCoordinates(null);
   };
 
   const handleHotspotSelect = (id: string) => {
     setPlaceCoordinates(null);
+    setPlaceId(null);
     setHotspotId(id);
+  };
+
+  const handlePlaceSelect = (id: string) => {
+    setPlaceCoordinates(null);
+    setHotspotId(null);
+    setPlaceId(id);
   };
 
   const handleMapLongPress = (coords: { latitude: number; longitude: number }) => {
     if (isMenuOpen) handleCloseBottomSheet();
     if (hotspotId) setHotspotId(null);
+    if (placeId) setPlaceId(null);
     setPlaceCoordinates(coords);
   };
 
@@ -67,6 +76,7 @@ export default function HomeScreen() {
           ref={mapRef}
           onPress={handleMapPress}
           onHotspotSelect={handleHotspotSelect}
+          onPlaceSelect={handlePlaceSelect}
           hotspotId={hotspotId}
           initialCenter={initialCenter}
           initialZoom={initialZoom}
