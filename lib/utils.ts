@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { MapFeature } from "./types";
+import { hotspotColor } from "./constants";
 
 type Params = {
   [key: string]: string | number | boolean;
@@ -80,18 +81,7 @@ export const mutate = async (method: "POST" | "PUT" | "DELETE" | "PATCH", url: s
   return json;
 };
 
-export const hotspotColor = [
-  "#bcbcbc",
-  "#8f9ca0",
-  "#9bc4cf",
-  "#aaddeb",
-  "#c7e466",
-  "#eaeb1f",
-  "#fac500",
-  "#e57701",
-  "#ce0d02",
-  "#ad0002",
-];
+export { hotspotColor };
 
 export const placeColor: Record<string, string> = {
   blue: "#0284c7",
