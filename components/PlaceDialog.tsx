@@ -31,7 +31,9 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
     enabled: !!placeId && isOpen,
   });
 
-  const savedPlace = placeId ? data : { lat: droppedLat, lng: droppedLng, name: `${droppedLat}, ${droppedLng}` };
+  const savedPlace = placeId
+    ? data
+    : { lat: droppedLat, lng: droppedLng, name: `${droppedLat}, ${droppedLng}`, notes: "" };
   const lat = savedPlace?.lat;
   const lng = savedPlace?.lng;
 
@@ -93,6 +95,11 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[300, 400]} headerContent={headerContent}>
       <View style={tw`px-4 pb-4 pt-2`}>
+        {savedPlace?.notes && (
+          <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
+            <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
+          </View>
+        )}
         {!!lat && !!lng && (
           <>
             <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
