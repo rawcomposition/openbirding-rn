@@ -25,7 +25,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["savedPlace", placeId],
     queryFn: () => (placeId ? getSavedPlaceById(placeId) : Promise.resolve(null)),
     enabled: !!placeId && isOpen,
@@ -74,6 +74,21 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       <Text style={tw`text-gray-600 text-sm mt-1`}>{savedPlace ? "Saved Pin" : "Dropped Pin"}</Text>
     </DialogHeader>
   );
+
+  if (placeId && !savedPlace && !isLoading) {
+    return (
+      <BaseBottomSheet
+        isOpen={isOpen}
+        onClose={onClose}
+        snapPoints={[300, 400]}
+        headerContent={<DialogHeader onClose={onClose} isPlace isSaved={false} />}
+      >
+        <View style={tw`px-4 pb-4 pt-2`}>
+          <Text style={tw`text-gray-600 text-center text-base`}>Pin not found</Text>
+        </View>
+      </BaseBottomSheet>
+    );
+  }
 
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[300, 400]} headerContent={headerContent}>

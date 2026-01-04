@@ -6,7 +6,7 @@ import tw from "@/lib/tw";
 import StarIcon from "./icons/StarIcon";
 
 type DialogHeaderProps = {
-  children: ReactNode;
+  children?: ReactNode;
   onClose: () => void;
   onSavePress?: () => void;
   saveDisabled?: boolean;

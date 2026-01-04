@@ -340,3 +340,9 @@ export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> 
     saved_at: row.saved_at as string,
   };
 }
+
+export async function deletePlace(id: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  await db.runAsync(`DELETE FROM saved_places WHERE id = ?`, [id]);
+}

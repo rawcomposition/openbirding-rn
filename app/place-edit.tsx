@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import tw from "@/lib/tw";
 import ModalHeader from "@/components/ModalHeader";
 import IconButton from "@/components/IconButton";
 import Input from "@/components/Input";
-import { savePlace, getSavedPlaceById } from "@/lib/database";
+import { savePlace, getSavedPlaceById, deletePlace } from "@/lib/database";
 import Toast from "react-native-toast-message";
 import { generateId } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -57,6 +58,23 @@ export default function PlaceEditScreen() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: deletePlace,
+    onSuccess: () => {
+      if (placeId) {
+        queryClient.invalidateQueries({ queryKey: ["savedPlace", placeId] });
+        queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
+        queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
+        setPlaceId(null);
+        setHotspotId(null);
+      }
+      router.back();
+    },
+    onError: (error) => {
+      Toast.show({ type: "error", text1: "Error deleting pin" });
+    },
+  });
+
   const canSave = title.trim().length > 0 && lat !== null && lng !== null && !mutation.isPending && !isLoading;
 
   const handleSave = () => {
@@ -73,6 +91,11 @@ export default function PlaceEditScreen() {
       lng,
       color: "blue",
     });
+  };
+
+  const handleDelete = () => {
+    if (!placeId) return;
+    deleteMutation.mutate(placeId);
   };
 
   if (error) {
@@ -108,7 +131,7 @@ export default function PlaceEditScreen() {
           <Input placeholder="Enter place title" value={title} onChangeText={setTitle} autoFocus returnKeyType="next" />
         </View>
 
-        <View>
+        <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Notes</Text>
           <Input
             placeholder="Add notes (optional)"
@@ -120,6 +143,18 @@ export default function PlaceEditScreen() {
             clearButtonMode="while-editing"
           />
         </View>
+
+        {isEditing && (
+          <TouchableOpacity
+            onPress={handleDelete}
+            disabled={deleteMutation.isPending}
+            style={tw`flex-row items-center justify-center py-2`}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={16} color={tw.color("red-500")} />
+            <Text style={tw`text-red-500 text-sm ml-1.5`}>Delete Pin</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
