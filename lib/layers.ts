@@ -1,8 +1,7 @@
-import { hotspotColor } from "@/lib/constants";
 import { placeColor } from "@/lib/utils";
 
 export const haloInnerStyle = (size: number = 1) => ({
-  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5 * size, 12, 10 * size],
+  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5 * size, 12, 11 * size],
   circleColor: "transparent",
   circleStrokeWidth: 7,
   circleStrokeColor: "rgba(255, 255, 255, 0.5)",
@@ -77,13 +76,6 @@ export const savedHotspotSymbolStyle = () => ({
   iconAllowOverlap: true,
   iconIgnorePlacement: true,
   iconAnchor: "center",
-});
-
-export const savedPlaceCircleStyle = (size: number = 1) => ({
-  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 9.1 * size, 12, 13 * size],
-  circleColor: ["match", ["get", "color"], ...Object.entries(placeColor).flat(), ["get", "color"]],
-  circleStrokeWidth: 0.5,
-  circleStrokeColor: "#555",
 });
 
 export const savedPlaceSymbolStyle = () => ({
