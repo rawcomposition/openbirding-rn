@@ -46,7 +46,8 @@ export default function PlaceEditScreen() {
   const mutation = useMutation({
     mutationFn: savePlace,
     onSuccess: (savedId) => {
-      queryClient.invalidateQueries({ queryKey: ["savedPlace", placeId] });
+      queryClient.invalidateQueries({ queryKey: ["savedPlace", savedId] });
+      queryClient.refetchQueries({ queryKey: ["savedPlace", savedId], type: "active" });
       setPlaceId(savedId);
       setHotspotId(null);
       router.back();
