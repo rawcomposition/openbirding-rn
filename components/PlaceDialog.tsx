@@ -67,7 +67,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   };
 
   const headerContent = (
-    <DialogHeader onClose={onClose} onSavePress={handleSavePress}>
+    <DialogHeader onClose={onClose} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
         {savedPlace?.name}
       </Text>
