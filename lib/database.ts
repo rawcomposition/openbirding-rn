@@ -60,7 +60,7 @@ async function createTables(): Promise<void> {
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       notes TEXT,
-      color TEXT NOT NULL,
+      icon TEXT NOT NULL,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
       saved_at TEXT NOT NULL
@@ -290,13 +290,13 @@ export async function uninstallPack(packId: number): Promise<void> {
   });
 }
 
-export async function savePlace({ id, name, notes, color, lat, lng }: Omit<SavedPlace, "saved_at">): Promise<string> {
+export async function savePlace({ id, name, notes, icon, lat, lng }: Omit<SavedPlace, "saved_at">): Promise<string> {
   if (!db) throw new Error("Database not initialized");
 
   const savedAt = new Date().toISOString();
   await db.runAsync(
-    `INSERT OR REPLACE INTO saved_places (id, name, notes, color, lat, lng, saved_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, notes, color, lat, lng, savedAt]
+    `INSERT OR REPLACE INTO saved_places (id, name, notes, icon, lat, lng, saved_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, notes, icon, lat, lng, savedAt]
   );
   return id;
 }
@@ -312,7 +312,7 @@ export async function getSavedPlaces(): Promise<SavedPlace[]> {
     id: row.id as string,
     name: row.name as string,
     notes: row.notes as string,
-    color: row.color as string,
+    icon: row.icon as string,
     lat: row.lat as number,
     lng: row.lng as number,
     saved_at: row.saved_at as string,
@@ -323,7 +323,7 @@ export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> 
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
-    `SELECT id, name, notes, color, lat, lng, saved_at FROM saved_places WHERE id = ?`,
+    `SELECT id, name, notes, icon, lat, lng, saved_at FROM saved_places WHERE id = ?`,
     [id]
   );
 
@@ -334,7 +334,7 @@ export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> 
     id: row.id as string,
     name: row.name as string,
     notes: row.notes as string,
-    color: row.color as string,
+    icon: row.icon as string,
     lat: row.lat as number,
     lng: row.lng as number,
     saved_at: row.saved_at as string,

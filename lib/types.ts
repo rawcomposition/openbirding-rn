@@ -62,7 +62,7 @@ export type SavedPlace = {
   id: string;
   name: string;
   notes: string;
-  color: string;
+  icon: string;
   lat: number;
   lng: number;
   saved_at: string;

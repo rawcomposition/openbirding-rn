@@ -89,7 +89,7 @@ export default function PlaceEditScreen() {
       notes: notes.trim(),
       lat,
       lng,
-      color: "blue",
+      icon: "star",
     });
   };
 
