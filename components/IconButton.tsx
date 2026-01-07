@@ -23,7 +23,7 @@ export default function IconButton({ icon, variant = "default", onPress, disable
     primary: {
       tintColor: tw.color("emerald-500"),
       iconColor: tw.color("white"),
-      fallbackBgColor: disabled ? tw`bg-emerald-50` : tw`bg-emerald-400`,
+      fallbackBgColor: tw`bg-emerald-400`,
     },
   };
 
