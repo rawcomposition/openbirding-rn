@@ -83,10 +83,6 @@ export const mutate = async (method: "POST" | "PUT" | "DELETE" | "PATCH", url: s
 
 export { hotspotColor };
 
-export const placeColor: Record<string, string> = {
-  blue: "#0284c7",
-};
-
 export const getMarkerColor = (count: number) => {
   if (count === 0) return hotspotColor[0];
   if (count <= 15) return hotspotColor[1];

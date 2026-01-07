@@ -180,10 +180,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       const uc = userCoordRef.current;
       if (!isValidUserCoord(uc)) return;
       cameraRef.current?.setCamera({
-        centerCoordinate: uc,
+        centerCoordinate: uc as [number, number],
         zoomLevel: DEFAULT_USER_ZOOM,
       });
-      onLocationSave?.(uc, DEFAULT_USER_ZOOM);
+      onLocationSave?.(uc as [number, number], DEFAULT_USER_ZOOM);
     }, [isMapReady, onLocationSave]);
 
     const centerMapOnUserInitial = useCallback(() => {
@@ -322,7 +322,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                     geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
                     properties: {
                       id: p.id,
-                      color: p.color,
+                      icon: p.icon,
                       isSelected: p.id === placeId,
                       featureType: "place",
                     },

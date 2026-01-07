@@ -298,6 +298,7 @@ export async function savePlace({ id, name, notes, icon, lat, lng }: Omit<SavedP
     `INSERT OR REPLACE INTO saved_places (id, name, notes, icon, lat, lng, saved_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [id, name, notes, icon, lat, lng, savedAt]
   );
+
   return id;
 }
 

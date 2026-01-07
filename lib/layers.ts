@@ -1,5 +1,3 @@
-import { placeColor } from "@/lib/utils";
-
 export const haloInnerStyle = (size: number = 1) => ({
   circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 8.5 * size, 12, 11 * size],
   circleColor: "transparent",

@@ -16,29 +16,29 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [placeCoordinates, setPlaceCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
-  const { currentLayer, hotspotId, setHotspotId, placeId, setPlaceId } = useMapStore();
+  const { currentLayer, hotspotId, setHotspotId, placeId, setPlaceId, customPinCoordinates, setCustomPinCoordinates } =
+    useMapStore();
   const installedPacks = useInstalledPacks();
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
     if (hotspotId) setHotspotId(null);
     if (placeId) setPlaceId(null);
-    if (placeCoordinates) setPlaceCoordinates(null);
+    if (customPinCoordinates) setCustomPinCoordinates(null);
   };
 
   const handleHotspotSelect = (id: string) => {
-    setPlaceCoordinates(null);
+    setCustomPinCoordinates(null);
     setPlaceId(null);
     setHotspotId(id);
   };
 
   const handlePlaceSelect = (id: string) => {
-    setPlaceCoordinates(null);
+    setCustomPinCoordinates(null);
     setHotspotId(null);
     setPlaceId(id);
   };
@@ -47,7 +47,7 @@ export default function HomeScreen() {
     if (isMenuOpen) handleCloseBottomSheet();
     if (hotspotId) setHotspotId(null);
     if (placeId) setPlaceId(null);
-    setPlaceCoordinates(coords);
+    setCustomPinCoordinates(coords);
   };
 
   const handleMenuPress = () => {
@@ -84,7 +84,7 @@ export default function HomeScreen() {
           onLocationSave={updateLocation}
           hasInstalledPacks={hasInstalledPacks}
           onLongPressCoordinates={handleMapLongPress}
-          placeCoordinates={placeCoordinates}
+          placeCoordinates={customPinCoordinates}
         />
         {!hasInstalledPacks && (
           <View
@@ -123,12 +123,12 @@ export default function HomeScreen() {
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
         <PlaceDialog
-          isOpen={placeCoordinates !== null || placeId !== null}
+          isOpen={customPinCoordinates !== null || placeId !== null}
           placeId={placeId}
-          lat={placeCoordinates?.latitude ?? null}
-          lng={placeCoordinates?.longitude ?? null}
+          lat={customPinCoordinates?.latitude ?? null}
+          lng={customPinCoordinates?.longitude ?? null}
           onClose={() => {
-            setPlaceCoordinates(null);
+            setCustomPinCoordinates(null);
             setPlaceId(null);
           }}
         />

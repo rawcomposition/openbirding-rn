@@ -15,7 +15,7 @@ import { useMapStore } from "@/stores/mapStore";
 export default function PlaceEditScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { setPlaceId, setHotspotId } = useMapStore();
+  const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
   const params = useLocalSearchParams<{
     id?: string;
     lat?: string;
@@ -48,9 +48,12 @@ export default function PlaceEditScreen() {
     mutationFn: savePlace,
     onSuccess: (savedId) => {
       queryClient.invalidateQueries({ queryKey: ["savedPlace", savedId] });
+      queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
+      queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
       queryClient.refetchQueries({ queryKey: ["savedPlace", savedId], type: "active" });
       setPlaceId(savedId);
       setHotspotId(null);
+      setCustomPinCoordinates(null);
       router.back();
     },
     onError: (error) => {
@@ -67,6 +70,7 @@ export default function PlaceEditScreen() {
         queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
         setPlaceId(null);
         setHotspotId(null);
+        setCustomPinCoordinates(null);
       }
       router.back();
     },
