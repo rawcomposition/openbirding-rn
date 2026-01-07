@@ -69,6 +69,11 @@ export type MapboxMapRef = {
 
 const MIN_ZOOM = 7;
 const DEFAULT_USER_ZOOM = 14;
+const isValidUserCoord = (coord: [number, number] | null) => {
+  if (!coord) return false;
+  const [lng, lat] = coord;
+  return Math.abs(lng) > 0.0001 || Math.abs(lat) > 0.0001;
+};
 
 const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
   (
@@ -94,7 +99,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
 
-    const firstIdleRef = useRef(false);
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
 
@@ -174,7 +178,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
       const uc = userCoordRef.current;
-      if (!uc) return;
+      if (!isValidUserCoord(uc)) return;
       cameraRef.current?.setCamera({
         centerCoordinate: uc,
         zoomLevel: DEFAULT_USER_ZOOM,
@@ -183,9 +187,9 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     }, [isMapReady, onLocationSave]);
 
     const centerMapOnUserInitial = useCallback(() => {
-      if (!isMapReady || hasSavedLocation || centeredToUserRef.current || !firstIdleRef.current) return;
+      if (!isMapReady || hasSavedLocation || centeredToUserRef.current) return;
       const uc = userCoordRef.current;
-      if (!uc) return;
+      if (!isValidUserCoord(uc)) return;
       centeredToUserRef.current = true;
       centerMapOnUser();
     }, [isMapReady, hasSavedLocation, centerMapOnUser]);
@@ -254,7 +258,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           onDidFinishLoadingStyle={syncViewport}
           onCameraChanged={syncViewport}
           onMapIdle={() => {
-            firstIdleRef.current = true;
             syncViewport();
             centerMapOnUserInitial();
           }}
@@ -268,8 +271,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         >
           <Mapbox.Camera
             ref={cameraRef}
-            centerCoordinate={initialCenter}
-            zoomLevel={initialZoom}
+            defaultSettings={{ centerCoordinate: initialCenter, zoomLevel: initialZoom }}
             animationMode="none"
             animationDuration={0}
           />
@@ -284,8 +286,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 animated
                 onUpdate={(loc: { coords?: { longitude: number; latitude: number } }) => {
                   if (!loc?.coords) return;
-                  userCoordRef.current = [loc.coords.longitude, loc.coords.latitude];
-                  if (firstIdleRef.current) centerMapOnUserInitial();
+                  const nextCoord: [number, number] = [loc.coords.longitude, loc.coords.latitude];
+                  if (!isValidUserCoord(nextCoord)) return;
+                  userCoordRef.current = nextCoord;
+                  centerMapOnUserInitial();
                 }}
               />
               <Mapbox.LocationPuck visible puckBearingEnabled scale={0.9} pulsing={{ isEnabled: true, radius: 22 }} />
