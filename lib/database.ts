@@ -305,7 +305,7 @@ export async function getSavedPlaces(): Promise<SavedPlace[]> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getAllAsync(
-    `SELECT id, name, notes, color, lat, lng, saved_at FROM saved_places ORDER BY saved_at DESC`
+    `SELECT id, name, notes, icon, lat, lng, saved_at FROM saved_places ORDER BY saved_at DESC`
   );
 
   return result.map((row: any) => ({
