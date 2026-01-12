@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useApproxLocation } from "@/hooks/useApproxLocation";
@@ -69,7 +69,7 @@ export default function PacksList() {
     return (
       <View style={tw`flex-1 justify-center items-center`}>
         <ActivityIndicator size="large" color={tw.color("blue-500")} />
-        <Text style={tw`mt-4 text-gray-900`}>Loading packs...</Text>
+        <Text style={tw`mt-4 text-gray-900 text-base`}>Loading packs...</Text>
       </View>
     );
   }
@@ -77,7 +77,7 @@ export default function PacksList() {
   if (error) {
     return (
       <View style={tw`flex-1 justify-center items-center`}>
-        <Text style={tw`text-red-500 text-center`}>Error loading packs: {error.message}</Text>
+        <Text style={tw`text-red-500 text-center text-base`}>Error loading packs: {error.message}</Text>
       </View>
     );
   }
@@ -107,7 +107,7 @@ export default function PacksList() {
             })}
           >
             <Text
-              style={tw.style(`text-center font-medium`, {
+              style={tw.style(`text-center font-medium text-sm`, {
                 "text-blue-600": activeTab === tab.id,
                 "text-gray-500": activeTab !== tab.id,
               })}
@@ -121,7 +121,7 @@ export default function PacksList() {
       {activeTab === "all" && (
         <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
           <TextInput
-            style={tw`bg-gray-100 rounded-lg px-3 py-2`}
+            style={tw`bg-gray-100 rounded-lg px-3 py-2 text-sm`}
             placeholder="Search packs..."
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -140,7 +140,7 @@ export default function PacksList() {
         </View>
       ) : showNoResults ? (
         <View style={tw`flex-1 justify-center items-center px-8`}>
-          <Text style={tw`text-gray-500`}>
+          <Text style={tw`text-gray-500 text-base`}>
             {isLoadingLocation ? "Getting your location..." : locationError ? locationError : "No Results"}
           </Text>
         </View>

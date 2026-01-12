@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, Text, Pressable } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import { useManagePack } from "@/hooks/useManagePack";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { UPDATE_INTERVAL_LIMIT } from "@/lib/config";
@@ -61,7 +61,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
               disabled={installDisabled}
               style={[tw`py-2 rounded-lg border border-gray-200`, installDisabled && tw`opacity-60`]}
             >
-              <Text style={tw`font-medium text-center mx-4 text-gray-700`}>{getButtonText()}</Text>
+              <Text style={tw`font-medium text-center mx-4 text-gray-700 text-sm`}>{getButtonText()}</Text>
             </Pressable>
           </View>
         </View>

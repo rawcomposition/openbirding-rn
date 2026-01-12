@@ -57,3 +57,13 @@ export type OnPressEvent = {
     y: number;
   };
 };
+
+export type SavedPlace = {
+  id: string;
+  name: string;
+  notes: string;
+  icon: string;
+  lat: number;
+  lng: number;
+  saved_at: string;
+};

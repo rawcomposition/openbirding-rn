@@ -2,7 +2,7 @@ import React, { useRef, useMemo, useEffect, ReactNode } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 type BaseBottomSheetProps = {
   isOpen: boolean;

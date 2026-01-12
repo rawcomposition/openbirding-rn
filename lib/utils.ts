@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import { MapFeature } from "./types";
+import { hotspotColor } from "./constants";
 
 type Params = {
   [key: string]: string | number | boolean;
@@ -80,36 +81,25 @@ export const mutate = async (method: "POST" | "PUT" | "DELETE" | "PATCH", url: s
   return json;
 };
 
-export const markerColors = [
-  "#bcbcbc",
-  "#8f9ca0",
-  "#9bc4cf",
-  "#aaddeb",
-  "#c7e466",
-  "#eaeb1f",
-  "#fac500",
-  "#e57701",
-  "#ce0d02",
-  "#ad0002",
-];
+export { hotspotColor };
 
 export const getMarkerColor = (count: number) => {
-  if (count === 0) return markerColors[0];
-  if (count <= 15) return markerColors[1];
-  if (count <= 50) return markerColors[2];
-  if (count <= 100) return markerColors[3];
-  if (count <= 150) return markerColors[4];
-  if (count <= 200) return markerColors[5];
-  if (count <= 250) return markerColors[6];
-  if (count <= 300) return markerColors[7];
-  if (count <= 400) return markerColors[8];
-  if (count <= 1000) return markerColors[9];
-  return markerColors[0];
+  if (count === 0) return hotspotColor[0];
+  if (count <= 15) return hotspotColor[1];
+  if (count <= 50) return hotspotColor[2];
+  if (count <= 100) return hotspotColor[3];
+  if (count <= 150) return hotspotColor[4];
+  if (count <= 200) return hotspotColor[5];
+  if (count <= 250) return hotspotColor[6];
+  if (count <= 300) return hotspotColor[7];
+  if (count <= 400) return hotspotColor[8];
+  if (count <= 1000) return hotspotColor[9];
+  return hotspotColor[0];
 };
 
 export const getMarkerColorIndex = (count: number) => {
   const color = getMarkerColor(count);
-  return markerColors.indexOf(color);
+  return hotspotColor.indexOf(color);
 };
 
 type Bbox = { west: number; south: number; east: number; north: number };
@@ -223,4 +213,13 @@ export const getDirections = (provider: string, lat: number, lng: number): strin
     default:
       throw new Error(`Unsupported map provider: ${provider}`);
   }
+};
+
+export const generateId = (length: number): string => {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };

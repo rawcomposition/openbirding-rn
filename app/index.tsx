@@ -6,8 +6,9 @@ import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import FloatingButton from "@/components/FloatingButton";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
-import tw from "twrnc";
-import HotspotDetails from "@/components/HotspotDetails";
+import tw from "@/lib/tw";
+import HotspotDialog from "@/components/HotspotDialog";
+import PlaceDialog from "@/components/PlaceDialog";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMapStore } from "@/stores/mapStore";
@@ -15,17 +16,38 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [hotspotId, setHotspotId] = useState<string | null>(null);
   const mapRef = useRef<MapboxMapRef>(null);
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
-  const { currentLayer } = useMapStore();
+  const { currentLayer, hotspotId, setHotspotId, placeId, setPlaceId, customPinCoordinates, setCustomPinCoordinates } =
+    useMapStore();
   const installedPacks = useInstalledPacks();
 
-  const handleMapPress = (feature: any) => {
+  const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
     if (hotspotId) setHotspotId(null);
+    if (placeId) setPlaceId(null);
+    if (customPinCoordinates) setCustomPinCoordinates(null);
+  };
+
+  const handleHotspotSelect = (id: string) => {
+    setCustomPinCoordinates(null);
+    setPlaceId(null);
+    setHotspotId(id);
+  };
+
+  const handlePlaceSelect = (id: string) => {
+    setCustomPinCoordinates(null);
+    setHotspotId(null);
+    setPlaceId(id);
+  };
+
+  const handleMapLongPress = (coords: { latitude: number; longitude: number }) => {
+    if (isMenuOpen) handleCloseBottomSheet();
+    if (hotspotId) setHotspotId(null);
+    if (placeId) setPlaceId(null);
+    setCustomPinCoordinates(coords);
   };
 
   const handleMenuPress = () => {
@@ -53,13 +75,16 @@ export default function HomeScreen() {
         <Mapbox
           ref={mapRef}
           onPress={handleMapPress}
-          onHotspotSelect={setHotspotId}
+          onHotspotSelect={handleHotspotSelect}
+          onPlaceSelect={handlePlaceSelect}
           hotspotId={hotspotId}
           initialCenter={initialCenter}
           initialZoom={initialZoom}
           hasSavedLocation={hadSavedLocationOnInit}
           onLocationSave={updateLocation}
           hasInstalledPacks={hasInstalledPacks}
+          onLongPressCoordinates={handleMapLongPress}
+          placeCoordinates={customPinCoordinates}
         />
         {!hasInstalledPacks && (
           <View
@@ -96,7 +121,17 @@ export default function HomeScreen() {
           />
         )}
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
-        <HotspotDetails isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
+        <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
+        <PlaceDialog
+          isOpen={customPinCoordinates !== null || placeId !== null}
+          placeId={placeId}
+          lat={customPinCoordinates?.latitude ?? null}
+          lng={customPinCoordinates?.longitude ?? null}
+          onClose={() => {
+            setCustomPinCoordinates(null);
+            setPlaceId(null);
+          }}
+        />
       </View>
     </GestureHandlerRootView>
   );

@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, FlatList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 type MenuOption = {
   id: string;

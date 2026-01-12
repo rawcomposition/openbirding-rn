@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 import PacksList from "@/components/PacksList";
 
 export default function PacksPage() {

@@ -3,7 +3,7 @@ import { View, Text, Pressable, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import tw from "twrnc";
+import tw from "@/lib/tw";
 
 type PacksNoticeProps = {
   variant?: "banner" | "card" | "inline";
@@ -67,10 +67,12 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
             <Ionicons name="map-outline" size={32} color={tw.color("gray-600")} />
           </View>
           <Text style={tw`text-gray-900 font-semibold text-lg mb-2`}>No Hotspot Packs Installed</Text>
-          <Text style={tw`text-gray-600 text-center mb-6`}>Get started by downloading hotspot packs for your area</Text>
+          <Text style={tw`text-gray-600 text-center mb-6 text-sm`}>
+            Get started by downloading hotspot packs for your area
+          </Text>
           <Pressable style={tw`bg-blue-500 px-6 py-3 rounded-lg flex-row items-center`} onPress={handlePress}>
             <Ionicons name="download" size={16} color="white" style={tw`mr-2`} />
-            <Text style={tw`text-white font-medium`}>Browse Packs</Text>
+            <Text style={tw`text-white font-medium text-base`}>Browse Packs</Text>
           </Pressable>
         </Pressable>
       </View>
@@ -83,12 +85,12 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
         <View style={tw`flex-row items-start`}>
           <Ionicons name="information-circle" size={20} color={tw.color("amber-600")} style={tw`mr-3 mt-0.5`} />
           <View style={tw`flex-1`}>
-            <Text style={tw`text-amber-900 font-medium mb-1`}>No packs installed</Text>
+            <Text style={tw`text-amber-900 font-medium mb-1 text-base`}>No packs installed</Text>
             <Text style={tw`text-amber-700 text-sm mb-3`}>
               Download hotspot packs to see birding locations and get the most out of OpenBirding
             </Text>
             <Pressable onPress={handlePress} style={tw`bg-amber-600 px-4 py-2 rounded-md self-start`}>
-              <Text style={tw`text-white font-medium text-sm`}>Download Packs</Text>
+              <Text style={tw`text-white font-medium text-base`}>Download Packs</Text>
             </Pressable>
           </View>
         </View>
