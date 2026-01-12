@@ -4,7 +4,7 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.1.0",
+    version: "1.1.1",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
@@ -23,7 +23,7 @@ module.exports = ({ config }) => ({
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
-      permissions: ["INTERNET"],
+      permissions: ["INTERNET", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       package: "com.rawcomposition.openbirding",
     },
     web: {
