@@ -2,7 +2,7 @@ import GoogleMapsIcon from "@/components/icons/GoogleMapsIcon";
 import OrganicMapsIcon from "@/components/icons/OrganicMapsIcon";
 import QuestionMarkIcon from "@/components/icons/QuestionMarkIcon";
 import WazeIcon from "@/components/icons/WazeIcon";
-import { useDefaultMapProvider } from "@/hooks/useDefaultMapProvider";
+import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
 import { getExternalMapProviders } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
@@ -11,7 +11,9 @@ import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native"
 import tw from "@/lib/tw";
 
 export default function SettingsPage() {
-  const { defaultProvider, setDefaultProvider, isLoading } = useDefaultMapProvider();
+  const defaultProvider = useDefaultMapProviderStore((state) => state.defaultProvider);
+  const setDefaultProvider = useDefaultMapProviderStore((state) => state.setDefaultProvider);
+  const isLoading = useDefaultMapProviderStore((state) => state.isLoading);
   const providers = getExternalMapProviders();
 
   const renderProviderIcon = (providerId: string) => {

@@ -53,10 +53,7 @@ export default function BaseBottomSheet({
         <View style={tw`pl-1 pr-4 pb-2`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
-        <TouchableOpacity
-          onPress={onClose}
-          style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full shadow-sm`}
-        >
+        <TouchableOpacity onPress={onClose} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>
           <Ionicons name="close" size={26} color={tw.color("gray-500")} />
         </TouchableOpacity>
       </View>

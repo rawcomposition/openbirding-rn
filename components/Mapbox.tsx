@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import debounce from "lodash/debounce";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Linking, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import InfoModal from "./InfoModal";
@@ -235,40 +236,76 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onHotspotSelect, onPlaceSelect, onPress]
     );
 
-    const handleMapLongPress = (event: any) => {
-      if (!onLongPressCoordinates) return;
-      if (
-        event?.geometry?.coordinates &&
-        Array.isArray(event.geometry.coordinates) &&
-        event.geometry.coordinates.length >= 2
-      ) {
-        const longitude = event.geometry.coordinates[0].toFixed(6);
-        const latitude = event.geometry.coordinates[1].toFixed(6);
-        onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
-      }
-    };
+    const handleMapLongPress = useCallback(
+      (event: any) => {
+        if (!onLongPressCoordinates) return;
+        if (
+          event?.geometry?.coordinates &&
+          Array.isArray(event.geometry.coordinates) &&
+          event.geometry.coordinates.length >= 2
+        ) {
+          const longitude = event.geometry.coordinates[0].toFixed(6);
+          const latitude = event.geometry.coordinates[1].toFixed(6);
+          onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
+        }
+      },
+      [onLongPressCoordinates]
+    );
 
-    return (
-      <View style={[tw`flex-1`, style]}>
-        <Mapbox.MapView
-          ref={mapRef}
-          style={tw`flex-1`}
-          styleURL={mapStyle}
-          onDidFinishLoadingMap={() => setIsMapReady(true)}
-          onDidFinishLoadingStyle={syncViewport}
-          onCameraChanged={syncViewport}
-          onMapIdle={() => {
-            syncViewport();
-            centerMapOnUserInitial();
-          }}
-          onPress={handleFeaturePress}
-          onLongPress={handleMapLongPress}
-          scaleBarEnabled={false}
-          attributionEnabled={false}
-          logoPosition={insets.bottom > 0 ? { bottom: -insets.bottom + 15, left: 25 } : { bottom: 4, left: 5 }}
-          rotateEnabled={false}
-          pitchEnabled={false}
-        >
+    const handleAndroidLongPress = useCallback(
+      async (e: any) => {
+        if (!onLongPressCoordinates || !mapRef.current) return;
+        if (e) {
+          try {
+            const mapPoint = await mapRef.current.getCoordinateFromView([e.x, e.y]);
+            if (mapPoint) {
+              const longitude = mapPoint[0].toFixed(6);
+              const latitude = mapPoint[1].toFixed(6);
+              onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
+            }
+          } catch (error) {
+            console.error("Error getting coordinate from view:", error);
+          }
+        }
+      },
+      [onLongPressCoordinates]
+    );
+
+    const longPressGesture = useMemo(
+      () =>
+        Gesture.LongPress()
+          .enabled(Platform.OS === "android")
+          .runOnJS(true)
+          .onStart(handleAndroidLongPress),
+      [handleAndroidLongPress]
+    );
+
+    const mapView = (
+      <Mapbox.MapView
+        ref={mapRef}
+        style={tw`flex-1`}
+        styleURL={mapStyle}
+        onDidFinishLoadingMap={() => setIsMapReady(true)}
+        onDidFinishLoadingStyle={syncViewport}
+        onCameraChanged={syncViewport}
+        onMapIdle={() => {
+          syncViewport();
+          centerMapOnUserInitial();
+        }}
+        onPress={handleFeaturePress}
+        onLongPress={Platform.OS === "android" ? undefined : handleMapLongPress}
+        scaleBarEnabled={false}
+        attributionEnabled={false}
+        logoPosition={
+          Platform.OS === "ios"
+            ? insets.bottom > 0
+              ? { bottom: -insets.bottom + 15, left: 25 }
+              : { bottom: 4, left: 5 }
+            : { bottom: 15, left: 25 }
+        }
+        rotateEnabled={false}
+        pitchEnabled={false}
+      >
           <Mapbox.Camera
             ref={cameraRef}
             defaultSettings={{ centerCoordinate: initialCenter, zoomLevel: initialZoom }}
@@ -469,6 +506,19 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             </Mapbox.ShapeSource>
           )}
         </Mapbox.MapView>
+    );
+
+    return (
+      <View style={[tw`flex-1`, style]}>
+        {Platform.OS === "android" ? (
+          <GestureDetector gesture={longPressGesture}>
+            <View style={tw`flex-1`} collapsable={false}>
+              {mapView}
+            </View>
+          </GestureDetector>
+        ) : (
+          mapView
+        )}
 
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>

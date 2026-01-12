@@ -1,5 +1,6 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import IconButton from "./IconButton";
 import { useRouter } from "expo-router";
@@ -11,9 +12,15 @@ type ModalHeaderProps = {
 
 export default function ModalHeader({ buttons, title }: ModalHeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={tw`flex-row items-start justify-between p-4 pt-5`}>
+    <View
+      style={[
+        tw`flex-row items-start justify-between p-4 pt-5`,
+        Platform.OS === "android" && { paddingTop: Math.max(insets.top, 20) },
+      ]}
+    >
       <IconButton icon="close" onPress={() => router.back()} />
       <Text style={tw`text-lg font-bold`}>{title}</Text>
       <View style={tw`flex-row items-center gap-2`}>
