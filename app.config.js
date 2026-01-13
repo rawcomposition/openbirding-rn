@@ -23,7 +23,7 @@ module.exports = ({ config }) => ({
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
-      permissions: ["INTERNET", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      permissions: ["INTERNET", "ACCESS_FINE_LOCATION"],
       package: "com.rawcomposition.openbirding",
     },
     web: {

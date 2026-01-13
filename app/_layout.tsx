@@ -13,6 +13,7 @@ import tw from "@/lib/tw";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { initializeDatabase } from "@/lib/database";
 import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
+import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { get } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
@@ -52,6 +53,7 @@ export default function RootLayout() {
 
     initDatabase();
     useDefaultMapProviderStore.getState().loadDefaultProvider();
+    useLocationPermissionStore.getState().requestPermission();
   }, []);
 
   if (!loaded) {

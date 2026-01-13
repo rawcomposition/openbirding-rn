@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import * as Location from "expo-location";
+import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 
-type UseApproxLocationReturn = {
+type UseLocationReturn = {
   location: { lat: number; lng: number } | null;
   error: string | null;
   isLoading: boolean;
@@ -9,15 +10,24 @@ type UseApproxLocationReturn = {
 
 const LOCATION_CACHE_DURATION = 300000;
 
-export function useApproxLocation(enabled: boolean = true): UseApproxLocationReturn {
+export function useLocation(enabled: boolean = true): UseLocationReturn {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const lastFetchTime = useRef<number | null>(null);
+  const { status: permissionStatus } = useLocationPermissionStore();
 
   useEffect(() => {
     if (!enabled) {
       setError(null);
+      return;
+    }
+
+    if (permissionStatus !== "granted") {
+      if (permissionStatus === "denied") {
+        setError("Location permission denied");
+      }
+      setIsLoading(false);
       return;
     }
 
@@ -35,15 +45,8 @@ export function useApproxLocation(enabled: boolean = true): UseApproxLocationRet
 
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setError("Location permission denied");
-          setIsLoading(false);
-          return;
-        }
-
         const currentLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.Highest,
         });
         const locationData = {
           lat: currentLocation.coords.latitude,
@@ -58,7 +61,7 @@ export function useApproxLocation(enabled: boolean = true): UseApproxLocationRet
         setIsLoading(false);
       }
     })();
-  }, [enabled]);
+  }, [enabled, permissionStatus]);
 
   return { location, error, isLoading };
 }

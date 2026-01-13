@@ -2,6 +2,7 @@ import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
+import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -96,6 +97,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
   ) => {
     const insets = useSafeAreaInsets();
     const { currentLayer, placeId } = useMapStore();
+    const { status: permissionStatus } = useLocationPermissionStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -315,7 +317,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
           <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...hotspotImages }} />
 
-          {isMapReady && (
+          {isMapReady && permissionStatus === "granted" && (
             <>
               <Mapbox.UserLocation
                 visible={false}

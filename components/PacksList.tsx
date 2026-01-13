@@ -5,7 +5,7 @@ import { useLocalSearchParams } from "expo-router";
 import tw from "@/lib/tw";
 import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
-import { useApproxLocation } from "@/hooks/useApproxLocation";
+import { useLocation } from "@/hooks/useLocation";
 import { calculateDistance } from "@/lib/utils";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
@@ -34,7 +34,7 @@ export default function PacksList() {
     location: userLocation,
     error: locationError,
     isLoading: isLoadingLocation,
-  } = useApproxLocation(activeTab === "nearby");
+  } = useLocation(activeTab === "nearby");
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];
