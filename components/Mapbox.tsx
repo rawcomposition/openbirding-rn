@@ -184,6 +184,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       cameraRef.current?.setCamera({
         centerCoordinate: uc as [number, number],
         zoomLevel: DEFAULT_USER_ZOOM,
+        ...(Platform.OS === "android" && { animationDuration: 0 }),
       });
       onLocationSave?.(uc as [number, number], DEFAULT_USER_ZOOM);
     }, [isMapReady, onLocationSave]);
