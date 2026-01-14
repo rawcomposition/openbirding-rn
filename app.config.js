@@ -45,8 +45,6 @@ module.exports = ({ config }) => ({
       [
         "@rnmapbox/maps",
         {
-          // 👇 Now the plugin receives the actual secret from env
-          RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN || process.env.MAPBOX_DOWNLOAD_TOKEN,
           RNMapboxMapsImpl: "mapbox",
         },
       ],
