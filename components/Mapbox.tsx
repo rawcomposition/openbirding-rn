@@ -17,7 +17,6 @@ import Constants from "expo-constants";
 import debounce from "lodash/debounce";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import InfoModal from "./InfoModal";
 
@@ -254,273 +253,233 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onLongPressCoordinates]
     );
 
-    const handleAndroidLongPress = useCallback(
-      async (e: any) => {
-        if (!onLongPressCoordinates || !mapRef.current) return;
-        if (e) {
-          try {
-            const mapPoint = await mapRef.current.getCoordinateFromView([e.x, e.y]);
-            if (mapPoint) {
-              const longitude = mapPoint[0].toFixed(6);
-              const latitude = mapPoint[1].toFixed(6);
-              onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
-            }
-          } catch (error) {
-            console.error("Error getting coordinate from view:", error);
-          }
-        }
-      },
-      [onLongPressCoordinates]
-    );
-
-    const longPressGesture = useMemo(
-      () =>
-        Gesture.LongPress()
-          .enabled(Platform.OS === "android")
-          .runOnJS(true)
-          .onStart(handleAndroidLongPress),
-      [handleAndroidLongPress]
-    );
-
-    const mapView = (
-      <Mapbox.MapView
-        ref={mapRef}
-        style={tw`flex-1`}
-        styleURL={mapStyle}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
-        onDidFinishLoadingStyle={syncViewport}
-        onCameraChanged={syncViewport}
-        onMapIdle={() => {
-          syncViewport();
-          centerMapOnUserInitial();
-        }}
-        onPress={handleFeaturePress}
-        onLongPress={Platform.OS === "android" ? undefined : handleMapLongPress}
-        scaleBarEnabled={false}
-        attributionEnabled={false}
-        logoPosition={
-          Platform.OS === "ios"
-            ? insets.bottom > 0
-              ? { bottom: -insets.bottom + 15, left: 25 }
-              : { bottom: 4, left: 5 }
-            : { bottom: 15, left: 25 }
-        }
-        rotateEnabled={false}
-        pitchEnabled={false}
-      >
-        <Mapbox.Camera
-          ref={cameraRef}
-          defaultSettings={{ centerCoordinate: initialCenter, zoomLevel: initialZoom }}
-          animationMode="none"
-          animationDuration={0}
-        />
-
-        <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...hotspotImages }} />
-
-        {isMapReady && permissionStatus === "granted" && (
-          <>
-            <Mapbox.UserLocation
-              visible={false}
-              showsUserHeadingIndicator
-              animated
-              onUpdate={(loc: { coords?: { longitude: number; latitude: number } }) => {
-                if (!loc?.coords) return;
-                const nextCoord: [number, number] = [loc.coords.longitude, loc.coords.latitude];
-                if (!isValidUserCoord(nextCoord)) return;
-                userCoordRef.current = nextCoord;
-                centerMapOnUserInitial();
-              }}
-            />
-            <Mapbox.LocationPuck visible puckBearingEnabled scale={0.9} pulsing={{ isEnabled: true, radius: 22 }} />
-          </>
-        )}
-
-        {isMapReady && (hotspots.length > 0 || savedPlaces.length > 0) && (
-          <Mapbox.ShapeSource
-            id="features-source"
-            onPress={handleFeaturePress}
-            shape={{
-              type: "FeatureCollection",
-              features: [
-                ...hotspots.map((h: any) => {
-                  const isSaved = savedHotspotsSet.has(h.id);
-                  return {
-                    type: "Feature" as const,
-                    geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
-                    properties: {
-                      id: h.id,
-                      shade: getMarkerColorIndex(h.species || 0),
-                      isSelected: h.id === hotspotId,
-                      isSaved,
-                      featureType: "hotspot",
-                    },
-                  };
-                }),
-                ...savedPlaces.map((p) => ({
-                  type: "Feature" as const,
-                  geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
-                  properties: {
-                    id: p.id,
-                    icon: p.icon,
-                    isSelected: p.id === placeId,
-                    featureType: "place",
-                  },
-                })),
-              ],
-            }}
-          >
-            {/* Hotspot */}
-            <Mapbox.SymbolLayer
-              id="hotspot"
-              filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
-              style={hotspotSymbolStyle()}
-            />
-
-            {/* Saved hotspot */}
-            <Mapbox.SymbolLayer
-              id="saved-hotspot"
-              filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], true]]}
-              style={savedHotspotSymbolStyle()}
-            />
-
-            {/* Selected hotspot */}
-            <Mapbox.CircleLayer
-              id="hotspot-halo"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], false],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={haloInnerStyle()}
-            />
-            <Mapbox.CircleLayer
-              id="hotspot-halo-outer"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], false],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={haloOuterStyle()}
-            />
-            <Mapbox.SymbolLayer
-              id="selected-hotspot"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], false],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={hotspotSymbolStyle()}
-            />
-
-            {/* Selected saved hotspot */}
-            <Mapbox.CircleLayer
-              id="saved-hotspot-halo"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], true],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={haloInnerStyle(1.2)}
-            />
-            <Mapbox.CircleLayer
-              id="saved-hotspot-halo-outer"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], true],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={haloOuterStyle(1.2)}
-            />
-            <Mapbox.SymbolLayer
-              id="selected-saved-hotspot"
-              filter={[
-                "all",
-                ["==", ["get", "featureType"], "hotspot"],
-                ["==", ["get", "isSaved"], true],
-                ["==", ["get", "isSelected"], true],
-              ]}
-              style={savedHotspotSymbolStyle()}
-            />
-
-            {/* Saved place */}
-            <Mapbox.SymbolLayer
-              id="saved-place"
-              filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], false]]}
-              style={savedPlaceSymbolStyle()}
-            />
-            <Mapbox.CircleLayer
-              id="saved-place-halo"
-              filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-              style={haloInnerStyle(1.2)}
-            />
-            <Mapbox.CircleLayer
-              id="saved-place-halo-outer"
-              filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-              style={haloOuterStyle(1.2)}
-            />
-            <Mapbox.SymbolLayer
-              id="selected-saved-place"
-              filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-              style={savedPlaceSymbolStyle()}
-            />
-          </Mapbox.ShapeSource>
-        )}
-
-        {isMapReady && placeCoordinates && (
-          <Mapbox.ShapeSource
-            id="place-marker-source"
-            shape={{
-              type: "FeatureCollection",
-              features: [
-                {
-                  type: "Feature" as const,
-                  geometry: {
-                    type: "Point" as const,
-                    coordinates: [placeCoordinates.longitude, placeCoordinates.latitude],
-                  },
-                  properties: {},
-                },
-              ],
-            }}
-          >
-            <Mapbox.CircleLayer
-              id="place-marker-outer"
-              style={{
-                circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 9],
-                circleColor: "transparent",
-                circleStrokeWidth: 2,
-                circleStrokeColor: "#444",
-              }}
-            />
-            <Mapbox.CircleLayer
-              id="place-marker"
-              style={{
-                circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 3.5, 12, 4],
-                circleColor: "#444",
-                circleStrokeWidth: 0,
-              }}
-            />
-          </Mapbox.ShapeSource>
-        )}
-      </Mapbox.MapView>
-    );
-
     return (
       <View style={[tw`flex-1`, style]}>
-        {Platform.OS === "android" ? (
-          <GestureDetector gesture={longPressGesture}>
-            <View style={tw`flex-1`} collapsable={false}>
-              {mapView}
-            </View>
-          </GestureDetector>
-        ) : (
-          mapView
-        )}
+        <Mapbox.MapView
+          ref={mapRef}
+          style={tw`flex-1`}
+          styleURL={mapStyle}
+          onDidFinishLoadingMap={() => setIsMapReady(true)}
+          onDidFinishLoadingStyle={syncViewport}
+          onCameraChanged={syncViewport}
+          onMapIdle={() => {
+            syncViewport();
+            centerMapOnUserInitial();
+          }}
+          onPress={handleFeaturePress}
+          onLongPress={handleMapLongPress}
+          scaleBarEnabled={false}
+          attributionEnabled={false}
+          logoPosition={
+            Platform.OS === "ios"
+              ? insets.bottom > 0
+                ? { bottom: -insets.bottom + 15, left: 25 }
+                : { bottom: 4, left: 5 }
+              : { bottom: 15, left: 25 }
+          }
+          rotateEnabled={false}
+          pitchEnabled={false}
+        >
+          <Mapbox.Camera
+            ref={cameraRef}
+            defaultSettings={{ centerCoordinate: initialCenter, zoomLevel: initialZoom }}
+            animationMode="none"
+            animationDuration={0}
+          />
+
+          <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...hotspotImages }} />
+
+          {isMapReady && permissionStatus === "granted" && (
+            <>
+              <Mapbox.UserLocation
+                visible={false}
+                showsUserHeadingIndicator
+                animated
+                onUpdate={(loc: { coords?: { longitude: number; latitude: number } }) => {
+                  if (!loc?.coords) return;
+                  const nextCoord: [number, number] = [loc.coords.longitude, loc.coords.latitude];
+                  if (!isValidUserCoord(nextCoord)) return;
+                  userCoordRef.current = nextCoord;
+                  centerMapOnUserInitial();
+                }}
+              />
+              <Mapbox.LocationPuck visible puckBearingEnabled scale={0.9} pulsing={{ isEnabled: true, radius: 22 }} />
+            </>
+          )}
+
+          {isMapReady && (hotspots.length > 0 || savedPlaces.length > 0) && (
+            <Mapbox.ShapeSource
+              id="features-source"
+              onPress={handleFeaturePress}
+              shape={{
+                type: "FeatureCollection",
+                features: [
+                  ...hotspots.map((h: any) => {
+                    const isSaved = savedHotspotsSet.has(h.id);
+                    return {
+                      type: "Feature" as const,
+                      geometry: { type: "Point" as const, coordinates: [h.lng, h.lat] },
+                      properties: {
+                        id: h.id,
+                        shade: getMarkerColorIndex(h.species || 0),
+                        isSelected: h.id === hotspotId,
+                        isSaved,
+                        featureType: "hotspot",
+                      },
+                    };
+                  }),
+                  ...savedPlaces.map((p) => ({
+                    type: "Feature" as const,
+                    geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+                    properties: {
+                      id: p.id,
+                      icon: p.icon,
+                      isSelected: p.id === placeId,
+                      featureType: "place",
+                    },
+                  })),
+                ],
+              }}
+            >
+              {/* Hotspot */}
+              <Mapbox.SymbolLayer
+                id="hotspot"
+                filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
+                style={hotspotSymbolStyle() as any}
+              />
+
+              {/* Saved hotspot */}
+              <Mapbox.SymbolLayer
+                id="saved-hotspot"
+                filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], true]]}
+                style={savedHotspotSymbolStyle() as any}
+              />
+
+              {/* Selected hotspot */}
+              <Mapbox.CircleLayer
+                id="hotspot-halo"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], false],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={haloInnerStyle() as any}
+              />
+              <Mapbox.CircleLayer
+                id="hotspot-halo-outer"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], false],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={haloOuterStyle() as any}
+              />
+              <Mapbox.SymbolLayer
+                id="selected-hotspot"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], false],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={hotspotSymbolStyle() as any}
+              />
+
+              {/* Selected saved hotspot */}
+              <Mapbox.CircleLayer
+                id="saved-hotspot-halo"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], true],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={haloInnerStyle(1.2) as any}
+              />
+              <Mapbox.CircleLayer
+                id="saved-hotspot-halo-outer"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], true],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={haloOuterStyle(1.2) as any}
+              />
+              <Mapbox.SymbolLayer
+                id="selected-saved-hotspot"
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], true],
+                  ["==", ["get", "isSelected"], true],
+                ]}
+                style={savedHotspotSymbolStyle() as any}
+              />
+
+              {/* Saved place */}
+              <Mapbox.SymbolLayer
+                id="saved-place"
+                filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], false]]}
+                style={savedPlaceSymbolStyle() as any}
+              />
+              <Mapbox.CircleLayer
+                id="saved-place-halo"
+                filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
+                style={haloInnerStyle(1.2) as any}
+              />
+              <Mapbox.CircleLayer
+                id="saved-place-halo-outer"
+                filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
+                style={haloOuterStyle(1.2) as any}
+              />
+              <Mapbox.SymbolLayer
+                id="selected-saved-place"
+                filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
+                style={savedPlaceSymbolStyle() as any}
+              />
+            </Mapbox.ShapeSource>
+          )}
+
+          {isMapReady && placeCoordinates && (
+            <Mapbox.ShapeSource
+              id="place-marker-source"
+              shape={{
+                type: "FeatureCollection",
+                features: [
+                  {
+                    type: "Feature" as const,
+                    geometry: {
+                      type: "Point" as const,
+                      coordinates: [placeCoordinates.longitude, placeCoordinates.latitude],
+                    },
+                    properties: {},
+                  },
+                ],
+              }}
+            >
+              <Mapbox.CircleLayer
+                id="place-marker-outer"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 7, 12, 9],
+                  circleColor: "transparent",
+                  circleStrokeWidth: 2,
+                  circleStrokeColor: "#444",
+                }}
+              />
+              <Mapbox.CircleLayer
+                id="place-marker"
+                style={{
+                  circleRadius: ["interpolate", ["linear"], ["zoom"], 7, 3.5, 12, 4],
+                  circleColor: "#444",
+                  circleStrokeWidth: 0,
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
+        </Mapbox.MapView>
 
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
