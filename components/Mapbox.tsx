@@ -1,17 +1,4 @@
 import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
-import { OnPressEvent } from "@/lib/types";
-import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
-import { useMapStore } from "@/stores/mapStore";
-import Mapbox from "@rnmapbox/maps";
-import { useQuery } from "@tanstack/react-query";
-import Constants from "expo-constants";
-import debounce from "lodash/debounce";
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import tw from "@/lib/tw";
-import InfoModal from "./InfoModal";
 import {
   haloInnerStyle,
   haloOuterStyle,
@@ -19,6 +6,19 @@ import {
   savedHotspotSymbolStyle,
   savedPlaceSymbolStyle,
 } from "@/lib/layers";
+import tw from "@/lib/tw";
+import { OnPressEvent } from "@/lib/types";
+import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
+import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
+import { useMapStore } from "@/stores/mapStore";
+import Mapbox from "@rnmapbox/maps";
+import { useQuery } from "@tanstack/react-query";
+import Constants from "expo-constants";
+import debounce from "lodash/debounce";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import InfoModal from "./InfoModal";
 
 const starImage = require("@/assets/images/star.png");
 const starLightImage = require("@/assets/images/star-light.png");
@@ -96,6 +96,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
   ) => {
     const insets = useSafeAreaInsets();
     const { currentLayer, placeId } = useMapStore();
+    const { status: permissionStatus } = useLocationPermissionStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -183,6 +184,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       cameraRef.current?.setCamera({
         centerCoordinate: uc as [number, number],
         zoomLevel: DEFAULT_USER_ZOOM,
+        ...(Platform.OS === "android" && { animationDuration: 0 }),
       });
       onLocationSave?.(uc as [number, number], DEFAULT_USER_ZOOM);
     }, [isMapReady, onLocationSave]);
@@ -252,60 +254,33 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onLongPressCoordinates]
     );
 
-    const handleAndroidLongPress = useCallback(
-      async (e: any) => {
-        if (!onLongPressCoordinates || !mapRef.current) return;
-        if (e) {
-          try {
-            const mapPoint = await mapRef.current.getCoordinateFromView([e.x, e.y]);
-            if (mapPoint) {
-              const longitude = mapPoint[0].toFixed(6);
-              const latitude = mapPoint[1].toFixed(6);
-              onLongPressCoordinates({ latitude: parseFloat(latitude), longitude: parseFloat(longitude) });
-            }
-          } catch (error) {
-            console.error("Error getting coordinate from view:", error);
+    return (
+      <View style={[tw`flex-1`, style]}>
+        <Mapbox.MapView
+          ref={mapRef}
+          style={tw`flex-1`}
+          styleURL={mapStyle}
+          onDidFinishLoadingMap={() => setIsMapReady(true)}
+          onDidFinishLoadingStyle={syncViewport}
+          onCameraChanged={syncViewport}
+          onMapIdle={() => {
+            syncViewport();
+            centerMapOnUserInitial();
+          }}
+          onPress={handleFeaturePress}
+          onLongPress={handleMapLongPress}
+          scaleBarEnabled={false}
+          attributionEnabled={false}
+          logoPosition={
+            Platform.OS === "ios"
+              ? insets.bottom > 0
+                ? { bottom: -insets.bottom + 15, left: 25 }
+                : { bottom: 4, left: 5 }
+              : { bottom: 15, left: 25 }
           }
-        }
-      },
-      [onLongPressCoordinates]
-    );
-
-    const longPressGesture = useMemo(
-      () =>
-        Gesture.LongPress()
-          .enabled(Platform.OS === "android")
-          .runOnJS(true)
-          .onStart(handleAndroidLongPress),
-      [handleAndroidLongPress]
-    );
-
-    const mapView = (
-      <Mapbox.MapView
-        ref={mapRef}
-        style={tw`flex-1`}
-        styleURL={mapStyle}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
-        onDidFinishLoadingStyle={syncViewport}
-        onCameraChanged={syncViewport}
-        onMapIdle={() => {
-          syncViewport();
-          centerMapOnUserInitial();
-        }}
-        onPress={handleFeaturePress}
-        onLongPress={Platform.OS === "android" ? undefined : handleMapLongPress}
-        scaleBarEnabled={false}
-        attributionEnabled={false}
-        logoPosition={
-          Platform.OS === "ios"
-            ? insets.bottom > 0
-              ? { bottom: -insets.bottom + 15, left: 25 }
-              : { bottom: 4, left: 5 }
-            : { bottom: 15, left: 25 }
-        }
-        rotateEnabled={false}
-        pitchEnabled={false}
-      >
+          rotateEnabled={false}
+          pitchEnabled={false}
+        >
           <Mapbox.Camera
             ref={cameraRef}
             defaultSettings={{ centerCoordinate: initialCenter, zoomLevel: initialZoom }}
@@ -315,7 +290,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
           <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...hotspotImages }} />
 
-          {isMapReady && (
+          {isMapReady && permissionStatus === "granted" && (
             <>
               <Mapbox.UserLocation
                 visible={false}
@@ -371,14 +346,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
               <Mapbox.SymbolLayer
                 id="hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
-                style={hotspotSymbolStyle()}
+                style={hotspotSymbolStyle() as any}
               />
 
               {/* Saved hotspot */}
               <Mapbox.SymbolLayer
                 id="saved-hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], true]]}
-                style={savedHotspotSymbolStyle()}
+                style={savedHotspotSymbolStyle() as any}
               />
 
               {/* Selected hotspot */}
@@ -390,7 +365,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={haloInnerStyle()}
+                style={haloInnerStyle() as any}
               />
               <Mapbox.CircleLayer
                 id="hotspot-halo-outer"
@@ -400,7 +375,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={haloOuterStyle()}
+                style={haloOuterStyle() as any}
               />
               <Mapbox.SymbolLayer
                 id="selected-hotspot"
@@ -410,7 +385,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={hotspotSymbolStyle()}
+                style={hotspotSymbolStyle() as any}
               />
 
               {/* Selected saved hotspot */}
@@ -422,7 +397,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], true],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={haloInnerStyle(1.2)}
+                style={haloInnerStyle(1.2) as any}
               />
               <Mapbox.CircleLayer
                 id="saved-hotspot-halo-outer"
@@ -432,7 +407,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], true],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={haloOuterStyle(1.2)}
+                style={haloOuterStyle(1.2) as any}
               />
               <Mapbox.SymbolLayer
                 id="selected-saved-hotspot"
@@ -442,29 +417,29 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "isSaved"], true],
                   ["==", ["get", "isSelected"], true],
                 ]}
-                style={savedHotspotSymbolStyle()}
+                style={savedHotspotSymbolStyle() as any}
               />
 
               {/* Saved place */}
               <Mapbox.SymbolLayer
                 id="saved-place"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], false]]}
-                style={savedPlaceSymbolStyle()}
+                style={savedPlaceSymbolStyle() as any}
               />
               <Mapbox.CircleLayer
                 id="saved-place-halo"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-                style={haloInnerStyle(1.2)}
+                style={haloInnerStyle(1.2) as any}
               />
               <Mapbox.CircleLayer
                 id="saved-place-halo-outer"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-                style={haloOuterStyle(1.2)}
+                style={haloOuterStyle(1.2) as any}
               />
               <Mapbox.SymbolLayer
                 id="selected-saved-place"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], true]]}
-                style={savedPlaceSymbolStyle()}
+                style={savedPlaceSymbolStyle() as any}
               />
             </Mapbox.ShapeSource>
           )}
@@ -506,19 +481,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             </Mapbox.ShapeSource>
           )}
         </Mapbox.MapView>
-    );
-
-    return (
-      <View style={[tw`flex-1`, style]}>
-        {Platform.OS === "android" ? (
-          <GestureDetector gesture={longPressGesture}>
-            <View style={tw`flex-1`} collapsable={false}>
-              {mapView}
-            </View>
-          </GestureDetector>
-        ) : (
-          mapView
-        )}
 
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>

@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
-import { MapFeature } from "./types";
 import { hotspotColor } from "./constants";
+import { MapFeature } from "./types";
 
 type Params = {
   [key: string]: string | number | boolean;
@@ -201,10 +201,17 @@ export const getExternalMapProviders = (): MapProvider[] => {
 };
 
 export const getDirections = (provider: string, lat: number, lng: number): string => {
+  const isIOS = Platform.OS === "ios";
+
   switch (provider) {
     case "google":
-      return `comgooglemaps://?q=${lat},${lng}`;
+      return isIOS
+        ? `comgooglemaps://?q=${lat},${lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
     case "apple":
+      if (!isIOS) {
+        throw new Error("Apple Maps is not available on Android");
+      }
       return `maps://?q=${lat},${lng}`;
     case "waze":
       return `waze://?ll=${lat},${lng}&navigate=yes`;

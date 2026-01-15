@@ -23,7 +23,7 @@ module.exports = ({ config }) => ({
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
-      permissions: ["INTERNET", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      permissions: ["INTERNET", "ACCESS_FINE_LOCATION"],
       package: "com.rawcomposition.openbirding",
     },
     web: {
@@ -45,8 +45,6 @@ module.exports = ({ config }) => ({
       [
         "@rnmapbox/maps",
         {
-          // 👇 Now the plugin receives the actual secret from env
-          RNMapboxMapsDownloadToken: process.env.MAPBOX_DOWNLOADS_TOKEN || process.env.MAPBOX_DOWNLOAD_TOKEN,
           RNMapboxMapsImpl: "mapbox",
         },
       ],
