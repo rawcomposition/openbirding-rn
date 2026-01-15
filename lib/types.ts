@@ -27,6 +27,7 @@ export type Pack = {
   installed_at: string | null;
   lat?: number | null;
   lng?: number | null;
+  clusters?: number[][];
 };
 
 export type BoundingBox = {

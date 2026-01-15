@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, FlatList, ActivityIndicator, Pressable, TextInput } from "react-native";
-import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
-import tw from "@/lib/tw";
-import { Pack } from "@/lib/types";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useLocation } from "@/hooks/useLocation";
+import tw from "@/lib/tw";
+import { Pack } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
+import React, { useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
 
@@ -48,11 +48,21 @@ export default function PacksList() {
     if (activeTab === "nearby") {
       if (!userLocation) return [];
 
-      const packsWithLocation = packs.filter((pack) => pack.lat != null && pack.lng != null);
-      const packsWithDistance = packsWithLocation.map((pack) => ({
-        pack,
-        distance: calculateDistance(userLocation.lat, userLocation.lng, pack.lat!, pack.lng!),
-      }));
+      const packsWithClusters = packs.filter((pack) => pack.clusters && pack.clusters.length > 0);
+      const packsWithDistance = packsWithClusters.map((pack) => {
+        let minDistance = Infinity;
+        for (const cluster of pack.clusters!) {
+          const [clusterLat, clusterLng] = cluster;
+          const distance = calculateDistance(userLocation.lat, userLocation.lng, clusterLat, clusterLng);
+          if (distance < minDistance) {
+            minDistance = distance;
+          }
+        }
+        return {
+          pack,
+          distance: minDistance,
+        };
+      });
       packsWithDistance.sort((a, b) => a.distance - b.distance);
       return packsWithDistance.slice(0, NEARBY_PACKS_LIMIT).map((item) => item.pack);
     }

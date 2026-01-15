@@ -4,7 +4,7 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.1.1",
+    version: "1.2.0",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
@@ -19,7 +19,7 @@ module.exports = ({ config }) => ({
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/logo.png",
+        foregroundImage: "./assets/images/logo-android.png",
         backgroundColor: "#ffffff",
       },
       edgeToEdgeEnabled: true,
