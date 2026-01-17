@@ -13,6 +13,7 @@ import { useSavedLocation } from "@/hooks/useSavedLocation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMapStore } from "@/stores/mapStore";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import MapListIcon from "@/components/icons/MapListIcon";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -108,6 +109,9 @@ export default function HomeScreen() {
         >
           <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
+          </FloatingButton>
+          <FloatingButton onPress={() => void 0} light={currentLayer === "satellite"}>
+            <MapListIcon size={24} color={tw.color("gray-700")} />
           </FloatingButton>
           <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
             <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
