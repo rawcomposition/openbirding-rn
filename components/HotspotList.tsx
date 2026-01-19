@@ -35,7 +35,15 @@ const formatDistance = (distanceKm: number, country: string | null) => {
   const useMiles = country && MILES_COUNTRIES.includes(country);
   if (useMiles) {
     const distanceMiles = distanceKm * 0.621371;
+    const rounded = Math.round(distanceMiles);
+    if (rounded >= 10) {
+      return `${rounded} mi`;
+    }
     return `${distanceMiles.toFixed(1)} mi`;
+  }
+  const rounded = Math.round(distanceKm);
+  if (rounded >= 10) {
+    return `${rounded} km`;
   }
   return `${distanceKm.toFixed(1)} km`;
 };
@@ -175,22 +183,21 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         renderItem={renderHotspotItem}
         keyExtractor={(item) => item.id}
         style={tw`flex-1`}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       />
     );
   };
 
   const headerText = hasLocationAccess ? "Nearby Hotspots" : "Hotspots";
-  const subtitleText = hasLocationAccess ? "Sorted by distance" : "Sorted alphabetically";
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[tw`flex-1 bg-white`, Platform.OS === "android" && { paddingTop: insets.top }]}>
-        <View style={tw`flex-row items-center justify-between px-4 py-3 pt-5 border-b border-gray-200`}>
+        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-5 border-b border-gray-200`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
-            <Text style={tw`text-gray-500 text-sm`}>{subtitleText}</Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
