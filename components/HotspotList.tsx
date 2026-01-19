@@ -67,7 +67,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
-  const { data: searchResults = [], isLoading: isSearching } = useQuery({
+  const { data: searchResults = [] } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery],
     queryFn: () => searchHotspots(debouncedQuery),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
@@ -75,7 +75,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     placeholderData: (prev) => prev,
   });
 
-  const { data: allHotspots = [], isLoading: isLoadingAll } = useQuery({
+  const { data: allHotspots = [] } = useQuery({
     queryKey: hasLocationAccess && location ? ["nearbyHotspots", location.lat, location.lng] : ["allHotspots"],
     queryFn: async () => {
       if (hasLocationAccess && location) {
@@ -155,39 +155,18 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     [handleSelectHotspot]
   );
 
-  const isLoading = isLoadingLocation || isSearching || isLoadingAll;
-
-  const renderContent = () => {
-    if (isLoadingLocation && permissionStatus === "granted") {
-      return (
-        <View style={tw`flex-1 items-center justify-center py-12`}>
+  const listEmptyComponent = (
+    <View style={tw`flex-1 items-center justify-center py-12`}>
+      {isLoadingLocation && permissionStatus === "granted" ? (
+        <>
           <ActivityIndicator size="large" color={tw.color("blue-500")} />
           <Text style={tw`text-gray-600 text-base mt-3`}>Getting current location...</Text>
-        </View>
-      );
-    }
-
-    if (displayedHotspots.length === 0 && !isLoading) {
-      return (
-        <View style={tw`flex-1 items-center justify-center py-12`}>
-          <Text style={tw`text-gray-600 text-base`}>No hotspots found</Text>
-        </View>
-      );
-    }
-
-    return (
-      <FlatList
-        ref={flatListRef}
-        data={displayedHotspots}
-        renderItem={renderHotspotItem}
-        keyExtractor={(item) => item.id}
-        style={tw`flex-1`}
-        contentContainerStyle={{ paddingBottom: insets.bottom }}
-        showsVerticalScrollIndicator={true}
-        keyboardShouldPersistTaps="handled"
-      />
-    );
-  };
+        </>
+      ) : (
+        <Text style={tw`text-gray-600 text-base`}>No hotspots found</Text>
+      )}
+    </View>
+  );
 
   const headerText = hasLocationAccess ? "Nearby Hotspots" : "Hotspots";
 
@@ -221,7 +200,17 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           />
         </View>
 
-        {renderContent()}
+        <FlatList
+          ref={flatListRef}
+          data={displayedHotspots}
+          renderItem={renderHotspotItem}
+          keyExtractor={(item) => item.id}
+          style={tw`flex-1`}
+          contentContainerStyle={displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: insets.bottom }}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={listEmptyComponent}
+        />
       </View>
     </Modal>
   );
