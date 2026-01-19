@@ -87,7 +87,9 @@ export default function HomeScreen() {
       setCustomPinCoordinates(null);
       setPlaceId(null);
       setHotspotId(selectedHotspotId);
-      mapRef.current?.centerOnCoordinates(lng, lat, 200);
+      setTimeout(() => {
+        mapRef.current?.centerOnCoordinates(lng, lat, 200);
+      }, 500);
     },
     [setIsHotspotListOpen, setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
