@@ -1,7 +1,7 @@
 import { useLocation } from "@/hooks/useLocation";
-import { getAllHotspots, searchHotspots } from "@/lib/database";
+import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
-import { calculateDistance, getMarkerColor } from "@/lib/utils";
+import { calculateDistance, getBoundingBoxFromLocation, getMarkerColor } from "@/lib/utils";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ type HotspotListProps = {
 
 const NEARBY_LIMIT = 100;
 const ALL_HOTSPOTS_LIMIT = 1000;
+const NEARBY_BUCKETS_KM = [50, 100, 200, 500];
 
 const MILES_COUNTRIES = ["US", "GB", "MM", "LR", "PR", "VI", "GU", "MP", "AS", "KY", "TC", "VG", "AI", "MS", "FK"];
 
@@ -41,8 +42,9 @@ const formatDistance = (distanceKm: number, country: string | null) => {
 
 export default function HotspotList({ isOpen, onClose, onSelectHotspot }: HotspotListProps) {
   const insets = useSafeAreaInsets();
-  const { status: permissionStatus } = useLocationPermissionStore();
-  const { location, isLoading: isLoadingLocation } = useLocation(isOpen);
+  const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
+  const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
+  const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -66,15 +68,30 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery],
     queryFn: () => searchHotspots(debouncedQuery),
-    enabled: isOpen && debouncedQuery.length > 0,
+    enabled: isOpen && debouncedQuery.length > 0 && !isLoadingLocation,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
   const { data: allHotspots = [], isLoading: isLoadingAll } = useQuery({
-    queryKey: ["allHotspots"],
-    queryFn: getAllHotspots,
-    enabled: isOpen && debouncedQuery.length === 0,
+    queryKey: hasLocationAccess && location ? ["nearbyHotspots", location.lat, location.lng] : ["allHotspots"],
+    queryFn: async () => {
+      if (hasLocationAccess && location) {
+        // Try the smallest buckets first to get a result quickly
+        for (const radiusKm of NEARBY_BUCKETS_KM) {
+          const bbox = getBoundingBoxFromLocation(location.lat, location.lng, radiusKm);
+          const hotspots = await getNearbyHotspots(bbox);
+          if (hotspots.length >= NEARBY_LIMIT) {
+            return hotspots;
+          }
+        }
+        // Fall back to the largest bucket if we didn't get enough results
+        const largestBbox = getBoundingBoxFromLocation(location.lat, location.lng, NEARBY_BUCKETS_KM[NEARBY_BUCKETS_KM.length - 1]);
+        return getNearbyHotspots(largestBbox);
+      }
+      return getAllHotspots(ALL_HOTSPOTS_LIMIT);
+    },
+    enabled: isOpen && debouncedQuery.length === 0 && !isLoadingLocation,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 30 * 1000,
     placeholderData: (prev) => prev,

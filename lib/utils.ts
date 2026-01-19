@@ -141,6 +141,24 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * c;
 }
 
+export function getBoundingBoxFromLocation(lat: number, lng: number, radiusKm: number): Bbox {
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
+  
+  let east = lng + lngDelta;
+  let west = lng - lngDelta;
+  
+  if (east > 180) east = 180;
+  if (west < -180) west = -180;
+  
+  return {
+    north: Math.min(90, lat + latDelta),
+    south: Math.max(-90, lat - latDelta),
+    east,
+    west,
+  };
+}
+
 export function findClosestFeature(features: GeoJSON.Feature[], tapLocation: [number, number]) {
   if (!features || features.length === 0 || !tapLocation) return null;
 

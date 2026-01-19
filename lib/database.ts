@@ -348,12 +348,32 @@ export async function deletePlace(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM saved_places WHERE id = ?`, [id]);
 }
 
-export async function getAllHotspots(): Promise<
+export async function getAllHotspots(limit: number): Promise<
   { id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]
 > {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name`);
+  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name LIMIT ?`, [limit]);
+
+  return result.map((row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    species: row.species as number,
+    country: row.country as string | null,
+  }));
+}
+
+export async function getNearbyHotspots(
+  bbox: { west: number; south: number; east: number; north: number }
+): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(
+    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ?`,
+    [bbox.south, bbox.north, bbox.west, bbox.east]
+  );
 
   return result.map((row: any) => ({
     id: row.id as string,
