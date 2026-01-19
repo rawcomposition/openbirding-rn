@@ -25,7 +25,7 @@ type HotspotListProps = {
   onSelectHotspot: (hotspotId: string, lat: number, lng: number) => void;
 };
 
-const NEARBY_LIMIT = 100;
+const NEARBY_LIMIT = 200;
 const ALL_HOTSPOTS_LIMIT = 1000;
 const NEARBY_BUCKETS_KM = [50, 100, 200, 500];
 
