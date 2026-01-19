@@ -15,6 +15,7 @@ import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import debounce from "lodash/debounce";
+import throttle from "lodash/throttle";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -69,6 +70,8 @@ export type MapboxMapRef = {
   centerOnCoordinates: (lng: number, lat: number, offsetY?: number) => void;
 };
 
+const THROTTLE_DELAY = 750;
+const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
 const MIN_ZOOM = 7;
 const DEFAULT_USER_ZOOM = 14;
 const isValidUserCoord = (coord: [number, number] | null) => {
@@ -150,7 +153,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       gcTime: 10 * 60 * 1000,
     });
 
-    const debouncedSetBounds = useMemo(() => debounce((b: Bounds | null) => setBounds(b), 250), []);
+    const throttledSetBounds = useMemo(() => throttle((b: Bounds | null) => setBounds(b), hotspotId ? THROTTLE_DELAY_WITH_OPEN_HOTSPOT : THROTTLE_DELAY), []);
     const debouncedSaveLocation = useMemo(
       () =>
         debounce(async () => {
@@ -174,9 +177,9 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const syncViewport = useCallback(async () => {
       if (!mapRef.current) return;
       const b = await readBoundsIfZoomed();
-      debouncedSetBounds(b);
+      throttledSetBounds(b);
       debouncedSaveLocation();
-    }, [readBoundsIfZoomed, debouncedSetBounds, debouncedSaveLocation]);
+    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation]);
 
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
