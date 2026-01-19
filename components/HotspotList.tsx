@@ -65,13 +65,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     return () => debouncedSetQuery.cancel();
   }, [searchQuery, debouncedSetQuery]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSearchQuery("");
-      setDebouncedQuery("");
-    }
-  }, [isOpen]);
-
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
