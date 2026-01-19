@@ -6,7 +6,7 @@ import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -56,6 +56,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const flatListRef = useRef<FlatList>(null);
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
 
@@ -76,7 +77,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery],
     queryFn: () => searchHotspots(debouncedQuery),
-    enabled: isOpen && debouncedQuery.length > 0 && !isLoadingLocation,
+    enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
@@ -99,13 +100,13 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       }
       return getAllHotspots(ALL_HOTSPOTS_LIMIT);
     },
-    enabled: isOpen && debouncedQuery.length === 0 && !isLoadingLocation,
+    enabled: isOpen && debouncedQuery.length < 2 && !isLoadingLocation,
     staleTime: 5 * 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
   const displayedHotspots = useMemo(() => {
-    const hotspots = debouncedQuery.length > 0 ? searchResults : allHotspots;
+    const hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
 
     if (hasLocationAccess && location) {
       const hotspotsWithDistance = hotspots.map((h) => ({
@@ -114,14 +115,18 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       }));
       hotspotsWithDistance.sort((a, b) => a.distance - b.distance);
 
-      const limit = debouncedQuery.length > 0 ? hotspots.length : NEARBY_LIMIT;
+      const limit = debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT;
       return hotspotsWithDistance.slice(0, limit);
     } else {
       const sorted = [...hotspots].sort((a, b) => a.name.localeCompare(b.name));
-      const limit = debouncedQuery.length > 0 ? hotspots.length : ALL_HOTSPOTS_LIMIT;
+      const limit = debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT;
       return sorted.slice(0, limit);
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
+
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [displayedHotspots]);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
@@ -179,6 +184,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
     return (
       <FlatList
+        ref={flatListRef}
         data={displayedHotspots}
         renderItem={renderHotspotItem}
         keyExtractor={(item) => item.id}

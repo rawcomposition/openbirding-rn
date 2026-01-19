@@ -103,7 +103,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const { status: permissionStatus } = useLocationPermissionStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
-    const cameraRef = useRef<Mapbox.Camera>(null);
+    const cameraRef = useRef<Mapbox.Camera>(null)
 
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
