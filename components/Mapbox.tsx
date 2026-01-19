@@ -66,6 +66,8 @@ type MapboxMapProps = {
 
 export type MapboxMapRef = {
   centerOnUser: () => void;
+  getVisibleBounds: () => Promise<{ west: number; south: number; east: number; north: number } | null>;
+  centerOnCoordinates: (lng: number, lat: number, offsetY?: number) => void;
 };
 
 const MIN_ZOOM = 7;
@@ -197,12 +199,35 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       centerMapOnUser();
     }, [isMapReady, hasSavedLocation, centerMapOnUser]);
 
+    const getVisibleBoundsAsync = useCallback(async () => {
+      if (!mapRef.current) return null;
+      const b = await mapRef.current.getVisibleBounds();
+      if (b) {
+        return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
+      }
+      return null;
+    }, []);
+
+    const centerOnCoordinates = useCallback(
+      (lng: number, lat: number, offsetY: number = 0) => {
+        if (!cameraRef.current) return;
+        cameraRef.current.setCamera({
+          centerCoordinate: [lng, lat],
+          padding: { paddingTop: 0, paddingBottom: offsetY, paddingLeft: 0, paddingRight: 0 },
+          animationDuration: 300,
+        });
+      },
+      []
+    );
+
     useImperativeHandle(
       ref,
       () => ({
         centerOnUser: centerMapOnUser,
+        getVisibleBounds: getVisibleBoundsAsync,
+        centerOnCoordinates,
       }),
-      [centerMapOnUser]
+      [centerMapOnUser, getVisibleBoundsAsync, centerOnCoordinates]
     );
 
     const savedHotspotsSet = useMemo(() => new Set(savedHotspots.map((s) => s.hotspot_id)), [savedHotspots]);

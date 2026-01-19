@@ -347,3 +347,37 @@ export async function deletePlace(id: string): Promise<void> {
 
   await db.runAsync(`DELETE FROM saved_places WHERE id = ?`, [id]);
 }
+
+export async function getAllHotspots(): Promise<
+  { id: string; name: string; lat: number; lng: number; species: number }[]
+> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species FROM hotspots ORDER BY name`);
+
+  return result.map((row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    species: row.species as number,
+  }));
+}
+
+export async function searchHotspots(
+  query: string
+): Promise<{ id: string; name: string; lat: number; lng: number; species: number }[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species FROM hotspots WHERE name LIKE ? ORDER BY name`, [
+    `%${query}%`,
+  ]);
+
+  return result.map((row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    lat: row.lat as number,
+    lng: row.lng as number,
+    species: row.species as number,
+  }));
+}
