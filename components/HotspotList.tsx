@@ -16,6 +16,7 @@ type Hotspot = {
   lat: number;
   lng: number;
   species: number;
+  country: string | null;
 };
 
 type HotspotListProps = {
@@ -27,7 +28,14 @@ type HotspotListProps = {
 const NEARBY_LIMIT = 100;
 const ALL_HOTSPOTS_LIMIT = 1000;
 
-const formatDistance = (distanceKm: number) => {
+const MILES_COUNTRIES = ["US", "GB", "MM", "LR", "PR", "VI", "GU", "MP", "AS", "KY", "TC", "VG", "AI", "MS", "FK"];
+
+const formatDistance = (distanceKm: number, country: string | null) => {
+  const useMiles = country && MILES_COUNTRIES.includes(country);
+  if (useMiles) {
+    const distanceMiles = distanceKm * 0.621371;
+    return `${distanceMiles.toFixed(1)} mi`;
+  }
   return `${distanceKm.toFixed(1)} km`;
 };
 
@@ -116,7 +124,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           </View>
         </View>
         {item.distance !== undefined && (
-          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance)}</Text>
+          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, item.country)}</Text>
         )}
         <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
       </TouchableOpacity>

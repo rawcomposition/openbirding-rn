@@ -349,11 +349,11 @@ export async function deletePlace(id: string): Promise<void> {
 }
 
 export async function getAllHotspots(): Promise<
-  { id: string; name: string; lat: number; lng: number; species: number }[]
+  { id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]
 > {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species FROM hotspots ORDER BY name`);
+  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name`);
 
   return result.map((row: any) => ({
     id: row.id as string,
@@ -361,15 +361,16 @@ export async function getAllHotspots(): Promise<
     lat: row.lat as number,
     lng: row.lng as number,
     species: row.species as number,
+    country: row.country as string | null,
   }));
 }
 
 export async function searchHotspots(
   query: string
-): Promise<{ id: string; name: string; lat: number; lng: number; species: number }[]> {
+): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species FROM hotspots WHERE name LIKE ? ORDER BY name`, [
+  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots WHERE name LIKE ? ORDER BY name`, [
     `%${query}%`,
   ]);
 
@@ -379,5 +380,6 @@ export async function searchHotspots(
     lat: row.lat as number,
     lng: row.lng as number,
     species: row.species as number,
+    country: row.country as string | null,
   }));
 }
