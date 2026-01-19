@@ -148,9 +148,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     if (displayedHotspots.length === 0 && !isLoading) {
       return (
         <View style={tw`flex-1 items-center justify-center py-12`}>
-          <Text style={tw`text-gray-600 text-base`}>
-            {debouncedQuery.length > 0 ? "No hotspots found" : "No hotspots available"}
-          </Text>
+          <Text style={tw`text-gray-600 text-base`}>No hotspots found</Text>
         </View>
       );
     }
