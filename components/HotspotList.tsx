@@ -28,9 +28,6 @@ const NEARBY_LIMIT = 100;
 const ALL_HOTSPOTS_LIMIT = 1000;
 
 const formatDistance = (distanceKm: number) => {
-  if (distanceKm < 1) {
-    return `${Math.round(distanceKm * 1000)} m`;
-  }
   return `${distanceKm.toFixed(1)} km`;
 };
 
