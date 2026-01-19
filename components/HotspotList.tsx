@@ -27,6 +27,13 @@ type HotspotListProps = {
 const NEARBY_LIMIT = 100;
 const ALL_HOTSPOTS_LIMIT = 1000;
 
+const formatDistance = (distanceKm: number) => {
+  if (distanceKm < 1) {
+    return `${Math.round(distanceKm * 1000)} m`;
+  }
+  return `${distanceKm.toFixed(1)} km`;
+};
+
 export default function HotspotList({ isOpen, onClose, onSelectHotspot }: HotspotListProps) {
   const insets = useSafeAreaInsets();
   const { status: permissionStatus } = useLocationPermissionStore();
@@ -86,13 +93,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
-  const formatDistance = useCallback((distanceKm: number) => {
-    if (distanceKm < 1) {
-      return `${Math.round(distanceKm * 1000)} m`;
-    }
-    return `${distanceKm.toFixed(1)} km`;
-  }, []);
-
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
       onSelectHotspot(hotspot.id, hotspot.lat, hotspot.lng);
@@ -124,7 +124,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
       </TouchableOpacity>
     ),
-    [handleSelectHotspot, formatDistance]
+    [handleSelectHotspot]
   );
 
   const isLoading = isLoadingLocation || isSearching || isLoadingAll;
@@ -196,12 +196,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         </View>
 
         {renderContent()}
-
-        {isLoading && displayedHotspots.length > 0 && (
-          <View style={tw`absolute bottom-0 left-0 right-0 py-2 bg-white/80 items-center`}>
-            <ActivityIndicator size="small" color={tw.color("blue-500")} />
-          </View>
-        )}
       </View>
     </Modal>
   );
