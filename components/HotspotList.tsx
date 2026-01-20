@@ -93,12 +93,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
   useEffect(() => {
-    if (displayedHotspots.length > 0) {
-      flashListRef.current?.scrollToIndex({ index: 0, animated: false });
-    } else {
       flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
-    }
-  }, [searchUpdatedAt, displayedHotspots.length]);
+  }, [searchUpdatedAt]);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
