@@ -1,4 +1,5 @@
 import { useLocation } from "@/hooks/useLocation";
+import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
 import { Hotspot } from "@/lib/types";
@@ -8,7 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HotspotItem from "./HotspotItem";
@@ -31,7 +32,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const flashListRef = useRef<any>(null);
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
 
@@ -92,9 +92,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
-  useEffect(() => {
-      flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [searchUpdatedAt]);
+  const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
@@ -158,13 +156,14 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         </View>
 
         <FlashList
-          ref={flashListRef}
+          ref={listRef}
           data={displayedHotspots}
           renderItem={renderHotspotItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: insets.bottom }}
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
+          onScroll={onScroll}
         />
       </View>
     </Modal>
