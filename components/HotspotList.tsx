@@ -1,23 +1,17 @@
 import { useLocation } from "@/hooks/useLocation";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
-import { calculateDistance, getBoundingBoxFromLocation, getMarkerColor } from "@/lib/utils";
+import { Hotspot } from "@/lib/types";
+import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-type Hotspot = {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  species: number;
-  country: string | null;
-};
+import HotspotItem from "./HotspotItem";
 
 type HotspotListProps = {
   isOpen: boolean;
@@ -29,25 +23,6 @@ const NEARBY_LIMIT = 200;
 const ALL_HOTSPOTS_LIMIT = 1000;
 const NEARBY_BUCKETS_KM = [50, 100, 200, 500];
 
-const MILES_COUNTRIES = ["US", "GB", "MM", "LR", "PR", "VI", "GU", "MP", "AS", "KY", "TC", "VG", "AI", "MS", "FK"];
-
-const formatDistance = (distanceKm: number, country: string | null) => {
-  const useMiles = country && MILES_COUNTRIES.includes(country);
-  if (useMiles) {
-    const distanceMiles = distanceKm * 0.621371;
-    const rounded = Math.round(distanceMiles);
-    if (rounded >= 10) {
-      return `${rounded} mi`;
-    }
-    return `${distanceMiles.toFixed(1)} mi`;
-  }
-  const rounded = Math.round(distanceKm);
-  if (rounded >= 10) {
-    return `${rounded} km`;
-  }
-  return `${distanceKm.toFixed(1)} km`;
-};
-
 export default function HotspotList({ isOpen, onClose, onSelectHotspot }: HotspotListProps) {
   const insets = useSafeAreaInsets();
   const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
@@ -56,7 +31,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const flatListRef = useRef<FlatList>(null);
+  const flashListRef = useRef<any>(null);
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
 
@@ -67,7 +42,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
-  const { data: searchResults = [] } = useQuery({
+  const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery],
     queryFn: () => searchHotspots(debouncedQuery),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
@@ -118,8 +93,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
   useEffect(() => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [displayedHotspots]);
+    if (displayedHotspots.length > 0) {
+      flashListRef.current?.scrollToIndex({ index: 0, animated: false });
+    } else {
+      flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [searchUpdatedAt, displayedHotspots.length]);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
@@ -130,27 +109,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const renderHotspotItem = useCallback(
     ({ item }: { item: Hotspot & { distance?: number } }) => (
-      <TouchableOpacity
-        onPress={() => handleSelectHotspot(item)}
-        style={tw`flex-row items-center px-4 py-3 border-b border-gray-200/70 bg-white`}
-        activeOpacity={0.7}
-      >
-        <View style={tw`flex-1`}>
-          <Text style={tw`text-gray-900 text-base font-medium`} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View style={tw`flex-row items-center mt-1`}>
-            <View
-              style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(item.species || 0) }]}
-            />
-            <Text style={tw`text-gray-600 text-sm`}>{item.species} species</Text>
-          </View>
-        </View>
-        {item.distance !== undefined && (
-          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, item.country)}</Text>
-        )}
-        <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
-      </TouchableOpacity>
+      <HotspotItem item={item} onSelect={handleSelectHotspot} />
     ),
     [handleSelectHotspot]
   );
@@ -169,6 +128,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   );
 
   const headerText = hasLocationAccess ? "Nearby Hotspots" : "Hotspots";
+
+  const keyExtractor = useCallback((item: Hotspot & { distance?: number }, i: number) => `${i}-${item.id}`, []);
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -200,15 +161,14 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           />
         </View>
 
-        <FlatList
-          ref={flatListRef}
+        <FlashList
+          key={debouncedQuery.length >= 2 ? "search" : "all"}
+          ref={flashListRef}
           data={displayedHotspots}
           renderItem={renderHotspotItem}
-          keyExtractor={(item) => item.id}
-          style={tw`flex-1`}
+          keyExtractor={keyExtractor}
           contentContainerStyle={displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: insets.bottom }}
-          showsVerticalScrollIndicator={true}
-          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
         />
       </View>

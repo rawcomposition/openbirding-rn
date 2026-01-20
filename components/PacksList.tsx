@@ -3,10 +3,11 @@ import { useLocation } from "@/hooks/useLocation";
 import tw from "@/lib/tw";
 import { Pack } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
 
@@ -74,6 +75,8 @@ export default function PacksList() {
 
     return packs;
   }, [data, activeTab, installedPackIds, searchQuery, userLocation]);
+  
+  const keyExtractor = useCallback((item: Pack, i: number) => `${i}-${item.id}`, []);
 
   if (isLoading) {
     return (
@@ -100,6 +103,7 @@ export default function PacksList() {
   const renderPack = ({ item }: { item: Pack }) => (
     <PackListRow id={item.id} name={item.name} hotspots={item.hotspots} />
   );
+
 
   return (
     <View style={tw`flex-1`}>
@@ -155,13 +159,11 @@ export default function PacksList() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={filteredPacks}
           renderItem={renderPack}
-          keyExtractor={(item) => item.id.toString()}
-          style={tw`flex-1`}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyExtractor={keyExtractor}
+          showsVerticalScrollIndicator
         />
       )}
     </View>
