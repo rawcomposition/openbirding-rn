@@ -162,7 +162,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         </View>
 
         <FlashList
-          key={debouncedQuery.length >= 2 ? "search" : "all"}
           ref={flashListRef}
           data={displayedHotspots}
           renderItem={renderHotspotItem}
