@@ -63,7 +63,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           }
         }
         // Fall back to the largest bucket if we didn't get enough results
-        const largestBbox = getBoundingBoxFromLocation(location.lat, location.lng, NEARBY_BUCKETS_KM[NEARBY_BUCKETS_KM.length - 1]);
+        const largestBbox = getBoundingBoxFromLocation(
+          location.lat,
+          location.lng,
+          NEARBY_BUCKETS_KM[NEARBY_BUCKETS_KM.length - 1]
+        );
         return getNearbyHotspots(largestBbox);
       }
       return getAllHotspots(ALL_HOTSPOTS_LIMIT);
@@ -102,9 +106,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   );
 
   const renderHotspotItem = useCallback(
-    ({ item }: { item: Hotspot & { distance?: number } }) => (
-      <HotspotItem item={item} onSelect={handleSelectHotspot} />
-    ),
+    ({ item }: { item: Hotspot & { distance?: number } }) => <HotspotItem item={item} onSelect={handleSelectHotspot} />,
     [handleSelectHotspot]
   );
 
@@ -164,6 +166,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
           onScroll={onScroll}
+          keyboardShouldPersistTaps="handled"
         />
       </View>
     </Modal>

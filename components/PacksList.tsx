@@ -75,7 +75,7 @@ export default function PacksList() {
 
     return packs;
   }, [data, activeTab, installedPackIds, searchQuery, userLocation]);
-  
+
   const keyExtractor = useCallback((item: Pack, i: number) => `${i}-${item.id}`, []);
 
   if (isLoading) {
@@ -103,7 +103,6 @@ export default function PacksList() {
   const renderPack = ({ item }: { item: Pack }) => (
     <PackListRow id={item.id} name={item.name} hotspots={item.hotspots} />
   );
-
 
   return (
     <View style={tw`flex-1`}>
@@ -164,6 +163,7 @@ export default function PacksList() {
           renderItem={renderPack}
           keyExtractor={keyExtractor}
           showsVerticalScrollIndicator
+          keyboardShouldPersistTaps="handled"
         />
       )}
     </View>
