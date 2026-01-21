@@ -74,6 +74,7 @@ const THROTTLE_DELAY = 750;
 const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
 const MIN_ZOOM = 7;
 const DEFAULT_USER_ZOOM = 14;
+const DEFAULT_HOTSPOT_ZOOM = 13;
 const isValidUserCoord = (coord: [number, number] | null) => {
   if (!coord) return false;
   const [lng, lat] = coord;
@@ -209,7 +210,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       cameraRef.current.setCamera({
         centerCoordinate: [lng, lat],
         padding: { paddingTop: 0, paddingBottom: offsetY, paddingLeft: 0, paddingRight: 0 },
-        animationDuration: 300,
+        animationDuration: 400,
+        zoomLevel: DEFAULT_HOTSPOT_ZOOM,
       });
     }, []);
 
