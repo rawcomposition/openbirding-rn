@@ -21,6 +21,7 @@ type HotspotListProps = {
 };
 
 const NEARBY_LIMIT = 200;
+const SEARCH_LIMIT = 100;
 const ALL_HOTSPOTS_LIMIT = 1000;
 const NEARBY_BUCKETS_KM = [50, 100, 200, 500];
 
@@ -44,7 +45,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery],
-    queryFn: () => searchHotspots(debouncedQuery),
+    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,

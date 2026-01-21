@@ -352,12 +352,22 @@ export async function deletePlace(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM saved_places WHERE id = ?`, [id]);
 }
 
-export async function getAllHotspots(limit: number): Promise<
-  { id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]
-> {
+type HotspotResult = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  species: number;
+  country: string | null;
+};
+
+export async function getAllHotspots(limit: number): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name LIMIT ?`, [limit]);
+  const result = await db.getAllAsync(
+    `SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name LIMIT ?`,
+    [limit]
+  );
 
   return result.map((row: any) => ({
     id: row.id as string,
@@ -369,9 +379,14 @@ export async function getAllHotspots(limit: number): Promise<
   }));
 }
 
-export async function getNearbyHotspots(
-  bbox: { west: number; south: number; east: number; north: number }
-): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
+type BoundingBox = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
+export async function getNearbyHotspots(bbox: BoundingBox): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
   // When west > east, the bounding box crosses the international date line
@@ -393,14 +408,13 @@ export async function getNearbyHotspots(
   }));
 }
 
-export async function searchHotspots(
-  query: string
-): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
+export async function searchHotspots(query: string, limit: number): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(`SELECT id, name, lat, lng, species, country FROM hotspots WHERE name LIKE ? ORDER BY name`, [
-    `%${query}%`,
-  ]);
+  const result = await db.getAllAsync(
+    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE name LIKE ? ORDER BY name LIMIT ?`,
+    [`%${query}%`, limit]
+  );
 
   return result.map((row: any) => ({
     id: row.id as string,
