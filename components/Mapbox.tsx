@@ -103,7 +103,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const { status: permissionStatus } = useLocationPermissionStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
-    const cameraRef = useRef<Mapbox.Camera>(null)
+    const cameraRef = useRef<Mapbox.Camera>(null);
 
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
@@ -153,7 +153,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       gcTime: 10 * 60 * 1000,
     });
 
-    const throttledSetBounds = useMemo(() => throttle((b: Bounds | null) => setBounds(b), hotspotId ? THROTTLE_DELAY_WITH_OPEN_HOTSPOT : THROTTLE_DELAY), []);
+    const throttledSetBounds = useMemo(
+      () => throttle((b: Bounds | null) => setBounds(b), hotspotId ? THROTTLE_DELAY_WITH_OPEN_HOTSPOT : THROTTLE_DELAY),
+      [hotspotId]
+    );
     const debouncedSaveLocation = useMemo(
       () =>
         debounce(async () => {
@@ -201,17 +204,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       centerMapOnUser();
     }, [isMapReady, hasSavedLocation, centerMapOnUser]);
 
-    const centerOnCoordinates = useCallback(
-      (lng: number, lat: number, offsetY: number = 0) => {
-        if (!cameraRef.current) return;
-        cameraRef.current.setCamera({
-          centerCoordinate: [lng, lat],
-          padding: { paddingTop: 0, paddingBottom: offsetY, paddingLeft: 0, paddingRight: 0 },
-          animationDuration: 300,
-        });
-      },
-      []
-    );
+    const centerOnCoordinates = useCallback((lng: number, lat: number, offsetY: number = 0) => {
+      if (!cameraRef.current) return;
+      cameraRef.current.setCamera({
+        centerCoordinate: [lng, lat],
+        padding: { paddingTop: 0, paddingBottom: offsetY, paddingLeft: 0, paddingRight: 0 },
+        animationDuration: 300,
+      });
+    }, []);
 
     useImperativeHandle(
       ref,
