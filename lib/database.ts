@@ -105,9 +105,13 @@ export async function getHotspotsWithinBounds(
 ): Promise<{ id: string; lat: number; lng: number; species: number }[]> {
   if (!db) throw new Error("Database not initialized");
 
+  // When west > east, the bounding box crosses the international date line
+  const crossesDateLine = west > east;
+  const lngCondition = crossesDateLine ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
+
   const result = await db.getAllAsync(
-    `SELECT id, lat, lng, species FROM hotspots 
-     WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ?`,
+    `SELECT id, lat, lng, species FROM hotspots
+     WHERE lat >= ? AND lat <= ? AND ${lngCondition}`,
     [south, north, west, east]
   );
 
@@ -370,8 +374,12 @@ export async function getNearbyHotspots(
 ): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
   if (!db) throw new Error("Database not initialized");
 
+  // When west > east, the bounding box crosses the international date line
+  const crossesDateLine = bbox.west > bbox.east;
+  const lngCondition = crossesDateLine ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
+
   const result = await db.getAllAsync(
-    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE lat >= ? AND lat <= ? AND lng >= ? AND lng <= ?`,
+    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE lat >= ? AND lat <= ? AND ${lngCondition}`,
     [bbox.south, bbox.north, bbox.west, bbox.east]
   );
 
