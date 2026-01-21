@@ -55,20 +55,15 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     queryFn: async () => {
       if (hasLocationAccess && location) {
         // Try the smallest buckets first to get a result quickly
+        let hotspots: Hotspot[] = [];
         for (const radiusKm of NEARBY_BUCKETS_KM) {
           const bbox = getBoundingBoxFromLocation(location.lat, location.lng, radiusKm);
-          const hotspots = await getNearbyHotspots(bbox);
+          hotspots = await getNearbyHotspots(bbox);
           if (hotspots.length >= NEARBY_LIMIT) {
             return hotspots;
           }
         }
-        // Fall back to the largest bucket if we didn't get enough results
-        const largestBbox = getBoundingBoxFromLocation(
-          location.lat,
-          location.lng,
-          NEARBY_BUCKETS_KM[NEARBY_BUCKETS_KM.length - 1]
-        );
-        return getNearbyHotspots(largestBbox);
+        return hotspots;
       }
       return getAllHotspots(ALL_HOTSPOTS_LIMIT);
     },
