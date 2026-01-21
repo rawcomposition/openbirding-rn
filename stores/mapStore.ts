@@ -11,6 +11,8 @@ type MapStore = {
   setPlaceId: (id: string | null) => void;
   customPinCoordinates: { latitude: number; longitude: number } | null;
   setCustomPinCoordinates: (coordinates: { latitude: number; longitude: number } | null) => void;
+  isHotspotListOpen: boolean;
+  setIsHotspotListOpen: (isOpen: boolean) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -22,4 +24,6 @@ export const useMapStore = create<MapStore>((set) => ({
   setPlaceId: (id) => set({ placeId: id }),
   customPinCoordinates: null,
   setCustomPinCoordinates: (coordinates) => set({ customPinCoordinates: coordinates }),
+  isHotspotListOpen: false,
+  setIsHotspotListOpen: (isOpen) => set({ isHotspotListOpen: isOpen }),
 }));

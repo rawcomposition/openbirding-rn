@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,10 +9,12 @@ import PacksNotice from "@/components/PacksNotice";
 import tw from "@/lib/tw";
 import HotspotDialog from "@/components/HotspotDialog";
 import PlaceDialog from "@/components/PlaceDialog";
+import HotspotList from "@/components/HotspotList";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMapStore } from "@/stores/mapStore";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import MapListIcon from "@/components/icons/MapListIcon";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,8 +22,17 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
-  const { currentLayer, hotspotId, setHotspotId, placeId, setPlaceId, customPinCoordinates, setCustomPinCoordinates } =
-    useMapStore();
+  const {
+    currentLayer,
+    hotspotId,
+    setHotspotId,
+    placeId,
+    setPlaceId,
+    customPinCoordinates,
+    setCustomPinCoordinates,
+    isHotspotListOpen,
+    setIsHotspotListOpen,
+  } = useMapStore();
   const installedPacks = useInstalledPacks();
 
   const handleMapPress = (_event: any) => {
@@ -61,6 +72,27 @@ export default function HomeScreen() {
   const handleCenterOnUser = () => {
     mapRef.current?.centerOnUser();
   };
+
+  const handleOpenHotspotList = () => {
+    setIsHotspotListOpen(true);
+  };
+
+  const handleCloseHotspotList = () => {
+    setIsHotspotListOpen(false);
+  };
+
+  const handleSelectHotspotFromList = useCallback(
+    (selectedHotspotId: string, lat: number, lng: number) => {
+      setIsHotspotListOpen(false);
+      setCustomPinCoordinates(null);
+      setPlaceId(null);
+      setHotspotId(selectedHotspotId);
+      setTimeout(() => {
+        mapRef.current?.centerOnCoordinates(lng, lat, 200);
+      }, 500);
+    },
+    [setIsHotspotListOpen, setCustomPinCoordinates, setPlaceId, setHotspotId]
+  );
 
   if (isLoadingLocation) return null;
 
@@ -109,6 +141,9 @@ export default function HomeScreen() {
           <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
+          <FloatingButton onPress={handleOpenHotspotList} light={currentLayer === "satellite"}>
+            <MapListIcon size={24} color={tw.color("gray-700")} />
+          </FloatingButton>
           <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
             <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
@@ -131,6 +166,11 @@ export default function HomeScreen() {
             setCustomPinCoordinates(null);
             setPlaceId(null);
           }}
+        />
+        <HotspotList
+          isOpen={isHotspotListOpen}
+          onClose={handleCloseHotspotList}
+          onSelectHotspot={handleSelectHotspotFromList}
         />
       </View>
     </GestureHandlerRootView>

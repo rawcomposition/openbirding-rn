@@ -105,7 +105,11 @@ export const getMarkerColorIndex = (count: number) => {
 type Bbox = { west: number; south: number; east: number; north: number };
 
 export function padBoundsBySize(bbox: Bbox): Bbox {
-  const width = bbox.east - bbox.west;
+  // Check if bbox crosses the date line (west > east)
+  const crossesDateLine = bbox.west > bbox.east;
+  const width = crossesDateLine
+    ? (180 - bbox.west) + (bbox.east + 180)
+    : bbox.east - bbox.west;
   const height = bbox.north - bbox.south;
   const span = Math.max(width, height);
 
@@ -118,10 +122,17 @@ export function padBoundsBySize(bbox: Bbox): Bbox {
   const dx = width * paddingPct;
   const dy = height * paddingPct;
 
+  let west = bbox.west - dx;
+  let east = bbox.east + dx;
+
+  // Wrap around the date line if needed
+  if (west < -180) west += 360;
+  if (east > 180) east -= 360;
+
   return {
-    west: bbox.west - dx,
+    west,
     south: bbox.south - dy,
-    east: bbox.east + dx,
+    east,
     north: bbox.north + dy,
   };
 }
@@ -139,6 +150,26 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+export function getBoundingBoxFromLocation(lat: number, lng: number, radiusKm: number): Bbox {
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
+
+  let east = lng + lngDelta;
+  let west = lng - lngDelta;
+
+  // Wrap around the date line instead of clamping
+  // When west > east, it indicates the bbox crosses the date line
+  if (east > 180) east -= 360;
+  if (west < -180) west += 360;
+
+  return {
+    north: Math.min(90, lat + latDelta),
+    south: Math.max(-90, lat - latDelta),
+    east,
+    west,
+  };
 }
 
 export function findClosestFeature(features: GeoJSON.Feature[], tapLocation: [number, number]) {

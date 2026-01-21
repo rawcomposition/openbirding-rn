@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Alert } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
-import Toast from "react-native-toast-message";
-import { getPackById, installPack, uninstallPack, checkIsPackInstalling } from "@/lib/database";
+import { checkIsPackInstalling, getPackById, installPack, uninstallPack } from "@/lib/database";
 import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { Alert } from "react-native";
+import Toast from "react-native-toast-message";
 
 export function useManagePack(packId: number) {
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
@@ -44,6 +44,9 @@ export function useManagePack(packId: number) {
 
       await queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
+      queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
 
       Toast.show({
         type: "success",
@@ -78,6 +81,9 @@ export function useManagePack(packId: number) {
 
       queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
+      queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
 
       Toast.show({
         type: "success",

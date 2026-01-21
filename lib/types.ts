@@ -68,3 +68,12 @@ export type SavedPlace = {
   lng: number;
   saved_at: string;
 };
+
+export type Hotspot = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  species: number;
+  country: string | null;
+};
