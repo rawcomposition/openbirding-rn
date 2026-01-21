@@ -9,9 +9,10 @@ export function useScrollRestore(isOpen: boolean, resetKey: number) {
   // Restore scroll position when modal opens
   useEffect(() => {
     if (isOpen && scrollOffsetRef.current > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         listRef.current?.scrollToOffset({ offset: scrollOffsetRef.current, animated: false });
       }, 100);
+      return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
 
