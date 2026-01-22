@@ -72,6 +72,7 @@ export type MapboxMapRef = {
 
 const THROTTLE_DELAY = 750;
 const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
+const THROTTLE_DELAY_ZOOMED_OUT = 1500;
 const MIN_ZOOM = 7;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
@@ -112,6 +113,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const [isMapReady, setIsMapReady] = useState(false);
     const [showAttribution, setShowAttribution] = useState(false);
     const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
+    const [zoomLevel, setZoomLevel] = useState(Math.round(initialZoom));
     const [bounds, setBounds] = useState<Bounds | null>(null);
 
     const mapStyle = useMemo(() => {
@@ -154,9 +156,16 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       gcTime: 10 * 60 * 1000,
     });
 
+    let throttleDelay = THROTTLE_DELAY;
+    if (hotspotId) {
+      throttleDelay = THROTTLE_DELAY_WITH_OPEN_HOTSPOT;
+    } else if (zoomLevel < 8) {
+      throttleDelay = THROTTLE_DELAY_ZOOMED_OUT;
+    }
+
     const throttledSetBounds = useMemo(
-      () => throttle((b: Bounds | null) => setBounds(b), hotspotId ? THROTTLE_DELAY_WITH_OPEN_HOTSPOT : THROTTLE_DELAY),
-      [hotspotId]
+      () => throttle((b: Bounds | null) => setBounds(b), throttleDelay),
+      [throttleDelay]
     );
     const debouncedSaveLocation = useMemo(
       () =>
@@ -171,6 +180,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
       if (!mapRef.current) return null;
       const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
+      setZoomLevel(Math.round(z));
       setIsZoomedTooFarOut(z < MIN_ZOOM);
       if (z >= MIN_ZOOM && b) {
         return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
