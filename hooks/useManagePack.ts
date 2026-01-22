@@ -2,8 +2,9 @@ import { checkIsPackInstalling, getPackById, installPack, uninstallPack } from "
 import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import { useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import Toast from "react-native-toast-message";
 
 export function useManagePack(packId: number) {
@@ -12,7 +13,7 @@ export function useManagePack(packId: number) {
   const [isUninstalling, setIsUninstalling] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
-  const install = async (apiPack: ApiPack) => {
+  const install = async (apiPack: ApiPack, downloadMethod: "auto" | "manual") => {
     if (isInstalling || isUninstalling || isDownloading) {
       Toast.show({
         type: "info",
@@ -31,7 +32,14 @@ export function useManagePack(packId: number) {
 
       const currentPack = await getPackById(packId);
 
-      const response = await fetch(`${API_URL}/packs/${packId}`);
+      const response = await fetch(`${API_URL}/packs/${packId}`, {
+        headers: {
+          "App-Version": Constants.expoConfig?.version || "Unknown",
+          "App-Build": Constants.nativeBuildVersion || "Unknown",
+          "App-Platform": Platform.OS,
+          "Download-Method": downloadMethod,
+        },
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch pack data: ${response.status}`);
       }

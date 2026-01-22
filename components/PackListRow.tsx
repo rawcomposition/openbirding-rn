@@ -57,7 +57,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
         <View style={tw`flex-row items-center`}>
           <View style={tw`relative`}>
             <Pressable
-              onPress={() => install({ id, name, hotspots })}
+              onPress={() => install({ id, name, hotspots }, "manual")}
               disabled={installDisabled}
               style={[tw`py-2 rounded-lg border border-gray-200`, installDisabled && tw`opacity-60`]}
             >
