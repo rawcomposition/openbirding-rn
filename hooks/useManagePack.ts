@@ -3,6 +3,7 @@ import { ApiPack, ApiPackResponse } from "@/lib/types";
 import { API_URL } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { useState } from "react";
 import { Alert, Platform } from "react-native";
 import Toast from "react-native-toast-message";
@@ -32,11 +33,15 @@ export function useManagePack(packId: number) {
 
       const currentPack = await getPackById(packId);
 
+      const channel = Updates.channel || (__DEV__ ? "development" : "unknown");
+      const environment = channel === "device" ? "preview" : channel;
+
       const response = await fetch(`${API_URL}/packs/${packId}`, {
         headers: {
           "App-Version": Constants.expoConfig?.version || "Unknown",
           "App-Build": Constants.nativeBuildVersion || "Unknown",
           "App-Platform": Platform.OS,
+          "App-Environment": environment,
           "Download-Method": downloadMethod,
         },
       });
