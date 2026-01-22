@@ -11,10 +11,6 @@
       },
       "channel": "development"
     },
-    "device": {
-      "distribution": "internal",
-      "channel": "device"
-    },
     "preview": {
       "distribution": "internal",
       "channel": "preview"

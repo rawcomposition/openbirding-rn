@@ -34,14 +34,13 @@ export function useManagePack(packId: number) {
       const currentPack = await getPackById(packId);
 
       const channel = Updates.channel || (__DEV__ ? "development" : "unknown");
-      const environment = channel === "device" ? "preview" : channel;
 
       const response = await fetch(`${API_URL}/packs/${packId}`, {
         headers: {
           "App-Version": Constants.expoConfig?.version || "Unknown",
           "App-Build": Constants.nativeBuildVersion || "Unknown",
           "App-Platform": Platform.OS,
-          "App-Environment": environment,
+          "App-Environment": channel,
           "Download-Method": downloadMethod,
         },
       });
