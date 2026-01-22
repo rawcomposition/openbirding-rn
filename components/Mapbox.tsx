@@ -72,8 +72,7 @@ export type MapboxMapRef = {
 
 const THROTTLE_DELAY = 750;
 const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
-const THROTTLE_DELAY_ZOOMED_OUT = 1500;
-const MIN_ZOOM = 7;
+const MIN_ZOOM = 8;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
 const isValidUserCoord = (coord: [number, number] | null) => {
@@ -159,8 +158,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     let throttleDelay = THROTTLE_DELAY;
     if (hotspotId) {
       throttleDelay = THROTTLE_DELAY_WITH_OPEN_HOTSPOT;
-    } else if (zoomLevel < 8) {
-      throttleDelay = THROTTLE_DELAY_ZOOMED_OUT;
     }
 
     const throttledSetBounds = useMemo(
@@ -514,7 +511,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
-              <Text style={tw`text-sm text-gray-700`}>Zoom in to see hotspots</Text>
+              <Text style={tw`text-sm text-gray-700`}>Zoom in to load hotspots</Text>
             </View>
           </View>
         )}
