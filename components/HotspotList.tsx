@@ -124,7 +124,13 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const keyExtractor = useCallback((item: Hotspot & { distance?: number }, i: number) => `${i}-${item.id}`, []);
 
   return (
-    <Modal visible={isOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal
+      visible={isOpen}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      transparent={Platform.OS === "android"}
+    >
       <View style={[tw`flex-1 bg-white`, Platform.OS === "android" && { paddingTop: insets.top }]}>
         <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-5 border-b border-gray-200`}>
           <View style={tw`flex-1`}>
