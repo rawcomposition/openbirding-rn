@@ -2,7 +2,7 @@ import tw from "@/lib/tw";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React, { ReactNode, useEffect, useMemo, useRef } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Platform, Text, TouchableOpacity, View } from "react-native";
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
@@ -61,20 +61,23 @@ export default function BaseBottomSheet({
   };
 
   return (
-    <BottomSheet
-      ref={bottomSheetRef}
-      index={-1}
-      snapPoints={memoizedSnapPoints}
-      onChange={handleSheetChanges}
-      enablePanDownToClose
-      bottomInset={0}
-      backgroundStyle={tw`bg-white rounded-t-3xl`}
-      handleIndicatorStyle={tw`bg-gray-300`}
-    >
-      <BottomSheetView style={tw`flex-1`}>
-        {renderHeader()}
-        {children}
-      </BottomSheetView>
-    </BottomSheet>
+    <>
+      {Platform.OS === "android" && isOpen && <View style={tw`absolute bottom-0 left-0 right-0 h-6 bg-white`} />}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={memoizedSnapPoints}
+        onChange={handleSheetChanges}
+        enablePanDownToClose
+        bottomInset={0}
+        backgroundStyle={tw`bg-white rounded-t-3xl`}
+        handleIndicatorStyle={tw`bg-gray-300`}
+      >
+        <BottomSheetView style={tw`flex-1`}>
+          {renderHeader()}
+          {children}
+        </BottomSheetView>
+      </BottomSheet>
+    </>
   );
 }

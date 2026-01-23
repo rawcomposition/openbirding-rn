@@ -37,8 +37,7 @@ export function useManagePack(packId: number) {
 
       const response = await fetch(`${API_URL}/packs/${packId}`, {
         headers: {
-          "App-Version": Constants.expoConfig?.version || "Unknown",
-          "App-Build": Constants.nativeBuildVersion || "Unknown",
+          "App-Version": Constants.expoConfig?.version || "unknown",
           "App-Platform": Platform.OS,
           "App-Environment": channel,
           "Download-Method": downloadMethod,
