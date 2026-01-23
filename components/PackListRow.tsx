@@ -1,10 +1,10 @@
-import React, { memo } from "react";
-import { View, Text, Pressable } from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import tw from "@/lib/tw";
-import { useManagePack } from "@/hooks/useManagePack";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { useManagePack } from "@/hooks/useManagePack";
 import { UPDATE_INTERVAL_LIMIT } from "@/lib/config";
+import tw from "@/lib/tw";
+import React, { memo } from "react";
+import { Pressable, Text, View } from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 type PackListRowProps = {
   id: number;
@@ -14,7 +14,7 @@ type PackListRowProps = {
 
 const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
   const { install, uninstall, isDownloading, isInstalling, isUninstalling } = useManagePack(id);
-  const installedPacks = useInstalledPacks();
+  const { data: installedPacks } = useInstalledPacks();
   const installedPack = installedPacks.get(id);
 
   const isInstalled = installedPack !== undefined;

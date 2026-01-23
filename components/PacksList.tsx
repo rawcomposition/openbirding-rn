@@ -30,7 +30,7 @@ export default function PacksList() {
     queryKey: ["/packs"],
   });
 
-  const installedPackIds = useInstalledPacks();
+  const { data: installedPackIds } = useInstalledPacks();
   const {
     location: userLocation,
     error: locationError,

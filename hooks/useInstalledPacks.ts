@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { getDatabase } from "@/lib/database";
+import { useQuery } from "@tanstack/react-query";
 
 export function useInstalledPacks() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["installed-packs"],
     queryFn: async () => {
       const db = getDatabase();
@@ -11,5 +11,5 @@ export function useInstalledPacks() {
     },
   });
 
-  return data || new Map();
+  return { data: data || new Map(), isLoading };
 }

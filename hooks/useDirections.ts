@@ -1,9 +1,9 @@
+import { getDirections, getExternalMapProviders } from "@/lib/utils";
+import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { useCallback } from "react";
 import { ActionSheetIOS, Alert, Linking, Platform, findNodeHandle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
-import { getDirections, getExternalMapProviders } from "@/lib/utils";
 
 export type DirectionsCoordinates = {
   latitude: number;
@@ -53,7 +53,6 @@ export function useDirections() {
           options,
           cancelButtonIndex,
           title: "Choose Map Provider",
-          useModal: true,
           containerStyle: {
             paddingBottom: insets.bottom,
             backgroundColor: "white",

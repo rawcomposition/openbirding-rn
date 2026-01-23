@@ -112,7 +112,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const [isMapReady, setIsMapReady] = useState(false);
     const [showAttribution, setShowAttribution] = useState(false);
     const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
-    const [zoomLevel, setZoomLevel] = useState(Math.round(initialZoom));
     const [bounds, setBounds] = useState<Bounds | null>(null);
 
     const mapStyle = useMemo(() => {
@@ -177,7 +176,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
       if (!mapRef.current) return null;
       const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
-      setZoomLevel(Math.round(z));
       setIsZoomedTooFarOut(z < MIN_ZOOM);
       if (z >= MIN_ZOOM && b) {
         return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
@@ -283,6 +281,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     return (
       <View style={[tw`flex-1`, style]}>
         <Mapbox.MapView
+          surfaceView={Platform.OS === "android"}
           ref={mapRef}
           style={tw`flex-1`}
           styleURL={mapStyle}

@@ -1,20 +1,20 @@
-import React, { useState, useRef, useCallback } from "react";
-import { View, TouchableOpacity } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { Ionicons } from "@expo/vector-icons";
-import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import FloatingButton from "@/components/FloatingButton";
+import HotspotDialog from "@/components/HotspotDialog";
+import HotspotList from "@/components/HotspotList";
+import MapListIcon from "@/components/icons/MapListIcon";
+import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
-import tw from "@/lib/tw";
-import HotspotDialog from "@/components/HotspotDialog";
 import PlaceDialog from "@/components/PlaceDialog";
-import HotspotList from "@/components/HotspotList";
-import { useSavedLocation } from "@/hooks/useSavedLocation";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMapStore } from "@/stores/mapStore";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
-import MapListIcon from "@/components/icons/MapListIcon";
+import { useSavedLocation } from "@/hooks/useSavedLocation";
+import tw from "@/lib/tw";
+import { useMapStore } from "@/stores/mapStore";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useRef, useState } from "react";
+import { TouchableOpacity, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,7 +33,7 @@ export default function HomeScreen() {
     isHotspotListOpen,
     setIsHotspotListOpen,
   } = useMapStore();
-  const installedPacks = useInstalledPacks();
+  const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -118,7 +118,7 @@ export default function HomeScreen() {
           onLongPressCoordinates={handleMapLongPress}
           placeCoordinates={customPinCoordinates}
         />
-        {!hasInstalledPacks && (
+        {!hasInstalledPacks && !isLoadingInstalledPacks && (
           <View
             style={[
               tw`absolute left-0 right-0`,
