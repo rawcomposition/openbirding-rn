@@ -2,13 +2,13 @@ import GoogleMapsIcon from "@/components/icons/GoogleMapsIcon";
 import OrganicMapsIcon from "@/components/icons/OrganicMapsIcon";
 import QuestionMarkIcon from "@/components/icons/QuestionMarkIcon";
 import WazeIcon from "@/components/icons/WazeIcon";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
+import tw from "@/lib/tw";
 import { getExternalMapProviders } from "@/lib/utils";
+import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import React from "react";
-import { Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import tw from "@/lib/tw";
+import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function SettingsPage() {
   const defaultProvider = useDefaultMapProviderStore((state) => state.defaultProvider);
@@ -61,6 +61,8 @@ export default function SettingsPage() {
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
+    } else {
+      Alert.alert("Feedback", "Send feedback to adam@openbirding.org");
     }
   };
 
