@@ -1,8 +1,8 @@
-import React, { useRef, useMemo, useEffect, ReactNode } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import { Ionicons } from "@expo/vector-icons";
 import tw from "@/lib/tw";
+import { Ionicons } from "@expo/vector-icons";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import React, { ReactNode, useEffect, useMemo, useRef } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
@@ -67,6 +67,7 @@ export default function BaseBottomSheet({
       snapPoints={memoizedSnapPoints}
       onChange={handleSheetChanges}
       enablePanDownToClose
+      bottomInset={0}
       backgroundStyle={tw`bg-white rounded-t-3xl`}
       handleIndicatorStyle={tw`bg-gray-300`}
     >
