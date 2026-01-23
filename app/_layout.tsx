@@ -1,3 +1,4 @@
+import tw from "@/lib/tw";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,14 +9,14 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import tw from "@/lib/tw";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { initializeDatabase } from "@/lib/database";
+import { get } from "@/lib/utils";
 import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
-import { get } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 const queryClient = new QueryClient({
@@ -75,59 +76,61 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ActionSheetProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
-              <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
-              <Stack.Screen name="settings" options={{ title: "Settings" }} />
-              <Stack.Screen
-                name="place-edit"
-                options={{
-                  title: "Edit Place",
-                  presentation: "modal",
-                  gestureEnabled: true,
-                  animation: "slide_from_bottom",
-                  headerShown: false,
+      <SafeAreaProvider>
+        <ActionSheetProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
+                <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
+                <Stack.Screen name="settings" options={{ title: "Settings" }} />
+                <Stack.Screen
+                  name="place-edit"
+                  options={{
+                    title: "Edit Place",
+                    presentation: "modal",
+                    gestureEnabled: true,
+                    animation: "slide_from_bottom",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <Toast
+                config={{
+                  success: ({ text1 }) => (
+                    <View style={toastStyles}>
+                      <View style={tw`mr-1.5`}>
+                        <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                      </View>
+                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                    </View>
+                  ),
+                  error: ({ text1 }) => (
+                    <View style={toastStyles}>
+                      <View style={tw`mr-1.5`}>
+                        <Ionicons name="alert-circle" size={20} color="#DC2626" />
+                      </View>
+                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                    </View>
+                  ),
+                  info: ({ text1 }) => (
+                    <View style={toastStyles}>
+                      <View style={tw`mr-1.5`}>
+                        <Ionicons name="information-circle" size={20} color="#2563EB" />
+                      </View>
+                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                    </View>
+                  ),
                 }}
+                position="top"
+                topOffset={65}
               />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <Toast
-              config={{
-                success: ({ text1 }) => (
-                  <View style={toastStyles}>
-                    <View style={tw`mr-1.5`}>
-                      <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-                    </View>
-                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                  </View>
-                ),
-                error: ({ text1 }) => (
-                  <View style={toastStyles}>
-                    <View style={tw`mr-1.5`}>
-                      <Ionicons name="alert-circle" size={20} color="#DC2626" />
-                    </View>
-                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                  </View>
-                ),
-                info: ({ text1 }) => (
-                  <View style={toastStyles}>
-                    <View style={tw`mr-1.5`}>
-                      <Ionicons name="information-circle" size={20} color="#2563EB" />
-                    </View>
-                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                  </View>
-                ),
-              }}
-              position="top"
-              topOffset={65}
-            />
-            <StatusBar style="auto" />
-          </ThemeProvider>
-        </QueryClientProvider>
-      </ActionSheetProvider>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </QueryClientProvider>
+        </ActionSheetProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
