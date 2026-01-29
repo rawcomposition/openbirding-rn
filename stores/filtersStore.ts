@@ -4,7 +4,6 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 type FiltersState = {
   showSavedOnly: boolean;
-  // Future filters can be added here (e.g., minSpeciesCount, maxDistance)
 };
 
 type FiltersActions = {

@@ -35,6 +35,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
   const { showSavedOnly } = useFiltersStore();
   const { savedHotspotsSet } = useSavedHotspots();
+  const activeFilterCount = [showSavedOnly].filter(Boolean).length;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
@@ -151,11 +152,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
               onPress={() => setIsFilterSheetOpen(true)}
               style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
             >
-              <Ionicons
-                name={showSavedOnly ? "filter" : "filter-outline"}
-                size={22}
-                color={tw.color("gray-500")}
-              />
+              <Ionicons name="filter-outline" size={22} color={tw.color("gray-500")} />
+              {activeFilterCount > 0 && (
+                <View style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}>
+                  <Text style={tw`text-white text-xs font-semibold`}>{activeFilterCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
