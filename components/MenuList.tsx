@@ -1,7 +1,7 @@
-import React from "react";
-import { View, Text, TouchableOpacity, FlatList } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import tw from "@/lib/tw";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
 
 type MenuOption = {
   id: string;
@@ -33,7 +33,7 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings }: Me
 
   const renderMenuItem = ({ item }: { item: MenuOption }) => (
     <TouchableOpacity
-      style={tw`flex-row items-center p-4 border-b border-gray-200`}
+      style={tw`flex-row items-center px-4 py-3 border-b border-gray-200`}
       onPress={item.onPress}
       activeOpacity={0.7}
     >
@@ -53,6 +53,7 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings }: Me
         keyExtractor={(item) => item.id}
         style={tw`flex-1`}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={false}
       />
     </View>
   );

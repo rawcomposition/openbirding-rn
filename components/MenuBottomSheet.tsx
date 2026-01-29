@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
+import FilterSection from "./FilterSection";
 import MapLayerSwitcher from "./MapLayerSwitcher";
 import MenuList from "./MenuList";
 
@@ -34,6 +35,7 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" snapPoints={["45%", "90%"]}>
       <View style={tw`flex-1`}>
         <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
+        <FilterSection />
         <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
       </View>
     </BaseBottomSheet>

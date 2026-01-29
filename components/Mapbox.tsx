@@ -9,6 +9,7 @@ import {
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
+import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { useMapStore } from "@/stores/mapStore";
 import Mapbox from "@rnmapbox/maps";
@@ -102,6 +103,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const insets = useSafeAreaInsets();
     const { currentLayer, placeId } = useMapStore();
     const { status: permissionStatus } = useLocationPermissionStore();
+    const { showSavedOnly } = useFiltersStore();
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -367,10 +369,15 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 ],
               }}
             >
-              {/* Hotspot */}
+              {/* Hotspot - hidden when showSavedOnly filter is active */}
               <Mapbox.SymbolLayer
                 id="hotspot"
-                filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
+                filter={[
+                  "all",
+                  ["==", ["get", "featureType"], "hotspot"],
+                  ["==", ["get", "isSaved"], false],
+                  ["literal", !showSavedOnly],
+                ]}
                 style={hotspotSymbolStyle() as any}
               />
 
@@ -381,7 +388,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Selected hotspot */}
+              {/* Selected hotspot - hidden when showSavedOnly filter is active */}
               <Mapbox.CircleLayer
                 id="hotspot-halo"
                 filter={[
@@ -389,6 +396,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
+                  ["literal", !showSavedOnly],
                 ]}
                 style={haloInnerStyle() as any}
               />
@@ -399,6 +407,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
+                  ["literal", !showSavedOnly],
                 ]}
                 style={haloOuterStyle() as any}
               />
@@ -409,6 +418,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
+                  ["literal", !showSavedOnly],
                 ]}
                 style={hotspotSymbolStyle() as any}
               />

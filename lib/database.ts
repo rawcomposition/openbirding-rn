@@ -361,13 +361,17 @@ type HotspotResult = {
   country: string | null;
 };
 
-export async function getAllHotspots(limit: number): Promise<HotspotResult[]> {
+export async function getAllHotspots(limit: number, savedOnly = false): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(
-    `SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name LIMIT ?`,
-    [limit]
-  );
+  const query = savedOnly
+    ? `SELECT h.id, h.name, h.lat, h.lng, h.species, h.country
+       FROM hotspots h
+       INNER JOIN saved_hotspots s ON h.id = s.hotspot_id
+       ORDER BY h.name LIMIT ?`
+    : `SELECT id, name, lat, lng, species, country FROM hotspots ORDER BY name LIMIT ?`;
+
+  const result = await db.getAllAsync(query, [limit]);
 
   return result.map((row: any) => ({
     id: row.id as string,
@@ -386,17 +390,21 @@ type BoundingBox = {
   north: number;
 };
 
-export async function getNearbyHotspots(bbox: BoundingBox): Promise<HotspotResult[]> {
+export async function getNearbyHotspots(bbox: BoundingBox, savedOnly = false): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
   // When west > east, the bounding box crosses the international date line
   const crossesDateLine = bbox.west > bbox.east;
-  const lngCondition = crossesDateLine ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
+  const lngCondition = crossesDateLine ? `(h.lng >= ? OR h.lng <= ?)` : `(h.lng >= ? AND h.lng <= ?)`;
 
-  const result = await db.getAllAsync(
-    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE lat >= ? AND lat <= ? AND ${lngCondition}`,
-    [bbox.south, bbox.north, bbox.west, bbox.east]
-  );
+  const query = savedOnly
+    ? `SELECT h.id, h.name, h.lat, h.lng, h.species, h.country
+       FROM hotspots h
+       INNER JOIN saved_hotspots s ON h.id = s.hotspot_id
+       WHERE h.lat >= ? AND h.lat <= ? AND ${lngCondition}`
+    : `SELECT id, name, lat, lng, species, country FROM hotspots h WHERE h.lat >= ? AND h.lat <= ? AND ${lngCondition}`;
+
+  const result = await db.getAllAsync(query, [bbox.south, bbox.north, bbox.west, bbox.east]);
 
   return result.map((row: any) => ({
     id: row.id as string,
@@ -408,13 +416,17 @@ export async function getNearbyHotspots(bbox: BoundingBox): Promise<HotspotResul
   }));
 }
 
-export async function searchHotspots(query: string, limit: number): Promise<HotspotResult[]> {
+export async function searchHotspots(query: string, limit: number, savedOnly = false): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getAllAsync(
-    `SELECT id, name, lat, lng, species, country FROM hotspots WHERE name LIKE ? ORDER BY name LIMIT ?`,
-    [`%${query}%`, limit]
-  );
+  const sql = savedOnly
+    ? `SELECT h.id, h.name, h.lat, h.lng, h.species, h.country
+       FROM hotspots h
+       INNER JOIN saved_hotspots s ON h.id = s.hotspot_id
+       WHERE h.name LIKE ? ORDER BY h.name LIMIT ?`
+    : `SELECT id, name, lat, lng, species, country FROM hotspots WHERE name LIKE ? ORDER BY name LIMIT ?`;
+
+  const result = await db.getAllAsync(sql, [`%${query}%`, limit]);
 
   return result.map((row: any) => ({
     id: row.id as string,

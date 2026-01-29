@@ -4,6 +4,7 @@ import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/databas
 import tw from "@/lib/tw";
 import { Hotspot } from "@/lib/types";
 import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
+import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
@@ -12,6 +13,7 @@ import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FilterBottomSheet from "./FilterBottomSheet";
 import HotspotItem from "./HotspotItem";
 
 type HotspotListProps = {
@@ -30,8 +32,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
+  const { showSavedOnly } = useFiltersStore();
+  const activeFilterCount = [showSavedOnly].filter(Boolean).length;
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
@@ -44,29 +49,31 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
   const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
-    queryKey: ["hotspotSearch", debouncedQuery],
-    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT),
+    queryKey: ["hotspotSearch", debouncedQuery, showSavedOnly],
+    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT, showSavedOnly),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
   const { data: allHotspots = [] } = useQuery({
-    queryKey: hasLocationAccess && location ? ["nearbyHotspots", location.lat, location.lng] : ["allHotspots"],
+    queryKey: hasLocationAccess && location
+      ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
+      : ["allHotspots", showSavedOnly],
     queryFn: async () => {
       if (hasLocationAccess && location) {
         // Try the smallest buckets first to get a result quickly
         let hotspots: Hotspot[] = [];
         for (const radiusKm of NEARBY_BUCKETS_KM) {
           const bbox = getBoundingBoxFromLocation(location.lat, location.lng, radiusKm);
-          hotspots = await getNearbyHotspots(bbox);
+          hotspots = await getNearbyHotspots(bbox, showSavedOnly);
           if (hotspots.length >= NEARBY_LIMIT) {
             return hotspots;
           }
         }
         return hotspots;
       }
-      return getAllHotspots(ALL_HOTSPOTS_LIMIT);
+      return getAllHotspots(ALL_HOTSPOTS_LIMIT, showSavedOnly);
     },
     enabled: isOpen && debouncedQuery.length < 2 && !isLoadingLocation,
     staleTime: 5 * 60 * 1000,
@@ -82,13 +89,10 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         distance: calculateDistance(location.lat, location.lng, h.lat, h.lng),
       }));
       hotspotsWithDistance.sort((a, b) => a.distance - b.distance);
-
-      const limit = debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT;
-      return hotspotsWithDistance.slice(0, limit);
+      return hotspotsWithDistance.slice(0, debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT);
     } else {
       const sorted = [...hotspots].sort((a, b) => a.name.localeCompare(b.name));
-      const limit = debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT;
-      return sorted.slice(0, limit);
+      return sorted.slice(0, debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT);
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
@@ -136,12 +140,25 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
-          >
-            <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-          </TouchableOpacity>
+          <View style={tw`flex-row items-center gap-2`}>
+            <TouchableOpacity
+              onPress={() => setIsFilterSheetOpen(true)}
+              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
+            >
+              <Ionicons name="filter-outline" size={22} color={tw.color("gray-500")} />
+              {activeFilterCount > 0 && (
+                <View style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}>
+                  <Text style={tw`text-white text-xs font-semibold`}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onClose}
+              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
+            >
+              <Ionicons name="close" size={26} color={tw.color("gray-500")} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
@@ -170,6 +187,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           onScroll={onScroll}
           keyboardShouldPersistTaps="handled"
         />
+
+        <FilterBottomSheet isOpen={isFilterSheetOpen} onClose={() => setIsFilterSheetOpen(false)} />
       </View>
     </Modal>
   );
