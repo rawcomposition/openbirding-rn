@@ -1,5 +1,4 @@
 import { useLocation } from "@/hooks/useLocation";
-import { useSavedHotspots } from "@/hooks/useSavedHotspots";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
@@ -34,7 +33,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
   const { showSavedOnly } = useFiltersStore();
-  const { savedHotspotsSet } = useSavedHotspots();
   const activeFilterCount = [showSavedOnly].filter(Boolean).length;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,29 +49,31 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
   const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
-    queryKey: ["hotspotSearch", debouncedQuery],
-    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT),
+    queryKey: ["hotspotSearch", debouncedQuery, showSavedOnly],
+    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT, showSavedOnly),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
   const { data: allHotspots = [] } = useQuery({
-    queryKey: hasLocationAccess && location ? ["nearbyHotspots", location.lat, location.lng] : ["allHotspots"],
+    queryKey: hasLocationAccess && location
+      ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
+      : ["allHotspots", showSavedOnly],
     queryFn: async () => {
       if (hasLocationAccess && location) {
         // Try the smallest buckets first to get a result quickly
         let hotspots: Hotspot[] = [];
         for (const radiusKm of NEARBY_BUCKETS_KM) {
           const bbox = getBoundingBoxFromLocation(location.lat, location.lng, radiusKm);
-          hotspots = await getNearbyHotspots(bbox);
+          hotspots = await getNearbyHotspots(bbox, showSavedOnly);
           if (hotspots.length >= NEARBY_LIMIT) {
             return hotspots;
           }
         }
         return hotspots;
       }
-      return getAllHotspots(ALL_HOTSPOTS_LIMIT);
+      return getAllHotspots(ALL_HOTSPOTS_LIMIT, showSavedOnly);
     },
     enabled: isOpen && debouncedQuery.length < 2 && !isLoadingLocation,
     staleTime: 5 * 60 * 1000,
@@ -81,11 +81,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   });
 
   const displayedHotspots = useMemo(() => {
-    let hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
-
-    if (showSavedOnly) {
-      hotspots = hotspots.filter((h) => savedHotspotsSet.has(h.id));
-    }
+    const hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
 
     if (hasLocationAccess && location) {
       const hotspotsWithDistance = hotspots.map((h) => ({
@@ -93,15 +89,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
         distance: calculateDistance(location.lat, location.lng, h.lat, h.lng),
       }));
       hotspotsWithDistance.sort((a, b) => a.distance - b.distance);
-
-      const limit = debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT;
-      return hotspotsWithDistance.slice(0, limit);
+      return hotspotsWithDistance.slice(0, debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT);
     } else {
       const sorted = [...hotspots].sort((a, b) => a.name.localeCompare(b.name));
-      const limit = debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT;
-      return sorted.slice(0, limit);
+      return sorted.slice(0, debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT);
     }
-  }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location, showSavedOnly, savedHotspotsSet]);
+  }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
   const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
