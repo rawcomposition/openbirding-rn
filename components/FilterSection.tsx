@@ -7,7 +7,7 @@ export default function FilterSection() {
   const { showSavedOnly, setShowSavedOnly } = useFiltersStore();
 
   return (
-    <View style={tw`px-6 py-4 border-b border-gray-200`}>
+    <View style={tw`pl-6 pr-5 py-4 border-b border-gray-200`}>
       <View style={tw`flex-row items-center justify-between`}>
         <Text style={tw`text-lg text-gray-900`}>Show saved only</Text>
         <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />

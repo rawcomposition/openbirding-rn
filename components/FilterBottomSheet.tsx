@@ -57,7 +57,12 @@ export default function FilterBottomSheet({ isOpen, onClose }: FilterBottomSheet
   return (
     <Modal visible={isOpen} transparent onRequestClose={handleClose}>
       <View style={tw`flex-1`}>
-        <Animated.View style={[tw`absolute inset-0 bg-black`, { opacity: backdropAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] }) }]}>
+        <Animated.View
+          style={[
+            tw`absolute inset-0 bg-black`,
+            { opacity: backdropAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] }) },
+          ]}
+        >
           <Pressable style={tw`flex-1`} onPress={handleClose} />
         </Animated.View>
 
@@ -72,7 +77,7 @@ export default function FilterBottomSheet({ isOpen, onClose }: FilterBottomSheet
               <View style={tw`w-10 h-1 bg-gray-300 rounded-full`} />
             </View>
 
-            <View style={tw`flex-row items-center justify-between px-4 pb-3`}>
+            <View style={tw`flex-row items-center justify-between px-5 pb-3`}>
               <Text style={tw`text-gray-900 text-xl font-bold`}>Filters</Text>
               <TouchableOpacity
                 onPress={handleClose}
@@ -82,9 +87,9 @@ export default function FilterBottomSheet({ isOpen, onClose }: FilterBottomSheet
               </TouchableOpacity>
             </View>
 
-            <View style={tw`px-4 pt-2 pb-4`}>
+            <View style={tw`px-5 pt-2 pb-4`}>
               <View style={tw`flex-row items-center justify-between py-3`}>
-                <Text style={tw`text-base text-gray-700`}>Show saved only</Text>
+                <Text style={tw`text-base text-gray-900`}>Show saved only</Text>
                 <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
               </View>
             </View>
