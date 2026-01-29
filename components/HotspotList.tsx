@@ -1,9 +1,11 @@
 import { useLocation } from "@/hooks/useLocation";
+import { useSavedHotspots } from "@/hooks/useSavedHotspots";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
 import { Hotspot } from "@/lib/types";
 import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
+import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
@@ -12,6 +14,7 @@ import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FilterBottomSheet from "./FilterBottomSheet";
 import HotspotItem from "./HotspotItem";
 
 type HotspotListProps = {
@@ -30,8 +33,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
+  const { showSavedOnly } = useFiltersStore();
+  const { savedHotspotsSet } = useSavedHotspots();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
@@ -74,7 +80,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   });
 
   const displayedHotspots = useMemo(() => {
-    const hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
+    let hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
+
+    if (showSavedOnly) {
+      hotspots = hotspots.filter((h) => savedHotspotsSet.has(h.id));
+    }
 
     if (hasLocationAccess && location) {
       const hotspotsWithDistance = hotspots.map((h) => ({
@@ -90,7 +100,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       const limit = debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT;
       return sorted.slice(0, limit);
     }
-  }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
+  }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location, showSavedOnly, savedHotspotsSet]);
 
   const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
@@ -136,12 +146,24 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
           </View>
-          <TouchableOpacity
-            onPress={onClose}
-            style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
-          >
-            <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-          </TouchableOpacity>
+          <View style={tw`flex-row items-center gap-2`}>
+            <TouchableOpacity
+              onPress={() => setIsFilterSheetOpen(true)}
+              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
+            >
+              <Ionicons
+                name={showSavedOnly ? "filter" : "filter-outline"}
+                size={22}
+                color={tw.color("gray-500")}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onClose}
+              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
+            >
+              <Ionicons name="close" size={26} color={tw.color("gray-500")} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
@@ -170,6 +192,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           onScroll={onScroll}
           keyboardShouldPersistTaps="handled"
         />
+
+        <FilterBottomSheet isOpen={isFilterSheetOpen} onClose={() => setIsFilterSheetOpen(false)} />
       </View>
     </Modal>
   );

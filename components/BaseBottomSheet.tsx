@@ -49,8 +49,8 @@ export default function BaseBottomSheet({
     }
 
     return (
-      <View style={tw`flex-row items-start justify-between p-4 pt-0 border-b border-gray-200`}>
-        <View style={tw`pl-1 pr-4 pb-2`}>
+      <View style={tw`flex-row items-start justify-between px-4`}>
+        <View style={tw`pl-1`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
         <TouchableOpacity onPress={onClose} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>

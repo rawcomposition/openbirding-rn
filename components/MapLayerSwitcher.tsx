@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
 import tw from "@/lib/tw";
+import React from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 type MapLayerType = "default" | "satellite";
 
@@ -24,7 +24,7 @@ export default function MapLayerSwitcher({ currentLayer, onLayerChange }: MapLay
   ];
 
   return (
-    <View style={tw`p-4 border-b border-gray-200`}>
+    <View style={tw`p-4 pt-3 border-b border-gray-200`}>
       <View style={tw`flex-row gap-2`}>
         {layers.map((layer) => (
           <TouchableOpacity
