@@ -4,7 +4,7 @@ import QuestionMarkIcon from "@/components/icons/QuestionMarkIcon";
 import WazeIcon from "@/components/icons/WazeIcon";
 import tw from "@/lib/tw";
 import { getExternalMapProviders } from "@/lib/utils";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useRouter } from "expo-router";
@@ -62,8 +62,8 @@ function OptionsGroup({ children, footer }: OptionsGroupProps) {
 
 export default function MapProviderPage() {
   const router = useRouter();
-  const defaultProvider = useDefaultMapProviderStore((state) => state.defaultProvider);
-  const setDefaultProvider = useDefaultMapProviderStore((state) => state.setDefaultProvider);
+  const directionsProvider = useSettingsStore((state) => state.directionsProvider);
+  const setDirectionsProvider = useSettingsStore((state) => state.setDirectionsProvider);
   const providers = getExternalMapProviders();
 
   const renderProviderIcon = (providerId: string) => {
@@ -82,7 +82,7 @@ export default function MapProviderPage() {
   };
 
   const handleSelect = (providerId: string) => {
-    setDefaultProvider(providerId);
+    setDirectionsProvider(providerId);
     router.back();
   };
 
@@ -98,15 +98,15 @@ export default function MapProviderPage() {
             key={provider.id}
             icon={renderProviderIcon(provider.id)}
             label={provider.name}
-            selected={defaultProvider === provider.id}
+            selected={directionsProvider === provider.id}
             onPress={() => handleSelect(provider.id)}
-            isLast={index === providers.length - 1 && !!defaultProvider}
+            isLast={index === providers.length - 1 && !!directionsProvider}
           />
         ))}
         <OptionRow
           icon={<QuestionMarkIcon size={30} color={tw.color("gray-600")} />}
           label="Always Ask"
-          selected={!defaultProvider}
+          selected={!directionsProvider}
           onPress={() => handleSelect("")}
           isLast
         />

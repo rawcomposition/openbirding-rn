@@ -13,7 +13,6 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { initializeDatabase } from "@/lib/database";
 import { get } from "@/lib/utils";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -53,7 +52,6 @@ export default function RootLayout() {
     };
 
     initDatabase();
-    useDefaultMapProviderStore.getState().loadDefaultProvider();
     useLocationPermissionStore.getState().requestPermission();
   }, []);
 

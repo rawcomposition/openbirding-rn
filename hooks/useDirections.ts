@@ -1,5 +1,5 @@
 import { getDirections, getExternalMapProviders } from "@/lib/utils";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { useCallback } from "react";
 import { ActionSheetIOS, Alert, Linking, Platform, findNodeHandle } from "react-native";
@@ -16,7 +16,7 @@ type DirectionsOptions = {
 };
 
 export function useDirections() {
-  const defaultProvider = useDefaultMapProviderStore((state) => state.defaultProvider);
+  const directionsProvider = useSettingsStore((state) => state.directionsProvider);
   const { showActionSheetWithOptions } = useActionSheet();
   const insets = useSafeAreaInsets();
 
@@ -66,11 +66,11 @@ export function useDirections() {
 
   const openDirections = useCallback(
     ({ coordinates, anchorRef }: DirectionsOptions) => {
-      if (defaultProvider && defaultProvider !== "") {
+      if (directionsProvider && directionsProvider !== "") {
         const providers = getExternalMapProviders();
-        const provider = providers.find((p) => p.id === defaultProvider);
-        const providerName = provider?.name || defaultProvider;
-        const url = getDirections(defaultProvider, coordinates.latitude, coordinates.longitude);
+        const provider = providers.find((p) => p.id === directionsProvider);
+        const providerName = provider?.name || directionsProvider;
+        const url = getDirections(directionsProvider, coordinates.latitude, coordinates.longitude);
         Linking.openURL(url).catch(() => {
           Alert.alert("Error", `Could not open ${providerName}`);
         });
@@ -79,7 +79,7 @@ export function useDirections() {
 
       showProviderPicker({ coordinates, anchorRef });
     },
-    [defaultProvider, showProviderPicker]
+    [directionsProvider, showProviderPicker]
   );
 
   return { openDirections, showProviderPicker };

@@ -1,6 +1,6 @@
 import tw from "@/lib/tw";
 import { getExternalMapProviders } from "@/lib/utils";
-import { useDefaultMapProviderStore } from "@/stores/defaultMapProviderStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
@@ -75,8 +75,7 @@ function SettingsGroup({ children, header, footer }: SettingsGroupProps) {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const defaultProvider = useDefaultMapProviderStore((state) => state.defaultProvider);
-  const isLoading = useDefaultMapProviderStore((state) => state.isLoading);
+  const directionsProvider = useSettingsStore((state) => state.directionsProvider);
   const providers = getExternalMapProviders();
 
   const getProviderName = (providerId: string | null) => {
@@ -105,14 +104,6 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={tw`flex-1 bg-gray-100 justify-center items-center`}>
-        <Text style={tw`text-gray-600 text-base`}>Loading settings...</Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView
       style={tw`flex-1 bg-gray-100`}
@@ -122,7 +113,7 @@ export default function SettingsPage() {
       <SettingsGroup header="Navigation">
         <SettingsRow
           label="Directions App"
-          value={getProviderName(defaultProvider)}
+          value={getProviderName(directionsProvider)}
           onPress={() => router.push("/settings-map-provider" as Href)}
           icon={{ name: "car", bgColor: "#007AFF" }}
           isLast
