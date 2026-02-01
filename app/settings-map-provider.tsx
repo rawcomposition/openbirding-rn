@@ -23,11 +23,7 @@ function OptionRow({ icon, label, selected, onPress, isLast }: OptionRowProps) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
 
   return (
-    <TouchableOpacity
-      style={[tw`flex-row items-center px-4 py-3`, borderStyle]}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
+    <TouchableOpacity style={[tw`flex-row items-center px-4 py-3`, borderStyle]} onPress={onPress} activeOpacity={0.6}>
       <View style={tw`w-8 h-8 items-center justify-center mr-3`}>{icon}</View>
       <Text style={tw`text-gray-900 text-base flex-1`}>{label}</Text>
       {selected && <Ionicons name="checkmark" size={22} color={tw.color("blue-500")} />}
@@ -73,13 +69,13 @@ export default function MapProviderPage() {
   const renderProviderIcon = (providerId: string) => {
     switch (providerId) {
       case "google":
-        return <GoogleMapsIcon size={24} />;
+        return <GoogleMapsIcon size={18} />;
       case "apple":
         return <Ionicons name="logo-apple" size={26} color={tw.color("gray-800")} />;
       case "organic":
-        return <OrganicMapsIcon size={28} />;
+        return <OrganicMapsIcon size={32} />;
       case "waze":
-        return <WazeIcon size={26} />;
+        return <WazeIcon size={25} />;
       default:
         return <Ionicons name="map" size={24} color={tw.color("gray-500")} />;
     }
@@ -108,7 +104,7 @@ export default function MapProviderPage() {
           />
         ))}
         <OptionRow
-          icon={<QuestionMarkIcon size={24} color={tw.color("gray-600")} />}
+          icon={<QuestionMarkIcon size={30} color={tw.color("gray-600")} />}
           label="Always Ask"
           selected={!defaultProvider}
           onPress={() => handleSelect("")}

@@ -8,22 +8,33 @@ import { Href, useRouter } from "expo-router";
 import React from "react";
 import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 
+type SettingsIconProps = {
+  name: keyof typeof Ionicons.glyphMap;
+  bgColor: string;
+};
+
+function SettingsIcon({ name, bgColor }: SettingsIconProps) {
+  return (
+    <View style={[tw`w-7 h-7 rounded-md items-center justify-center mr-3`, { backgroundColor: bgColor }]}>
+      <Ionicons name={name} size={18} color="white" />
+    </View>
+  );
+}
+
 type SettingsRowProps = {
   label: string;
   value?: string;
   onPress: () => void;
   isLast?: boolean;
+  icon?: SettingsIconProps;
 };
 
-function SettingsRow({ label, value, onPress, isLast }: SettingsRowProps) {
+function SettingsRow({ label, value, onPress, isLast, icon }: SettingsRowProps) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
 
   return (
-    <TouchableOpacity
-      style={[tw`flex-row items-center px-4 py-3`, borderStyle]}
-      onPress={onPress}
-      activeOpacity={0.6}
-    >
+    <TouchableOpacity style={[tw`flex-row items-center px-4 py-3`, borderStyle]} onPress={onPress} activeOpacity={0.6}>
+      {icon && <SettingsIcon name={icon.name} bgColor={icon.bgColor} />}
       <Text style={tw`text-gray-900 text-base flex-1`}>{label}</Text>
       {value && <Text style={tw`text-gray-500 text-base mr-1`}>{value}</Text>}
       <Ionicons name="chevron-forward" size={20} color={tw.color("gray-400")} />
@@ -55,15 +66,9 @@ function SettingsGroup({ children, header, footer }: SettingsGroupProps) {
 
   return (
     <View style={tw`mb-6`}>
-      {header && (
-        <Text style={tw`text-gray-500 text-xs uppercase px-4 pb-2 font-medium tracking-wide`}>
-          {header}
-        </Text>
-      )}
+      {header && <Text style={tw`text-gray-500 text-xs uppercase px-4 pb-2 font-medium tracking-wide`}>{header}</Text>}
       {content}
-      {footer && (
-        <Text style={tw`text-gray-500 text-xs px-4 pt-2`}>{footer}</Text>
-      )}
+      {footer && <Text style={tw`text-gray-500 text-xs px-4 pt-2`}>{footer}</Text>}
     </View>
   );
 }
@@ -116,23 +121,17 @@ export default function SettingsPage() {
     >
       <SettingsGroup header="Navigation">
         <SettingsRow
-          label="Directions Map Provider"
+          label="Directions App"
           value={getProviderName(defaultProvider)}
           onPress={() => router.push("/settings-map-provider" as Href)}
+          icon={{ name: "car", bgColor: "#007AFF" }}
           isLast
         />
       </SettingsGroup>
 
       <SettingsGroup header="About">
-        <SettingsRow
-          label="Privacy Policy"
-          onPress={handlePrivacyPolicyPress}
-        />
-        <SettingsRow
-          label="Contact & Feedback"
-          onPress={handleContactPress}
-          isLast
-        />
+        <SettingsRow label="Privacy Policy" onPress={handlePrivacyPolicyPress} />
+        <SettingsRow label="Contact & Feedback" onPress={handleContactPress} isLast />
       </SettingsGroup>
 
       <View style={tw`items-center mt-4`}>
