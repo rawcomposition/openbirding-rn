@@ -46,7 +46,7 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings }: Me
   );
 
   return (
-    <View style={tw`flex-1`}>
+    <View style={tw`flex-1 border-t border-gray-200`}>
       <FlatList
         data={menuOptions}
         renderItem={renderMenuItem}
