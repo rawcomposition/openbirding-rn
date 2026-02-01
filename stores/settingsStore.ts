@@ -69,6 +69,7 @@ export const useSettingsStore = create<SettingsStore>()(
             directionsProvider: state.directionsProvider,
           });
           useSettingsStore.setState(migratedState);
+          console.log("Migrated settings to version", LATEST_VERSION);
         }
       },
     }
