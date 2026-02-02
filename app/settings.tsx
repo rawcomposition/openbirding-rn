@@ -120,6 +120,15 @@ export default function SettingsPage() {
         />
       </SettingsGroup>
 
+      <SettingsGroup header="Life List">
+        <SettingsRow
+          label="Import Life List"
+          onPress={() => router.push("/settings-import-life-list" as Href)}
+          icon={{ name: "cloud-upload", bgColor: "#34C759" }}
+          isLast
+        />
+      </SettingsGroup>
+
       <SettingsGroup header="Support">
         <SettingsRow label="Privacy Policy" onPress={handlePrivacyPolicyPress} />
         <SettingsRow label="Feedback" onPress={handleContactPress} isLast />

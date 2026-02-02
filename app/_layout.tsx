@@ -87,6 +87,10 @@ export default function RootLayout() {
                   options={{ title: "Directions Provider", headerBackButtonDisplayMode: "minimal" }}
                 />
                 <Stack.Screen
+                  name="settings-import-life-list"
+                  options={{ title: "Import Life List", headerBackButtonDisplayMode: "minimal" }}
+                />
+                <Stack.Screen
                   name="place-edit"
                   options={{
                     title: "Edit Place",

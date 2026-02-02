@@ -2,13 +2,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+export type LifeListEntry = {
+  code: string;
+  date: string;
+  location: string;
+  checklistId: string;
+};
+
 type SettingsState = {
   version: number;
   directionsProvider: string | null;
+  lifelist: LifeListEntry[] | null;
 };
 
 type SettingsActions = {
   setDirectionsProvider: (provider: string | null) => void;
+  setLifelist: (lifelist: LifeListEntry[] | null) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -54,7 +63,9 @@ export const useSettingsStore = create<SettingsStore>()(
     (set) => ({
       version: 0,
       directionsProvider: null,
+      lifelist: null,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
+      setLifelist: (lifelist) => set({ lifelist }),
     }),
     {
       name: "settings",
