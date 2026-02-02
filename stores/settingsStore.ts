@@ -18,6 +18,7 @@ type Migration = {
   migrate: (state: SettingsState) => Promise<SettingsState>;
 };
 
+// Migrations must be safe to run on fresh installs (no-op if nothing to migrate)
 const migrations: Migration[] = [
   {
     version: 1,
@@ -37,10 +38,9 @@ const LATEST_VERSION = migrations[migrations.length - 1]?.version ?? 0;
 
 const runMigrations = async (state: SettingsState): Promise<SettingsState> => {
   let currentState = state;
-  const startVersion = state.version || 0;
 
   for (const migration of migrations) {
-    if (migration.version > startVersion) {
+    if (migration.version > currentState.version) {
       currentState = await migration.migrate(currentState);
       currentState.version = migration.version;
     }
@@ -52,7 +52,7 @@ const runMigrations = async (state: SettingsState): Promise<SettingsState> => {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      version: LATEST_VERSION,
+      version: 0,
       directionsProvider: null,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
     }),
@@ -62,14 +62,10 @@ export const useSettingsStore = create<SettingsStore>()(
       onRehydrateStorage: () => async (state, error) => {
         if (error || !state) return;
 
-        const currentVersion = state.version || 0;
-        if (currentVersion < LATEST_VERSION) {
-          const migratedState = await runMigrations({
-            version: currentVersion,
-            directionsProvider: state.directionsProvider,
-          });
+        if (state.version < LATEST_VERSION) {
+          const migratedState = await runMigrations(state);
           useSettingsStore.setState(migratedState);
-          console.log("Migrated settings to version", LATEST_VERSION);
+          console.log(`Settings migrated from v${state.version} to v${migratedState.version}`);
         }
       },
     }
