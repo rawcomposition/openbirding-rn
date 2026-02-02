@@ -120,9 +120,9 @@ export default function SettingsPage() {
         />
       </SettingsGroup>
 
-      <SettingsGroup header="About">
+      <SettingsGroup header="Support">
         <SettingsRow label="Privacy Policy" onPress={handlePrivacyPolicyPress} />
-        <SettingsRow label="Contact & Feedback" onPress={handleContactPress} isLast />
+        <SettingsRow label="Feedback" onPress={handleContactPress} isLast />
       </SettingsGroup>
 
       <View style={tw`items-center mt-4`}>
