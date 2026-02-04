@@ -10,8 +10,12 @@ import { Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
+import DownloadOverlay from "@/components/DownloadOverlay";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { STATIC_PACKS_URL } from "@/lib/config";
 import { initializeDatabase } from "@/lib/database";
+import { fetchJson } from "@/lib/download";
+import { StaticPacksIndex } from "@/lib/types";
 import { get } from "@/lib/utils";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +30,13 @@ const queryClient = new QueryClient({
       staleTime: 0,
       queryFn: async ({ queryKey }) => {
         const url = queryKey[0] as string;
+
+        // Fetch packs from static.openbirding.org
+        if (url === "/packs") {
+          const data = await fetchJson<StaticPacksIndex>(STATIC_PACKS_URL);
+          return data.packs;
+        }
+
         return get(url, (queryKey[1] || {}) as Record<string, string | number | boolean>);
       },
     },
@@ -136,6 +147,7 @@ export default function RootLayout() {
                 position="top"
                 topOffset={65}
               />
+              <DownloadOverlay />
               <StatusBar style="auto" />
             </ThemeProvider>
           </QueryClientProvider>

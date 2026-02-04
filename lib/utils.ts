@@ -255,6 +255,15 @@ export const getDirections = (provider: string, lat: number, lng: number): strin
   }
 };
 
+export function formatSize(bytes: number): string {
+  if (bytes >= 1_000_000) {
+    const mb = bytes / 1_000_000;
+    return mb < 10 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+  }
+  const kb = bytes / 1000;
+  return kb < 10 ? `${kb.toFixed(1)} KB` : `${Math.round(kb)} KB`;
+}
+
 export const generateId = (length: number): string => {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
