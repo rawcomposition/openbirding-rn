@@ -32,7 +32,7 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
   };
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" snapPoints={["45%", "90%"]}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" snapPoints={["47%", "90%"]} initialIndex={0}>
       <View style={tw`flex-1`}>
         <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
         <FilterSection />

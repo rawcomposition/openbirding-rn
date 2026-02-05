@@ -518,3 +518,52 @@ export async function searchHotspots(query: string, limit: number, savedOnly = f
     country: row.country as string | null,
   }));
 }
+
+export type HotspotTarget = {
+  speciesCode: string;
+  observations: number;
+  percentage: number;
+};
+
+export type HotspotTargetsResult = {
+  samples: number;
+  targets: HotspotTarget[];
+};
+
+export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTargetsResult | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(`SELECT data FROM targets WHERE id = ?`, [hotspotId]);
+
+  if (!result) return null;
+
+  const row = result as { data: string };
+  const data = JSON.parse(row.data) as {
+    samples: (number | null)[];
+    species: (string | number)[][];
+  };
+
+  // Sum all non-null samples to get total checklists
+  const totalSamples = data.samples.reduce((sum: number, val) => sum + (val ?? 0), 0);
+
+  if (totalSamples === 0) return { samples: 0, targets: [] };
+
+  // Aggregate observations per species and calculate percentages
+  const speciesMap = new Map<string, number>();
+  for (const [code, observations] of data.species) {
+    const speciesCode = String(code);
+    const obs = typeof observations === "number" ? observations : 0;
+    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + obs);
+  }
+
+  // Convert to array, calculate percentages, and sort by percentage descending
+  const targets: HotspotTarget[] = Array.from(speciesMap.entries())
+    .map(([speciesCode, observations]) => ({
+      speciesCode,
+      observations,
+      percentage: (observations / totalSamples) * 100,
+    }))
+    .sort((a, b) => b.percentage - a.percentage);
+
+  return { samples: totalSamples, targets };
+}

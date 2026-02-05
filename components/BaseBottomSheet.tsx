@@ -1,17 +1,20 @@
 import tw from "@/lib/tw";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import React, { ReactNode, useEffect, useMemo, useRef } from "react";
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   snapPoints?: (string | number)[];
+  initialIndex?: number;
   children: ReactNode;
   showHeader?: boolean;
   headerContent?: ReactNode;
+  scrollable?: boolean;
 };
 
 export default function BaseBottomSheet({
@@ -19,27 +22,32 @@ export default function BaseBottomSheet({
   onClose,
   title,
   snapPoints = ["45%", "90%"],
+  initialIndex = 0,
   children,
   showHeader = true,
   headerContent,
+  scrollable = false,
 }: BaseBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
-
+  const insets = useSafeAreaInsets();
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
 
   useEffect(() => {
     if (isOpen) {
-      bottomSheetRef.current?.snapToIndex(1);
+      bottomSheetRef.current?.snapToIndex(initialIndex);
     } else {
       bottomSheetRef.current?.close();
     }
-  }, [isOpen]);
+  }, [isOpen, initialIndex]);
 
-  const handleSheetChanges = (index: number) => {
-    if (index === -1) {
-      onClose();
-    }
-  };
+  const handleSheetChanges = useCallback(
+    (index: number) => {
+      if (index === -1) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
   const renderHeader = () => {
     if (!showHeader) return null;
@@ -69,14 +77,22 @@ export default function BaseBottomSheet({
         snapPoints={memoizedSnapPoints}
         onChange={handleSheetChanges}
         enablePanDownToClose
-        bottomInset={0}
+        enableDynamicSizing={false}
+        topInset={insets.top}
         backgroundStyle={tw`bg-white rounded-t-3xl`}
         handleIndicatorStyle={tw`bg-gray-300`}
       >
-        <BottomSheetView style={tw`flex-1`}>
-          {renderHeader()}
-          {children}
-        </BottomSheetView>
+        {scrollable ? (
+          <>
+            {renderHeader()}
+            {children}
+          </>
+        ) : (
+          <BottomSheetView style={tw`flex-1`}>
+            {renderHeader()}
+            {children}
+          </BottomSheetView>
+        )}
       </BottomSheet>
     </>
   );

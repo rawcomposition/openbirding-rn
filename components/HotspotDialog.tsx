@@ -1,17 +1,19 @@
 import ActionButton from "./ActionButton";
-import DialogHeader from "./DialogHeader";
-import { useDirections } from "@/hooks/useDirections";
-import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
-import { getMarkerColor } from "@/lib/utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useRef } from "react";
-import { Alert, Linking, ScrollView, Text, View } from "react-native";
-import type { TouchableOpacity } from "react-native";
-import tw from "@/lib/tw";
 import BaseBottomSheet from "./BaseBottomSheet";
+import DialogHeader from "./DialogHeader";
+import HotspotTargets from "./HotspotTargets";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
 import TargetsIcon from "./icons/TargetsIcon";
+import { useDirections } from "@/hooks/useDirections";
+import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
+import tw from "@/lib/tw";
+import { getMarkerColor } from "@/lib/utils";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useRef } from "react";
+import { Alert, Linking, Text, View } from "react-native";
+import type { TouchableOpacity } from "react-native";
 
 type HotspotDialogProps = {
   isOpen: boolean;
@@ -123,8 +125,8 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   );
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[200, 400, 600]} headerContent={headerContent}>
-      <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={["45%", "90%"]} headerContent={headerContent} scrollable>
+      <BottomSheetScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
         <View style={[tw`px-4 pb-4`, { minHeight: 350 }]}>
           {hotspot ? (
             <View style={tw`pt-2`}>
@@ -150,6 +152,8 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                   onLongPress={handleShowMapProviders}
                 />
               </View>
+
+              <HotspotTargets hotspotId={hotspot.id} />
             </View>
           ) : isLoadingHotspot ? null : (
             <View style={tw`py-8 items-center`}>
@@ -157,7 +161,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
             </View>
           )}
         </View>
-      </ScrollView>
+      </BottomSheetScrollView>
     </BaseBottomSheet>
   );
 }

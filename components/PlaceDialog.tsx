@@ -82,7 +82,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       <BaseBottomSheet
         isOpen={isOpen}
         onClose={onClose}
-        snapPoints={[300, 400]}
+        snapPoints={["30%"]}
         headerContent={<DialogHeader onClose={onClose} isPlace isSaved={false} />}
       >
         <View style={tw`px-4 pb-4 pt-2`}>
@@ -93,7 +93,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   }
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[300, 400]} headerContent={headerContent}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={["30%"]} headerContent={headerContent}>
       <View style={tw`px-4 pb-4 pt-2`}>
         {savedPlace?.notes && (
           <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
