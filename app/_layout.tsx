@@ -92,6 +92,10 @@ export default function RootLayout() {
                   options={{ title: "Life List", headerBackButtonDisplayMode: "minimal" }}
                 />
                 <Stack.Screen
+                  name="settings-life-list-exclusions"
+                  options={{ title: "Exclusions", headerBackButtonDisplayMode: "minimal" }}
+                />
+                <Stack.Screen
                   name="place-edit"
                   options={{
                     title: "Edit Place",

@@ -25,6 +25,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
+  const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
   const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
@@ -43,8 +44,15 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const filteredTargets = useMemo(() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
-    return data.targets.filter((t) => t.percentage >= 1 && (!lifelistCodes || !lifelistCodes.has(t.speciesCode)));
-  }, [data, lifelist]);
+    const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
+    return data.targets.filter((t) => {
+      if (t.percentage < 1) return false;
+      // If species is in exclusions, show it as a target (override life list)
+      if (exclusionCodes?.has(t.speciesCode)) return true;
+      // Otherwise, filter out species on the life list
+      return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
+    });
+  }, [data, lifelist, lifelistExclusions]);
 
   if (isLoading) return null;
 

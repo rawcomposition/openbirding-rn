@@ -13,11 +13,13 @@ type SettingsState = {
   version: number;
   directionsProvider: string | null;
   lifelist: LifeListEntry[] | null;
+  lifelistExclusions: string[] | null;
 };
 
 type SettingsActions = {
   setDirectionsProvider: (provider: string | null) => void;
   setLifelist: (lifelist: LifeListEntry[] | null) => void;
+  setLifelistExclusions: (exclusions: string[] | null) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -64,8 +66,10 @@ export const useSettingsStore = create<SettingsStore>()(
       version: 0,
       directionsProvider: null,
       lifelist: null,
+      lifelistExclusions: null,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
+      setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
     }),
     {
       name: "settings",

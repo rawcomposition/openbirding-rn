@@ -55,11 +55,13 @@ function LifeListItem({
   isLast,
   taxonomyMap,
   onRemove,
+  isExcluded,
 }: {
   item: LifeListEntry;
   isLast: boolean;
   taxonomyMap: Map<string, string>;
   onRemove: () => void;
+  isExcluded: boolean;
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
@@ -90,7 +92,14 @@ function LifeListItem({
   return (
     <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
       <View style={tw`flex-1`}>
-        <Text style={tw`text-gray-900 text-base font-medium`}>{speciesName}</Text>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-900 text-base font-medium`}>{speciesName}</Text>
+          {isExcluded && (
+            <View style={tw`ml-2 bg-orange-100 px-2 py-0.5 rounded-full`}>
+              <Text style={tw`text-orange-700 text-xs font-medium`}>Excluded</Text>
+            </View>
+          )}
+        </View>
         <Text style={tw`text-gray-500 text-sm mt-0.5`}>{formatDate(item.date)}</Text>
       </View>
       <TouchableOpacity ref={menuRef} onPress={showMenu} style={tw`p-2 -mr-2`}>
@@ -104,6 +113,7 @@ export default function ViewLifeListPage() {
   const navigation = useNavigation();
   const lifelist = useSettingsStore((state) => state.lifelist);
   const setLifelist = useSettingsStore((state) => state.setLifelist);
+  const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -157,6 +167,7 @@ export default function ViewLifeListPage() {
       isLast={index === filteredList.length - 1}
       taxonomyMap={taxonomyMap}
       onRemove={() => handleRemove(item)}
+      isExcluded={lifelistExclusions?.includes(item.code) ?? false}
     />
   );
 

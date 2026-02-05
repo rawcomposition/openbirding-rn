@@ -83,6 +83,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const directionsProvider = useSettingsStore((state) => state.directionsProvider);
   const lifelist = useSettingsStore((state) => state.lifelist);
+  const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const providers = getExternalMapProviders();
 
   const getProviderName = (providerId: string | null) => {
@@ -133,6 +134,12 @@ export default function SettingsPage() {
           value={lifelist?.length ? `${lifelist.length} species` : undefined}
           onPress={() => router.push("/settings-view-life-list" as Href)}
           icon={{ family: "fontawesome5", name: "feather", bgColor: "#34C759" }}
+        />
+        <SettingsRow
+          label="Life List Exclusions"
+          value={lifelistExclusions?.length ? `${lifelistExclusions.length} species` : undefined}
+          onPress={() => router.push("/settings-life-list-exclusions" as Href)}
+          icon={{ name: "eye-off", bgColor: "#FF9500" }}
         />
         <SettingsRow
           label="Import Life List"
