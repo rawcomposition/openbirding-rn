@@ -50,6 +50,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["/taxonomy"] });
 
       Toast.show({
         type: "success",

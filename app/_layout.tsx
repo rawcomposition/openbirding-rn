@@ -1,7 +1,7 @@
 import tw from "@/lib/tw";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -12,36 +12,13 @@ import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { STATIC_PACKS_URL } from "@/lib/config";
 import { initializeDatabase } from "@/lib/database";
-import { fetchJson } from "@/lib/download";
-import { StaticPacksIndex } from "@/lib/types";
-import { get } from "@/lib/utils";
+import { asyncStoragePersister, queryClient, shouldPersistQuery } from "@/lib/queryClient";
+import { prefetchTaxonomy } from "@/hooks/useTaxonomy";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      gcTime: 24 * 24 * 60 * 60 * 1000,
-      staleTime: 0,
-      queryFn: async ({ queryKey }) => {
-        const url = queryKey[0] as string;
-
-        // Fetch packs from static.openbirding.org
-        if (url === "/packs") {
-          const data = await fetchJson<StaticPacksIndex>(STATIC_PACKS_URL);
-          return data.packs;
-        }
-
-        return get(url, (queryKey[1] || {}) as Record<string, string | number | boolean>);
-      },
-    },
-  },
-});
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -63,6 +40,7 @@ export default function RootLayout() {
     };
 
     initDatabase();
+    prefetchTaxonomy();
     useLocationPermissionStore.getState().requestPermission();
   }, []);
 
@@ -87,7 +65,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ActionSheetProvider>
-          <QueryClientProvider client={queryClient}>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{
+              persister: asyncStoragePersister,
+              dehydrateOptions: {
+                shouldDehydrateQuery: shouldPersistQuery,
+              },
+            }}
+          >
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
@@ -150,7 +136,7 @@ export default function RootLayout() {
               <DownloadOverlay />
               <StatusBar style="auto" />
             </ThemeProvider>
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </ActionSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

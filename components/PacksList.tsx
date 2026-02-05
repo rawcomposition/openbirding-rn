@@ -1,7 +1,9 @@
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useLocation } from "@/hooks/useLocation";
+import { STATIC_PACKS_URL } from "@/lib/config";
+import { fetchJson } from "@/lib/download";
 import tw from "@/lib/tw";
-import { StaticPack } from "@/lib/types";
+import { StaticPack, StaticPacksIndex } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
@@ -27,7 +29,11 @@ export default function PacksList() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data, isLoading, error } = useQuery<StaticPack[]>({
-    queryKey: ["/packs"],
+    queryKey: ["packs"],
+    queryFn: async () => {
+      const response = await fetchJson<StaticPacksIndex>(STATIC_PACKS_URL);
+      return response.packs;
+    },
   });
 
   const { data: installedPackIds } = useInstalledPacks();

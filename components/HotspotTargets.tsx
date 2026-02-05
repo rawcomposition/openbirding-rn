@@ -1,3 +1,4 @@
+import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ type HotspotTargetsProps = {
 
 export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
+  const { taxonomyMap } = useTaxonomyMap();
 
   useEffect(() => {
     setShowAll(false);
@@ -37,8 +39,10 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
       <View style={tw`gap-2`}>
         {displayedTargets.map((target) => (
           <View key={target.speciesCode} style={tw`flex-row items-center gap-2`}>
-            <Text style={tw`text-xs text-gray-700 w-16`}>{target.speciesCode}</Text>
-            <View style={tw`flex-1 h-4 bg-gray-200 rounded-full overflow-hidden`}>
+            <Text style={tw`text-xs text-gray-700 flex-1`} numberOfLines={1}>
+              {taxonomyMap.get(target.speciesCode) || "Unknown species"}
+            </Text>
+            <View style={tw`w-24 h-4 bg-gray-200 rounded-full overflow-hidden`}>
               <View style={[tw`h-full bg-green-500 rounded-full`, { width: `${Math.min(target.percentage, 100)}%` }]} />
             </View>
             <Text style={tw`text-xs text-gray-600 w-12 text-right`}>{target.percentage.toFixed(0)}%</Text>
