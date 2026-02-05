@@ -37,15 +37,13 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
     return data.targets.filter((t) => t.percentage >= 1 && (!lifelistCodes || !lifelistCodes.has(t.speciesCode)));
   }, [data, lifelist]);
 
-  if (isLoading || !data) {
-    return null;
-  }
+  if (isLoading) return null;
 
   const displayedTargets = showAll ? filteredTargets : filteredTargets.slice(0, INITIAL_LIMIT);
   const hasMore = filteredTargets.length > INITIAL_LIMIT;
 
-  const hasNoSpeciesData = data.targets.length === 0;
-  const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data.targets.length > 0;
+  const hasNoSpeciesData = !data || data.targets.length === 0;
+  const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
   const renderEmptyState = () => {
     if (hasNoSpeciesData) {
@@ -87,7 +85,7 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   return (
     <View style={tw`mt-4`}>
       <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-      {data.samples > 0 && !hasNoLifeList && (
+      {data?.samples && data.samples > 0 && !hasNoLifeList && (
         <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
       )}
 
