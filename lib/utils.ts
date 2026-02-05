@@ -387,3 +387,13 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
 
   return { success: true, entries, unmatchedCount };
 }
+
+export function parsePackVersion(version: string | null): string | null {
+  if (!version) return null;
+  // Parse "dec-2025" or "dec-2025-2" format
+  const match = version.match(/^([a-z]+)-(\d{4})(?:-\d+)?$/i);
+  if (!match) return null;
+  const [, month, year] = match;
+  const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
+  return `${monthCapitalized} ${year}`;
+}

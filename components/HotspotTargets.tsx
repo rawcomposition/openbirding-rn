@@ -1,6 +1,7 @@
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
+import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, findNodeHandle, Linking, Pressable, Text, TouchableOpacity, View } from "react-native";
+import InfoModal from "./InfoModal";
 
 const INITIAL_LIMIT = 10;
 
@@ -19,6 +21,7 @@ type HotspotTargetsProps = {
 
 export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
+  const [showDataInfo, setShowDataInfo] = useState(false);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
@@ -183,6 +186,34 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
             <TouchableOpacity onPress={() => setShowAll(true)} style={tw`mt-2 text-center py-1 w-full`}>
               <Text style={tw`text-sm font-medium text-blue-600 text-center`}>See all</Text>
             </TouchableOpacity>
+          )}
+
+          {data?.version && parsePackVersion(data.version) && (
+            <>
+              <View style={tw`flex-row items-center mt-3`}>
+                <Text style={tw`text-xs text-gray-600`}>Data as of {parsePackVersion(data.version)}</Text>
+                <Text style={tw`text-xs text-gray-400 mx-1`}>·</Text>
+                <TouchableOpacity onPress={() => setShowDataInfo(true)}>
+                  <Text style={tw`text-xs text-blue-700`}>Learn more</Text>
+                </TouchableOpacity>
+              </View>
+              <InfoModal
+                visible={showDataInfo}
+                onClose={() => setShowDataInfo(false)}
+                title="About This Data"
+                content={
+                  <View>
+                    <Text style={tw`text-sm text-gray-700 mb-3`}>
+                      Targets data is updated monthly from the eBird Basic Dataset.
+                    </Text>
+                    <Text style={tw`text-sm text-gray-600 italic`}>
+                      eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
+                      Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
+                    </Text>
+                  </View>
+                }
+              />
+            </>
           )}
         </>
       )}

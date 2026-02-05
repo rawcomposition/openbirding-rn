@@ -528,16 +528,20 @@ export type HotspotTarget = {
 export type HotspotTargetsResult = {
   samples: number;
   targets: HotspotTarget[];
+  version: string | null;
 };
 
 export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTargetsResult | null> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getFirstAsync(`SELECT data FROM targets WHERE id = ?`, [hotspotId]);
+  const result = await db.getFirstAsync(
+    `SELECT t.data, p.version FROM targets t LEFT JOIN packs p ON t.pack_id = p.id WHERE t.id = ?`,
+    [hotspotId]
+  );
 
   if (!result) return null;
 
-  const row = result as { data: string };
+  const row = result as { data: string; version: string | null };
   const data = JSON.parse(row.data) as {
     samples: (number | null)[];
     species: (string | number)[][];
@@ -546,7 +550,7 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
   // Sum all non-null samples to get total checklists
   const totalSamples = data.samples.reduce((sum: number, val) => sum + (val ?? 0), 0);
 
-  if (totalSamples === 0) return { samples: 0, targets: [] };
+  if (totalSamples === 0) return { samples: 0, targets: [], version: row.version };
 
   // Aggregate observations per species and calculate percentages
   const speciesMap = new Map<string, number>();
@@ -566,5 +570,5 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
     }))
     .sort((a, b) => b.percentage - a.percentage);
 
-  return { samples: totalSamples, targets };
+  return { samples: totalSamples, targets, version: row.version };
 }
