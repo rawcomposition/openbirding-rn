@@ -15,22 +15,25 @@ type BaseBottomSheetProps = {
   showHeader?: boolean;
   headerContent?: ReactNode;
   scrollable?: boolean;
+  enableDynamicSizing?: boolean;
 };
 
 export default function BaseBottomSheet({
   isOpen,
   onClose,
   title,
-  snapPoints = ["45%", "90%"],
+  snapPoints,
   initialIndex = 0,
   children,
   showHeader = true,
   headerContent,
   scrollable = false,
+  enableDynamicSizing = true,
 }: BaseBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const bottomPadding = Math.max(insets.bottom, 16);
 
   useEffect(() => {
     if (isOpen) {
@@ -74,10 +77,10 @@ export default function BaseBottomSheet({
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
-        snapPoints={memoizedSnapPoints}
+        snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
         onChange={handleSheetChanges}
         enablePanDownToClose
-        enableDynamicSizing={false}
+        enableDynamicSizing={enableDynamicSizing}
         topInset={insets.top}
         backgroundStyle={tw`bg-white rounded-t-3xl`}
         handleIndicatorStyle={tw`bg-gray-300`}
@@ -86,11 +89,13 @@ export default function BaseBottomSheet({
           <>
             {renderHeader()}
             {children}
+            <View style={{ height: bottomPadding }} />
           </>
         ) : (
           <BottomSheetView style={tw`flex-1`}>
             {renderHeader()}
             {children}
+            <View style={{ height: bottomPadding }} />
           </BottomSheetView>
         )}
       </BottomSheet>

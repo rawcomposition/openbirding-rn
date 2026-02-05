@@ -125,7 +125,14 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   );
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={["45%", "90%"]} headerContent={headerContent} scrollable>
+    <BaseBottomSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      snapPoints={["45%", "97%"]}
+      headerContent={headerContent}
+      scrollable
+      enableDynamicSizing={false}
+    >
       <BottomSheetScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
         <View style={[tw`px-4 pb-4`, { minHeight: 350 }]}>
           {hotspot ? (
