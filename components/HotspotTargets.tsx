@@ -26,6 +26,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
   const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
+  const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
   const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
@@ -62,7 +63,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
-  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string) => {
+  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string, isExcluded: boolean) => {
     if (buttonIndex === 0) {
       Linking.openURL(`merlinbirdid://species/${speciesCode}`).catch(() => {
         Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
@@ -75,27 +76,35 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
       console.log(url);
       Linking.openURL(url);
     } else if (buttonIndex === 2) {
-      const newEntry = {
-        code: speciesCode,
-        date: new Date().toISOString().split("T")[0],
-        location: "N/A",
-        checklistId: null,
-      };
-      setLifelist([...(lifelist || []), newEntry]);
+      if (isExcluded) {
+        // Remove from exclusions
+        const current = lifelistExclusions || [];
+        setLifelistExclusions(current.filter((c) => c !== speciesCode));
+      } else {
+        // Add to life list
+        const newEntry = {
+          code: speciesCode,
+          date: new Date().toISOString().split("T")[0],
+          location: "N/A",
+          checklistId: null,
+        };
+        setLifelist([...(lifelist || []), newEntry]);
+      }
     }
   };
 
   const showActionSheet = (speciesCode: string) => {
     const ref = menuRefs.current.get(speciesCode);
     const anchor = ref ? findNodeHandle(ref) : undefined;
-    const options = ["View in Merlin", "View eBird Map", "Add to Life List"];
+    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
+    const options = ["View in Merlin", "View eBird Map", isExcluded ? "Remove Exclusion" : "Add to Life List"];
 
     showActionSheetWithOptions(
       {
         options,
         anchor: anchor ?? undefined,
       },
-      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode)
+      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode, isExcluded)
     );
   };
 
