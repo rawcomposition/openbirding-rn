@@ -34,18 +34,20 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
 
   return (
     <View style={tw`mt-4`}>
-      <Text style={tw`text-sm font-medium text-gray-700 mb-1`}>Targets</Text>
-      <Text style={tw`text-xs text-gray-500 mb-3`}>Based on {data.samples.toLocaleString()} checklists</Text>
-      <View style={tw`gap-2`}>
+      <Text style={tw`text-base font-semibold text-gray-800 mb-1`}>Targets</Text>
+      <Text style={tw`text-sm text-gray-500 mb-4`}>Based on {data.samples.toLocaleString()} checklists</Text>
+      <View style={tw`gap-5`}>
         {displayedTargets.map((target) => (
-          <View key={target.speciesCode} style={tw`flex-row items-center gap-2`}>
-            <Text style={tw`text-xs text-gray-700 flex-1`} numberOfLines={1}>
-              {taxonomyMap.get(target.speciesCode) || "Unknown species"}
-            </Text>
-            <View style={tw`w-24 h-4 bg-gray-200 rounded-full overflow-hidden`}>
-              <View style={[tw`h-full bg-green-500 rounded-full`, { width: `${Math.min(target.percentage, 100)}%` }]} />
+          <View key={target.speciesCode}>
+            <View style={tw`flex-row justify-between mb-1.5`}>
+              <Text style={tw`text-base text-gray-800 flex-1 mr-2`} numberOfLines={1}>
+                {taxonomyMap.get(target.speciesCode) || "Unknown species"}
+              </Text>
+              <Text style={tw`text-base font-medium text-gray-700`}>{target.percentage.toFixed(0)}%</Text>
             </View>
-            <Text style={tw`text-xs text-gray-600 w-12 text-right`}>{target.percentage.toFixed(0)}%</Text>
+            <View style={tw`h-1.5 bg-gray-100 rounded overflow-hidden`}>
+              <View style={[tw`h-full bg-emerald-600 rounded`, { width: `${Math.min(target.percentage, 100)}%` }]} />
+            </View>
           </View>
         ))}
       </View>
