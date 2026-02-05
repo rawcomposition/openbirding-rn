@@ -345,6 +345,17 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
     return { success: false, error: "No data found in the CSV file" };
   }
 
+  const requiredColumns = ["Countable", "Scientific Name", "Date", "Location", "SubID"];
+  const firstRow = rows[0];
+  const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
+
+  if (missingColumns.length > 0) {
+    return {
+      success: false,
+      error: `Missing columns: ${missingColumns.join(", ")}.`,
+    };
+  }
+
   const countableRows = rows.filter((row) => row["Countable"] === "1");
 
   if (countableRows.length === 0) {
