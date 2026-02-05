@@ -7,7 +7,16 @@ import * as DocumentPicker from "expo-document-picker";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Linking, Platform, ScrollView, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from "react-native";
 import Toast from "react-native-toast-message";
 
 type StepCardProps = {
@@ -27,8 +36,8 @@ function StepCard({ stepNumber, title, children }: StepCardProps) {
   const content = (
     <View style={tw`p-4`}>
       <View style={tw`flex-row items-center mb-3`}>
-        <View style={tw`w-7 h-7 rounded-full bg-blue-500 items-center justify-center mr-3`}>
-          <Text style={tw`text-white font-semibold text-sm`}>{stepNumber}</Text>
+        <View style={tw`w-7 h-7 rounded-full bg-gray-200 items-center justify-center mr-3`}>
+          <Text style={tw`text-gray-600 font-semibold text-sm`}>{stepNumber}</Text>
         </View>
         <Text style={tw`text-gray-900 text-base font-semibold flex-1`}>{title}</Text>
       </View>
@@ -120,34 +129,37 @@ export default function ImportLifeListPage() {
       contentContainerStyle={tw`px-4 pt-6 pb-10`}
       showsVerticalScrollIndicator={false}
     >
-      <StepCard stepNumber={1} title="Download your life list">
-        <Text style={tw`text-gray-600 text-sm mb-3`}>
-          Download your eBird life list as a CSV file. You must be logged in to eBird.
-        </Text>
+      <StepCard stepNumber={1} title="Download life list CSV">
+        <Text style={tw`text-sm text-gray-700 mb-1.5`}>Download your eBird world life list CSV (login required).</Text>
+
         <TouchableOpacity
-          style={tw`bg-blue-500 rounded-lg py-3 px-4 flex-row items-center justify-center`}
+          style={tw`flex-row items-center self-start py-2`}
           onPress={handleDownloadPress}
           activeOpacity={0.7}
         >
-          <Ionicons name="download-outline" size={20} color="white" style={tw`mr-2`} />
-          <Text style={tw`text-white font-semibold text-base`}>Download from eBird</Text>
+          <Ionicons name="download-outline" size={18} color="#1D4ED8" style={tw`mr-1.5`} />
+          <Text style={tw`text-blue-700 font-semibold text-sm`}>Download CSV from eBird</Text>
         </TouchableOpacity>
       </StepCard>
 
-      <StepCard stepNumber={2} title="Select your downloaded file">
-        <Text style={tw`text-gray-600 text-sm mb-3`}>After downloading, select the CSV file from your device.</Text>
+      <StepCard stepNumber={2} title="Import file">
+        <Text style={tw`text-sm text-gray-700 mb-3`}>Select the CSV file (usually in Downloads).</Text>
+
         <TouchableOpacity
-          style={tw`bg-green-600 rounded-lg py-3 px-4 flex-row items-center justify-center`}
+          style={tw`bg-blue-600 rounded-lg py-3 px-4 flex-row items-center justify-center`}
           onPress={handleSelectFile}
           activeOpacity={0.7}
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="white" />
+            <>
+              <ActivityIndicator color="white" />
+              <Text style={tw`text-white font-semibold text-base ml-2`}>Importing…</Text>
+            </>
           ) : (
             <>
               <Ionicons name="document-outline" size={20} color="white" style={tw`mr-2`} />
-              <Text style={tw`text-white font-semibold text-base`}>Select File</Text>
+              <Text style={tw`text-white font-semibold text-base`}>Select CSV to Import</Text>
             </>
           )}
         </TouchableOpacity>
