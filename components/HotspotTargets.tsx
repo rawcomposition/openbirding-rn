@@ -1,8 +1,9 @@
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 const INITIAL_LIMIT = 10;
@@ -14,6 +15,7 @@ type HotspotTargetsProps = {
 export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const { taxonomyMap } = useTaxonomyMap();
+  const lifelist = useSettingsStore((s) => s.lifelist);
 
   useEffect(() => {
     setShowAll(false);
@@ -25,12 +27,20 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
     enabled: !!hotspotId,
   });
 
-  if (isLoading || !data || data.targets.length === 0) {
+  const filteredTargets = useMemo(() => {
+    if (!data) return [];
+    const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
+    return data.targets.filter(
+      (t) => t.percentage >= 1 && (!lifelistCodes || !lifelistCodes.has(t.speciesCode))
+    );
+  }, [data, lifelist]);
+
+  if (isLoading || !data || filteredTargets.length === 0) {
     return null;
   }
 
-  const displayedTargets = showAll ? data.targets : data.targets.slice(0, INITIAL_LIMIT);
-  const hasMore = data.targets.length > INITIAL_LIMIT;
+  const displayedTargets = showAll ? filteredTargets : filteredTargets.slice(0, INITIAL_LIMIT);
+  const hasMore = filteredTargets.length > INITIAL_LIMIT;
 
   return (
     <View style={tw`mt-4`}>
