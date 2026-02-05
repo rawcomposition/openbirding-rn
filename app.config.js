@@ -13,7 +13,7 @@ module.exports = ({ config }) => ({
     ios: {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        LSApplicationQueriesSchemes: ["mailto"],
+        LSApplicationQueriesSchemes: ["mailto", "merlinbirdid", "comgooglemaps", "om", "waze", "maps"],
       },
       bundleIdentifier: "com.rawcomposition.openbirding",
     },

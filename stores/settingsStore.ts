@@ -6,7 +6,7 @@ export type LifeListEntry = {
   code: string;
   date: string;
   location: string;
-  checklistId: string;
+  checklistId: string | null;
 };
 
 type SettingsState = {

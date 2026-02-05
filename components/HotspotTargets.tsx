@@ -2,11 +2,12 @@ import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, findNodeHandle, Linking, Pressable, Text, TouchableOpacity, View } from "react-native";
 
 const INITIAL_LIMIT = 10;
 
@@ -18,8 +19,11 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
+  const setLifelist = useSettingsStore((s) => s.setLifelist);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
+  const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
+  const { showActionSheetWithOptions } = useActionSheet();
 
   useEffect(() => {
     setShowAll(false);
@@ -44,6 +48,36 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
 
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
+
+  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string) => {
+    if (buttonIndex === 0) {
+      Linking.openURL(`merlinbirdid://species/${speciesCode}`).catch(() => {
+        Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+      });
+    } else if (buttonIndex === 1) {
+      const newEntry = {
+        code: speciesCode,
+        date: new Date().toISOString().split("T")[0],
+        location: "N/A",
+        checklistId: null,
+      };
+      setLifelist([...(lifelist || []), newEntry]);
+    }
+  };
+
+  const showActionSheet = (speciesCode: string) => {
+    const ref = menuRefs.current.get(speciesCode);
+    const anchor = ref ? findNodeHandle(ref) : undefined;
+    const options = ["View in Merlin", "Add to Life List"];
+
+    showActionSheetWithOptions(
+      {
+        options,
+        anchor: anchor ?? undefined,
+      },
+      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode)
+    );
+  };
 
   const renderEmptyState = () => {
     if (hasNoSpeciesData) {
@@ -98,15 +132,26 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
               <View key={t.speciesCode}>
                 {idx > 0 && <View style={tw`h-px bg-gray-100`} />}
 
-                <View style={tw`pl-5 pr-6 py-3`}>
+                <View style={tw`pl-5 pr-3 py-3`}>
                   <View style={tw`flex-row items-center`}>
                     <Text style={tw`w-7 text-sm font-semibold text-gray-400 tabular-nums`}>{idx + 1}</Text>
 
                     <View style={tw`flex-1`}>
-                      <View style={tw`flex-row items-baseline justify-between`}>
-                        <Text style={tw`text-base text-gray-900 flex-1 mr-3`} numberOfLines={1}>
-                          {taxonomyMap.get(t.speciesCode) || "Unknown species"}
-                        </Text>
+                      <View style={tw`flex-row items-center justify-between`}>
+                        <View style={tw`flex-row items-center flex-1 mr-3`}>
+                          <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
+                            {taxonomyMap.get(t.speciesCode) || "Unknown species"}
+                          </Text>
+                          <TouchableOpacity
+                            ref={(ref) => {
+                              if (ref) menuRefs.current.set(t.speciesCode, ref);
+                            }}
+                            onPress={() => showActionSheet(t.speciesCode)}
+                            style={tw`px-1.5 py-2 ml-1 mt-px`}
+                          >
+                            <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
+                          </TouchableOpacity>
+                        </View>
 
                         <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
                           {t.percentage.toFixed(0)}%
