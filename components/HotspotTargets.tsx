@@ -34,26 +34,43 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
 
   return (
     <View style={tw`mt-4`}>
-      <Text style={tw`text-base font-semibold text-gray-800 mb-1`}>Targets</Text>
-      <Text style={tw`text-sm text-gray-500 mb-4`}>Based on {data.samples.toLocaleString()} checklists</Text>
-      <View style={tw`gap-5`}>
-        {displayedTargets.map((target) => (
-          <View key={target.speciesCode}>
-            <View style={tw`flex-row justify-between mb-1.5`}>
-              <Text style={tw`text-base text-gray-800 flex-1 mr-2`} numberOfLines={1}>
-                {taxonomyMap.get(target.speciesCode) || "Unknown species"}
-              </Text>
-              <Text style={tw`text-base font-medium text-gray-700`}>{target.percentage.toFixed(0)}%</Text>
-            </View>
-            <View style={tw`h-1.5 bg-gray-100 rounded overflow-hidden`}>
-              <View style={[tw`h-full bg-emerald-600 rounded`, { width: `${Math.min(target.percentage, 100)}%` }]} />
+      <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
+      <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
+
+      {/* Full-bleed list */}
+      <View style={tw`mt-3 -mx-4`}>
+        {displayedTargets.map((t, idx) => (
+          <View key={t.speciesCode}>
+            {idx > 0 && <View style={tw`h-px bg-gray-100`} />}
+
+            <View style={tw`pl-5 pr-6 py-3`}>
+              <View style={tw`flex-row items-center`}>
+                <Text style={tw`w-7 text-sm font-semibold text-gray-400 tabular-nums`}>{idx + 1}</Text>
+
+                <View style={tw`flex-1`}>
+                  <View style={tw`flex-row items-baseline justify-between`}>
+                    <Text style={tw`text-base text-gray-900 flex-1 mr-3`} numberOfLines={1}>
+                      {taxonomyMap.get(t.speciesCode) || "Unknown species"}
+                    </Text>
+
+                    <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>{t.percentage.toFixed(0)}%</Text>
+                  </View>
+
+                  <View style={tw`mt-2 h-1 bg-gray-200 rounded-full overflow-hidden`}>
+                    <View
+                      style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(t.percentage, 100)}%` }]}
+                    />
+                  </View>
+                </View>
+              </View>
             </View>
           </View>
         ))}
       </View>
+
       {hasMore && !showAll && (
-        <TouchableOpacity onPress={() => setShowAll(true)} style={tw`mt-3 py-2`}>
-          <Text style={tw`text-sm text-blue-600 text-center`}>View All ({data.targets.length} species)</Text>
+        <TouchableOpacity onPress={() => setShowAll(true)} style={tw`mt-2 text-center py-1 w-full`}>
+          <Text style={tw`text-sm font-medium text-blue-600 text-center`}>See all</Text>
         </TouchableOpacity>
       )}
     </View>
