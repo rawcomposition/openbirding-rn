@@ -129,10 +129,11 @@ export default function ViewLifeListPage() {
 
     if (!searchQuery.trim()) return sorted;
 
-    const query = searchQuery.toLowerCase().trim();
+    const stripPunctuation = (s: string) => s.replace(/[^\w\s]/g, "");
+    const query = stripPunctuation(searchQuery.toLowerCase().trim());
     return sorted.filter((item) => {
       const speciesName = taxonomyMap.get(item.code) ?? "";
-      return item.code.toLowerCase().includes(query) || speciesName.toLowerCase().includes(query);
+      return item.code.toLowerCase().includes(query) || stripPunctuation(speciesName.toLowerCase()).includes(query);
     });
   }, [lifelist, searchQuery, taxonomyMap]);
 
