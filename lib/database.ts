@@ -550,10 +550,11 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
 
   // Aggregate observations per species and calculate percentages
   const speciesMap = new Map<string, number>();
-  for (const [code, observations] of data.species) {
-    const speciesCode = String(code);
-    const obs = typeof observations === "number" ? observations : 0;
-    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + obs);
+  for (const speciesEntry of data.species) {
+    const speciesCode = String(speciesEntry[0]);
+    // Sum all observation values (everything after the code at index 0)
+    const totalObs = speciesEntry.slice(1).reduce<number>((sum, val) => sum + (typeof val === "number" ? val : 0), 0);
+    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
   }
 
   // Convert to array, calculate percentages, and sort by percentage descending
