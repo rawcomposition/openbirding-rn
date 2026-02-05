@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   ScrollView,
@@ -60,8 +61,23 @@ function StepCard({ stepNumber, title, children }: StepCardProps) {
 
 export default function ImportLifeListPage() {
   const router = useRouter();
+  const lifelist = useSettingsStore((state) => state.lifelist);
   const setLifelist = useSettingsStore((state) => state.setLifelist);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleReset = () => {
+    Alert.alert("Reset Life List", "Are you sure you want to clear your life list?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reset",
+        style: "destructive",
+        onPress: () => {
+          setLifelist(null);
+          Toast.show({ type: "success", text1: "Life list cleared" });
+        },
+      },
+    ]);
+  };
 
   const processCSV = async (csvText: string): Promise<void> => {
     const result = await processLifeListCSV(csvText);
@@ -126,7 +142,7 @@ export default function ImportLifeListPage() {
   return (
     <ScrollView
       style={tw`flex-1 bg-gray-100`}
-      contentContainerStyle={tw`px-4 pt-6 pb-10`}
+      contentContainerStyle={tw`px-4 pt-6 pb-10 flex-grow`}
       showsVerticalScrollIndicator={false}
     >
       <StepCard stepNumber={1} title="Download life list CSV">
@@ -186,6 +202,18 @@ export default function ImportLifeListPage() {
             )}
           </TouchableOpacity>
         </StepCard>
+      )}
+
+      {lifelist && lifelist.length > 0 && (
+        <View style={tw`flex-1 justify-end`}>
+          <TouchableOpacity
+            onPress={handleReset}
+            style={tw`border border-gray-300 rounded-lg py-2.5 px-4 self-center`}
+            activeOpacity={0.7}
+          >
+            <Text style={tw`text-gray-600 text-sm`}>Reset Life List</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </ScrollView>
   );

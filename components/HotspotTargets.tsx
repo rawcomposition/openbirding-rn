@@ -18,6 +18,7 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
+  const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["hotspotTargets", hotspotId],
     queryFn: () => getTargetsForHotspot(hotspotId),
-    enabled: !!hotspotId,
+    enabled: !!hotspotId && !hasNoLifeList,
   });
 
   const filteredTargets = useMemo(() => {
@@ -44,7 +45,6 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const hasMore = filteredTargets.length > INITIAL_LIMIT;
 
   const hasNoSpeciesData = data.targets.length === 0;
-  const hasNoLifeList = !lifelist;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data.targets.length > 0;
 
   const renderEmptyState = () => {
@@ -87,13 +87,13 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   return (
     <View style={tw`mt-4`}>
       <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-      {data.samples > 0 && (
+      {data.samples > 0 && !hasNoLifeList && (
         <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
       )}
 
       {renderEmptyState()}
 
-      {filteredTargets.length > 0 && (
+      {filteredTargets.length > 0 && !hasNoLifeList && (
         <>
           <View style={tw`mt-3 -mx-4`}>
             {displayedTargets.map((t, idx) => (
