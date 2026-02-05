@@ -1,10 +1,3 @@
-import ActionButton from "./ActionButton";
-import BaseBottomSheet from "./BaseBottomSheet";
-import DialogHeader from "./DialogHeader";
-import HotspotTargets from "./HotspotTargets";
-import DirectionsIcon from "./icons/DirectionsIcon";
-import InfoIcon from "./icons/InfoIcon";
-import TargetsIcon from "./icons/TargetsIcon";
 import { useDirections } from "@/hooks/useDirections";
 import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
@@ -12,8 +5,14 @@ import { getMarkerColor } from "@/lib/utils";
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
-import { Alert, Linking, Text, View } from "react-native";
 import type { TouchableOpacity } from "react-native";
+import { Alert, Linking, Text, View } from "react-native";
+import ActionButton from "./ActionButton";
+import BaseBottomSheet from "./BaseBottomSheet";
+import DialogHeader from "./DialogHeader";
+import HotspotTargets from "./HotspotTargets";
+import DirectionsIcon from "./icons/DirectionsIcon";
+import InfoIcon from "./icons/InfoIcon";
 
 type HotspotDialogProps = {
   isOpen: boolean;
@@ -146,12 +145,6 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                 />
 
                 <ActionButton
-                  icon={<TargetsIcon color={tw.color("green-600")} size={20} />}
-                  label="View Targets"
-                  onPress={handleOpenTargets}
-                />
-
-                <ActionButton
                   ref={directionsButtonRef}
                   icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
                   label="Get Directions"
@@ -160,7 +153,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                 />
               </View>
 
-              <HotspotTargets hotspotId={hotspot.id} />
+              <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
             </View>
           ) : isLoadingHotspot ? null : (
             <View style={tw`py-8 items-center`}>

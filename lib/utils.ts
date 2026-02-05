@@ -1,6 +1,10 @@
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Platform } from "react-native";
 import { hotspotColor } from "./constants";
 import { MapFeature } from "./types";
+
+dayjs.extend(customParseFormat);
 
 type Params = {
   [key: string]: string | number | boolean;
@@ -324,6 +328,12 @@ type TaxonomyEntry = {
   code: string;
 };
 
+function parseEbirdDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const parsed = dayjs(dateStr, "DD MMM YYYY");
+  return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dateStr;
+}
+
 export type ProcessLifeListResult =
   | { success: true; entries: LifeListEntry[]; unmatchedCount: number }
   | { success: false; error: string };
@@ -362,7 +372,7 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
     if (code) {
       entries.push({
         code,
-        date: row["Date"] || "",
+        date: parseEbirdDate(row["Date"]),
         location: row["Location"] || "",
         checklistId: row["SubID"] || "",
       });

@@ -1,10 +1,20 @@
+import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { LifeListEntry, useSettingsStore } from "@/stores/settingsStore";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
+import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, Platform, Text, TextInput, View, ViewStyle } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, findNodeHandle, FlatList, Linking, Platform, Text, TextInput, TouchableOpacity, View, ViewStyle } from "react-native";
+import Toast from "react-native-toast-message";
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const parsed = dayjs(dateStr);
+  return parsed.isValid() ? parsed.format("MMM D, YYYY") : dateStr;
+}
 
 function EmptyState() {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
@@ -40,13 +50,52 @@ function NoResults() {
   );
 }
 
-function LifeListItem({ item, isLast }: { item: LifeListEntry; isLast: boolean }) {
+function LifeListItem({
+  item,
+  isLast,
+  taxonomyMap,
+  onRemove,
+}: {
+  item: LifeListEntry;
+  isLast: boolean;
+  taxonomyMap: Map<string, string>;
+  onRemove: () => void;
+}) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
+  const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
+  const menuRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
+  const { showActionSheetWithOptions } = useActionSheet();
+
+  const showMenu = () => {
+    const anchor = menuRef.current ? findNodeHandle(menuRef.current) : undefined;
+    showActionSheetWithOptions(
+      {
+        options: ["View in Merlin", "Remove from Life List", "Cancel"],
+        destructiveButtonIndex: 1,
+        cancelButtonIndex: 2,
+        anchor: anchor ?? undefined,
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          Linking.openURL(`merlinbirdid://species/${item.code}`).catch(() => {
+            Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+          });
+        } else if (buttonIndex === 1) {
+          onRemove();
+        }
+      }
+    );
+  };
 
   return (
-    <View style={[tw`px-4 py-3`, borderStyle]}>
-      <Text style={tw`text-gray-900 text-base font-medium`}>{item.code}</Text>
-      <Text style={tw`text-gray-500 text-sm mt-0.5`}>{item.date}</Text>
+    <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
+      <View style={tw`flex-1`}>
+        <Text style={tw`text-gray-900 text-base font-medium`}>{speciesName}</Text>
+        <Text style={tw`text-gray-500 text-sm mt-0.5`}>{formatDate(item.date)}</Text>
+      </View>
+      <TouchableOpacity ref={menuRef} onPress={showMenu} style={tw`p-2 -mr-2`}>
+        <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -54,6 +103,8 @@ function LifeListItem({ item, isLast }: { item: LifeListEntry; isLast: boolean }
 export default function ViewLifeListPage() {
   const navigation = useNavigation();
   const lifelist = useSettingsStore((state) => state.lifelist);
+  const setLifelist = useSettingsStore((state) => state.setLifelist);
+  const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -63,11 +114,17 @@ export default function ViewLifeListPage() {
 
   const filteredList = useMemo(() => {
     if (!lifelist) return [];
-    if (!searchQuery.trim()) return lifelist;
+
+    const sorted = [...lifelist].sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!searchQuery.trim()) return sorted;
 
     const query = searchQuery.toLowerCase().trim();
-    return lifelist.filter((item) => item.code.toLowerCase().includes(query));
-  }, [lifelist, searchQuery]);
+    return sorted.filter((item) => {
+      const speciesName = taxonomyMap.get(item.code) ?? "";
+      return item.code.toLowerCase().includes(query) || speciesName.toLowerCase().includes(query);
+    });
+  }, [lifelist, searchQuery, taxonomyMap]);
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
@@ -84,8 +141,23 @@ export default function ViewLifeListPage() {
     );
   }
 
+  const handleRemove = (item: LifeListEntry) => {
+    if (!lifelist) return;
+    const updated = lifelist.filter(
+      (entry) => !(entry.code === item.code && entry.checklistId === item.checklistId)
+    );
+    setLifelist(updated);
+    const speciesName = taxonomyMap.get(item.code) ?? item.code;
+    Toast.show({ type: "success", text1: `Removed ${speciesName}` });
+  };
+
   const renderItem = ({ item, index }: { item: LifeListEntry; index: number }) => (
-    <LifeListItem item={item} isLast={index === filteredList.length - 1} />
+    <LifeListItem
+      item={item}
+      isLast={index === filteredList.length - 1}
+      taxonomyMap={taxonomyMap}
+      onRemove={() => handleRemove(item)}
+    />
   );
 
   const listContent = (

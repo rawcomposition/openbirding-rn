@@ -73,7 +73,7 @@ export default function ImportLifeListPage() {
         style: "destructive",
         onPress: () => {
           setLifelist(null);
-          Toast.show({ type: "success", text1: "Life list cleared" });
+          Toast.show({ type: "success", text1: "Life list reset" });
         },
       },
     ]);

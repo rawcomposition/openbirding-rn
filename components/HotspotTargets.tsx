@@ -13,9 +13,11 @@ const INITIAL_LIMIT = 10;
 
 type HotspotTargetsProps = {
   hotspotId: string;
+  lat: number;
+  lng: number;
 };
 
-export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
+export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
@@ -55,6 +57,13 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
         Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
       });
     } else if (buttonIndex === 1) {
+      const delta = 0.05;
+      const url = `https://ebird.org/map/${speciesCode}?gp=true&yr=all&env.minX=${(lng - delta).toFixed(3)}&env.minY=${(
+        lat - delta
+      ).toFixed(3)}&env.maxX=${(lng + delta).toFixed(3)}&env.maxY=${(lat + delta).toFixed(3)}`;
+      console.log(url);
+      Linking.openURL(url);
+    } else if (buttonIndex === 2) {
       const newEntry = {
         code: speciesCode,
         date: new Date().toISOString().split("T")[0],
@@ -68,7 +77,7 @@ export default function HotspotTargets({ hotspotId }: HotspotTargetsProps) {
   const showActionSheet = (speciesCode: string) => {
     const ref = menuRefs.current.get(speciesCode);
     const anchor = ref ? findNodeHandle(ref) : undefined;
-    const options = ["View in Merlin", "Add to Life List"];
+    const options = ["View in Merlin", "View eBird Map", "Add to Life List"];
 
     showActionSheetWithOptions(
       {
