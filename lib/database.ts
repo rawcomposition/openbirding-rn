@@ -112,13 +112,13 @@ async function createIndexes(): Promise<void> {
 async function runMigrations(): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
-  const tableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(packs)");
-  const columns = tableInfo.map((col) => col.name);
+  const packsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(packs)");
+  const packsColumns = packsTableInfo.map((col) => col.name);
 
-  if (!columns.includes("version")) {
+  if (!packsColumns.includes("version")) {
     await db.execAsync(`ALTER TABLE packs ADD COLUMN version TEXT`);
   }
-  if (!columns.includes("updated_at")) {
+  if (!packsColumns.includes("updated_at")) {
     await db.execAsync(`ALTER TABLE packs ADD COLUMN updated_at TEXT`);
   }
 }

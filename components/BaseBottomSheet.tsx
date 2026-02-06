@@ -89,7 +89,6 @@ export default function BaseBottomSheet({
           <>
             {renderHeader()}
             {children}
-            <View style={{ height: bottomPadding }} />
           </>
         ) : (
           <BottomSheetView style={tw`flex-1`}>

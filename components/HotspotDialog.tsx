@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
 import type { TouchableOpacity } from "react-native";
 import { Alert, Linking, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
@@ -24,6 +25,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   const queryClient = useQueryClient();
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
+  const insets = useSafeAreaInsets();
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -133,7 +135,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
       enableDynamicSizing={false}
     >
       <BottomSheetScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
-        <View style={[tw`px-4 pb-4`, { minHeight: 350 }]}>
+        <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
           {hotspot ? (
             <View style={tw`pt-2`}>
               <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
