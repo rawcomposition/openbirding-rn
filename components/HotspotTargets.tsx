@@ -1,3 +1,4 @@
+import avicommons from "@/avicommons";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
@@ -6,9 +7,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, Linking, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Alert, findNodeHandle, Image, Linking, Platform, Pressable, Text, TouchableOpacity, View } from "react-native";
 import InfoModal from "./InfoModal";
 
 const INITIAL_LIMIT = 10;
@@ -30,7 +32,9 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
   const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
+  const headerMenuRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { showActionSheetWithOptions } = useActionSheet();
+  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   useEffect(() => {
     setShowAll(false);
@@ -108,16 +112,23 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     );
   };
 
-  const renderEmptyState = () => {
-    if (hasNoSpeciesData) {
-      return (
-        <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
-          <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
-          <Text style={tw`text-sm text-gray-600 flex-1`}>No species data available for this hotspot.</Text>
-        </View>
-      );
-    }
+  const showHeaderMenu = () => {
+    const anchor = headerMenuRef.current ? findNodeHandle(headerMenuRef.current) : undefined;
+    showActionSheetWithOptions(
+      {
+        options: ["About This Data", "Cancel"],
+        cancelButtonIndex: 1,
+        anchor: anchor ?? undefined,
+      },
+      (buttonIndex) => {
+        if (buttonIndex === 0) {
+          setShowDataInfo(true);
+        }
+      }
+    );
+  };
 
+  const renderEmptyState = () => {
     if (hasNoLifeList) {
       return (
         <Pressable
@@ -130,6 +141,15 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           </View>
           <Ionicons name="chevron-forward" size={20} color={tw.color("sky-400")} style={tw`ml-3`} />
         </Pressable>
+      );
+    }
+
+    if (hasNoSpeciesData) {
+      return (
+        <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
+          <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
+          <Text style={tw`text-sm text-gray-600 flex-1`}>No species data available for this hotspot.</Text>
+        </View>
       );
     }
 
@@ -147,10 +167,41 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
   return (
     <View style={tw`mt-4`}>
-      <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-      {data?.samples && data.samples > 0 && !hasNoLifeList && (
-        <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
-      )}
+      <View style={tw`flex-row items-center justify-between`}>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
+          {data?.samples && data.samples > 0 && !hasNoLifeList && (
+            <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
+          )}
+        </View>
+        {data?.version &&
+          parsePackVersion(data.version) &&
+          (useGlass ? (
+            <TouchableOpacity
+              ref={headerMenuRef}
+              onPress={showHeaderMenu}
+              activeOpacity={0.8}
+              style={tw`w-8 h-8 rounded-full items-center justify-center`}
+            >
+              <GlassView
+                style={tw`w-8 h-8 rounded-full items-center justify-center`}
+                glassEffectStyle="regular"
+                isInteractive
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-700")} />
+              </GlassView>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              ref={headerMenuRef}
+              onPress={showHeaderMenu}
+              activeOpacity={0.8}
+              style={tw`w-8 h-8 rounded-full items-center justify-center bg-white shadow-lg`}
+            >
+              <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-700")} />
+            </TouchableOpacity>
+          ))}
+      </View>
 
       {renderEmptyState()}
 
@@ -161,9 +212,20 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
               <View key={t.speciesCode}>
                 {idx > 0 && <View style={tw`h-px bg-gray-100`} />}
 
-                <View style={tw`pl-5 pr-3 py-3`}>
+                <View style={tw`px-5 py-3`}>
                   <View style={tw`flex-row items-center`}>
-                    <Text style={tw`w-7 text-sm font-semibold text-gray-400 tabular-nums`}>{idx + 1}</Text>
+                    {avicommons[t.speciesCode as keyof typeof avicommons] ? (
+                      <Image
+                        source={{
+                          uri: `https://static.avicommons.org/${t.speciesCode}-${
+                            avicommons[t.speciesCode as keyof typeof avicommons][0]
+                          }-240.jpg`,
+                        }}
+                        style={tw`w-20 h-15 rounded mr-3 bg-gray-200`}
+                      />
+                    ) : (
+                      <View style={tw`w-20 h-15 rounded mr-3 bg-gray-200`} />
+                    )}
 
                     <View style={tw`flex-1`}>
                       <View style={tw`flex-row items-center justify-between`}>
@@ -187,7 +249,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                         </Text>
                       </View>
 
-                      <View style={tw`mt-2 h-1 bg-gray-200 rounded-full overflow-hidden`}>
+                      <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
                         <View
                           style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(t.percentage, 100)}%` }]}
                         />
@@ -201,36 +263,42 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
           {hasMore && !showAll && (
             <TouchableOpacity onPress={() => setShowAll(true)} style={tw`mt-2 text-center py-1 w-full`}>
-              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>See all</Text>
+              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>View all</Text>
             </TouchableOpacity>
           )}
 
           {data?.version && parsePackVersion(data.version) && (
-            <>
-              <View style={tw`flex-row items-center mt-3`}>
-                <Text style={tw`text-xs text-gray-600`}>Data as of {parsePackVersion(data.version)}</Text>
-                <Text style={tw`text-xs text-gray-400 mx-1`}>·</Text>
-                <TouchableOpacity onPress={() => setShowDataInfo(true)}>
-                  <Text style={tw`text-xs text-blue-700`}>Learn more</Text>
-                </TouchableOpacity>
-              </View>
-              <InfoModal
-                visible={showDataInfo}
-                onClose={() => setShowDataInfo(false)}
-                title="About This Data"
-                content={
-                  <View>
-                    <Text style={tw`text-sm text-gray-700 mb-3`}>
-                      Targets data is updated monthly from the eBird Basic Dataset.
-                    </Text>
-                    <Text style={tw`text-sm text-gray-600 italic`}>
-                      eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
-                      Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
-                    </Text>
-                  </View>
-                }
-              />
-            </>
+            <InfoModal
+              visible={showDataInfo}
+              onClose={() => setShowDataInfo(false)}
+              title="About This Data"
+              content={
+                <View>
+                  <Text style={tw`text-sm text-gray-700 mb-3`}>
+                    Targets data is updated monthly from the eBird Basic Dataset.
+                  </Text>
+                  <Text style={tw`text-sm text-gray-600 italic`}>
+                    eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
+                    Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
+                  </Text>
+                  {(() => {
+                    const photoCredits = displayedTargets
+                      .map((t) => avicommons[t.speciesCode as keyof typeof avicommons]?.[1])
+                      .filter((author): author is string => !!author);
+                    const uniqueAuthors = [...new Set(photoCredits)];
+                    if (uniqueAuthors.length === 0) return null;
+                    return (
+                      <View style={tw`mt-4 pt-4 border-t border-gray-200`}>
+                        <Text style={tw`text-sm font-medium text-gray-700 mb-2`}>
+                          Photo Credits (in order of appearance)
+                        </Text>
+                        <Text style={tw`text-sm text-gray-600`}>{uniqueAuthors.join(", ")}</Text>
+                      </View>
+                    );
+                  })()}
+                </View>
+              }
+            />
           )}
         </>
       )}
