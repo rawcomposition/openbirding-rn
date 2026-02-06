@@ -138,11 +138,10 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
         <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
           {hotspot ? (
             <View style={tw`pt-2`}>
-              <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
               <View style={tw`gap-3 w-full`}>
                 <ActionButton
                   icon={<InfoIcon color={tw.color("blue-500")} size={20} />}
-                  label="View Details"
+                  label="View on eBird"
                   onPress={handleViewDetails}
                 />
 
