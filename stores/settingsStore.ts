@@ -14,12 +14,14 @@ type SettingsState = {
   directionsProvider: string | null;
   lifelist: LifeListEntry[] | null;
   lifelistExclusions: string[] | null;
+  disableSunTimes: boolean;
 };
 
 type SettingsActions = {
   setDirectionsProvider: (provider: string | null) => void;
   setLifelist: (lifelist: LifeListEntry[] | null) => void;
   setLifelistExclusions: (exclusions: string[] | null) => void;
+  setDisableSunTimes: (value: boolean) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -67,9 +69,11 @@ export const useSettingsStore = create<SettingsStore>()(
       directionsProvider: null,
       lifelist: null,
       lifelistExclusions: null,
+      disableSunTimes: false,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
+      setDisableSunTimes: (value) => set({ disableSunTimes: value }),
     }),
     {
       name: "settings",

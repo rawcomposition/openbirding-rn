@@ -6,7 +6,7 @@ import Constants from "expo-constants";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Href, useRouter } from "expo-router";
 import React from "react";
-import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Alert, Linking, Platform, ScrollView, Switch, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 
 type SettingsIconProps =
   | { family?: "ionicons"; name: keyof typeof Ionicons.glyphMap; bgColor: string }
@@ -48,6 +48,26 @@ function SettingsRow({ label, value, onPress, isLast, icon }: SettingsRowProps) 
   );
 }
 
+type SettingsToggleRowProps = {
+  label: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  isLast?: boolean;
+  icon?: SettingsIconProps;
+};
+
+function SettingsToggleRow({ label, value, onValueChange, isLast, icon }: SettingsToggleRowProps) {
+  const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
+
+  return (
+    <View style={[tw`flex-row items-center px-4 py-3`, borderStyle]}>
+      {icon && <SettingsIcon {...icon} />}
+      <Text style={tw`text-gray-900 text-base flex-1`}>{label}</Text>
+      <Switch value={value} onValueChange={onValueChange} />
+    </View>
+  );
+}
+
 type SettingsGroupProps = {
   children: React.ReactNode;
   header?: string;
@@ -84,6 +104,8 @@ export default function SettingsPage() {
   const directionsProvider = useSettingsStore((state) => state.directionsProvider);
   const lifelist = useSettingsStore((state) => state.lifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
+  const disableSunTimes = useSettingsStore((state) => state.disableSunTimes);
+  const setDisableSunTimes = useSettingsStore((state) => state.setDisableSunTimes);
   const providers = getExternalMapProviders();
 
   const getProviderName = (providerId: string | null) => {
@@ -124,6 +146,16 @@ export default function SettingsPage() {
           value={getProviderName(directionsProvider)}
           onPress={() => router.push("/settings-map-provider" as Href)}
           icon={{ name: "car", bgColor: "#007AFF" }}
+          isLast
+        />
+      </SettingsGroup>
+
+      <SettingsGroup header="Map Display">
+        <SettingsToggleRow
+          label="Show Sunrise/Sunset"
+          value={!disableSunTimes}
+          onValueChange={(value) => setDisableSunTimes(!value)}
+          icon={{ name: "sunny", bgColor: "#FF9500" }}
           isLast
         />
       </SettingsGroup>

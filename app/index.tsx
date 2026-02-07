@@ -6,6 +6,7 @@ import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
 import PlaceDialog from "@/components/PlaceDialog";
+import SunIndicator from "@/components/SunIndicator";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import tw from "@/lib/tw";
@@ -118,7 +119,7 @@ export default function HomeScreen() {
           onLongPressCoordinates={handleMapLongPress}
           placeCoordinates={customPinCoordinates}
         />
-        {!hasInstalledPacks && !isLoadingInstalledPacks && (
+        {!hasInstalledPacks && !isLoadingInstalledPacks ? (
           <View
             style={[
               tw`absolute left-0 right-0`,
@@ -129,6 +130,11 @@ export default function HomeScreen() {
           >
             <PacksNotice variant="banner" />
           </View>
+        ) : (
+          <SunIndicator
+            style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]}
+            light={currentLayer === "satellite"}
+          />
         )}
         <View
           style={[
