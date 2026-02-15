@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { useMemo, useState } from "react";
 import { Platform, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
 import SunsetIcon from "./icons/SunsetIcon";
@@ -33,6 +34,8 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
   const { sunrise, sunset, nextEvent, nextEventTime, timeUntilNextEvent, isLoading } = useSunTimes();
   const { location: userLocation } = useLocation();
   const mapCenter = useMapStore((state) => state.mapCenter);
+  const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
+  const isBottomSheetExpanded = useMapStore((state) => state.isBottomSheetExpanded);
 
   const isTooFarFromUser = useMemo(() => {
     if (!userLocation || !mapCenter) return false;
@@ -40,8 +43,17 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     return distance > MAX_DISTANCE_KM;
   }, [userLocation, mapCenter]);
 
-  // Don't render if no data available or map center is too far from user
-  if (!nextEvent || !nextEventTime || isLoading || isTooFarFromUser) return null;
+  const shouldShow = !!(
+    nextEvent &&
+    nextEventTime &&
+    !isLoading &&
+    !isTooFarFromUser &&
+    !isZoomedTooFarOut &&
+    !isBottomSheetExpanded
+  );
+  console.log("shouldShow", shouldShow);
+
+  if (!shouldShow) return null;
 
   const formattedTime = dayjs(nextEventTime).format("h:mm A");
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
@@ -81,17 +93,19 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
 
   return (
     <>
-      {useGlass ? (
-        <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={[baseStyle, style]}>
-          <GlassView style={baseStyle} glassEffectStyle="regular" tintColor={light ? "white" : undefined}>
+      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
+        {useGlass ? (
+          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={[baseStyle, style]}>
+            <GlassView style={baseStyle} glassEffectStyle="regular" tintColor={light ? "white" : undefined}>
+              {pillContent}
+            </GlassView>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={fallbackStyle}>
             {pillContent}
-          </GlassView>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={fallbackStyle}>
-          {pillContent}
-        </TouchableOpacity>
-      )}
+          </TouchableOpacity>
+        )}
+      </Animated.View>
 
       <InfoModal
         visible={showModal}

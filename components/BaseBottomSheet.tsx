@@ -1,9 +1,12 @@
 import tw from "@/lib/tw";
+import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const EXPANDED_THRESHOLD = 90;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
@@ -32,6 +35,7 @@ export default function BaseBottomSheet({
 }: BaseBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const insets = useSafeAreaInsets();
+  const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
   const bottomPadding = Math.max(insets.bottom, 16);
 
@@ -47,9 +51,17 @@ export default function BaseBottomSheet({
     (index: number) => {
       if (index === -1) {
         onClose();
+        setIsBottomSheetExpanded(false);
+        return;
+      }
+
+      if (!enableDynamicSizing && snapPoints && snapPoints[index]) {
+        const snapPoint = snapPoints[index];
+        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
+        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
       }
     },
-    [onClose]
+    [onClose, enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
   );
 
   const renderHeader = () => {

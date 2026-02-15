@@ -15,6 +15,10 @@ type MapStore = {
   setIsHotspotListOpen: (isOpen: boolean) => void;
   mapCenter: { lat: number; lng: number } | null;
   setMapCenter: (center: { lat: number; lng: number } | null) => void;
+  isZoomedTooFarOut: boolean;
+  setIsZoomedTooFarOut: (zoomed: boolean) => void;
+  isBottomSheetExpanded: boolean;
+  setIsBottomSheetExpanded: (expanded: boolean) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -30,4 +34,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsHotspotListOpen: (isOpen) => set({ isHotspotListOpen: isOpen }),
   mapCenter: null,
   setMapCenter: (center) => set({ mapCenter: center }),
+  isZoomedTooFarOut: false,
+  setIsZoomedTooFarOut: (zoomed) => set({ isZoomedTooFarOut: zoomed }),
+  isBottomSheetExpanded: false,
+  setIsBottomSheetExpanded: (expanded) => set({ isBottomSheetExpanded: expanded }),
 }));

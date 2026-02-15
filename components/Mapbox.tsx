@@ -101,7 +101,11 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     ref
   ) => {
     const insets = useSafeAreaInsets();
-    const { currentLayer, placeId, setMapCenter } = useMapStore();
+    const currentLayer = useMapStore((state) => state.currentLayer);
+    const placeId = useMapStore((state) => state.placeId);
+    const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
+    const setIsZoomedTooFarOut = useMapStore((state) => state.setIsZoomedTooFarOut);
     const { status: permissionStatus } = useLocationPermissionStore();
     const { showSavedOnly } = useFiltersStore();
 
@@ -113,7 +117,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [showAttribution, setShowAttribution] = useState(false);
-    const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
 
     const mapStyle = useMemo(() => {
@@ -188,12 +191,15 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
       if (!mapRef.current) return null;
       const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
-      setIsZoomedTooFarOut(z < MIN_ZOOM);
+      const zoomedOut = z < MIN_ZOOM;
+      if (zoomedOut !== isZoomedTooFarOut) {
+        setIsZoomedTooFarOut(zoomedOut);
+      }
       if (z >= MIN_ZOOM && b) {
         return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
       }
       return null;
-    }, []);
+    }, [isZoomedTooFarOut, setIsZoomedTooFarOut]);
 
     const syncViewport = useCallback(async () => {
       if (!mapRef.current) return;
