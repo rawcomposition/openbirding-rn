@@ -15,6 +15,7 @@ import { useMapStore } from "@/stores/mapStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import debounce from "lodash/debounce";
 import throttle from "lodash/throttle";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
@@ -184,7 +185,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           if (!mapRef.current) return;
           const center = await mapRef.current.getCenter();
           setMapCenter({ lat: center[1], lng: center[0] });
-        }, 2000),
+        }, 1000),
       [setMapCenter]
     );
 
@@ -536,9 +537,17 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
-            <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
-              <Text style={tw`text-sm text-gray-700`}>Zoom in to load hotspots</Text>
-            </View>
+            {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+                <View style={tw`flex-row items-center px-4 py-2`}>
+                  <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
+                </View>
+              </GlassView>
+            ) : (
+              <View style={tw`rounded-full overflow-hidden bg-white/90 shadow-md px-4 py-2`}>
+                <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
+              </View>
+            )}
           </View>
         )}
 

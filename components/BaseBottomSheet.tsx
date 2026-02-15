@@ -52,16 +52,22 @@ export default function BaseBottomSheet({
       if (index === -1) {
         onClose();
         setIsBottomSheetExpanded(false);
-        return;
-      }
-
-      if (!enableDynamicSizing && snapPoints && snapPoints[index]) {
-        const snapPoint = snapPoints[index];
-        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
-        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
       }
     },
-    [onClose, enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
+    [onClose, setIsBottomSheetExpanded]
+  );
+
+  const handleAnimate = useCallback(
+    (_fromIndex: number, toIndex: number) => {
+      if (!enableDynamicSizing && snapPoints && snapPoints[toIndex]) {
+        const snapPoint = snapPoints[toIndex];
+        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
+        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
+      } else if (toIndex === -1) {
+        setIsBottomSheetExpanded(false);
+      }
+    },
+    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
   );
 
   const renderHeader = () => {
@@ -91,6 +97,7 @@ export default function BaseBottomSheet({
         index={-1}
         snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
         onChange={handleSheetChanges}
+        onAnimate={handleAnimate}
         enablePanDownToClose
         enableDynamicSizing={enableDynamicSizing}
         topInset={insets.top}

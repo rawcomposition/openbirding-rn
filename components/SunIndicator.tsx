@@ -11,7 +11,7 @@ import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
 import SunsetIcon from "./icons/SunsetIcon";
 
-const MAX_DISTANCE_KM = 50;
+const MAX_DISTANCE_KM = 100;
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -51,7 +51,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     !isZoomedTooFarOut &&
     !isBottomSheetExpanded
   );
-  console.log("shouldShow", shouldShow);
 
   if (!shouldShow) return null;
 
@@ -100,7 +99,11 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
             </GlassView>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={[baseStyle, tw`bg-white/90 shadow-md`]}>
+          <TouchableOpacity
+            onPress={() => setShowModal(true)}
+            activeOpacity={0.8}
+            style={[baseStyle, tw`bg-white/90 shadow-md`]}
+          >
             {pillContent}
           </TouchableOpacity>
         )}
