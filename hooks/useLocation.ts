@@ -12,7 +12,7 @@ export function useLocation(enabled: boolean = true): UseLocationReturn {
   const { status: permissionStatus } = useLocationPermissionStore();
 
   const { data, error, isLoading } = useQuery({
-    queryKey: ["userLocation"],
+    queryKey: ["userLocation", enabled],
     queryFn: async () => {
       const currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
