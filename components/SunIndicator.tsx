@@ -68,7 +68,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
   );
 
   const baseStyle = tw`rounded-full overflow-hidden`;
-  const fallbackStyle = [baseStyle, tw`bg-white/90 shadow-md`, style];
 
   const modalContent = (
     <View>
@@ -93,15 +92,15 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
 
   return (
     <>
-      <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
+      <Animated.View style={style} entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
         {useGlass ? (
-          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={[baseStyle, style]}>
+          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={baseStyle}>
             <GlassView style={baseStyle} glassEffectStyle="regular" tintColor={light ? "white" : undefined}>
               {pillContent}
             </GlassView>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={fallbackStyle}>
+          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={[baseStyle, tw`bg-white/90 shadow-md`]}>
             {pillContent}
           </TouchableOpacity>
         )}
