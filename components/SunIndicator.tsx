@@ -1,12 +1,27 @@
+import { useLocation } from "@/hooks/useLocation";
 import { useSunTimes } from "@/hooks/useSunTimes";
 import tw from "@/lib/tw";
+import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Platform, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
 import SunsetIcon from "./icons/SunsetIcon";
+
+const MAX_DISTANCE_KM = 50;
+
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 type SunIndicatorProps = {
   style?: StyleProp<ViewStyle>;
@@ -16,9 +31,17 @@ type SunIndicatorProps = {
 export default function SunIndicator({ style, light }: SunIndicatorProps) {
   const [showModal, setShowModal] = useState(false);
   const { sunrise, sunset, nextEvent, nextEventTime, timeUntilNextEvent, isLoading } = useSunTimes();
+  const { location: userLocation } = useLocation();
+  const mapCenter = useMapStore((state) => state.mapCenter);
 
-  // Don't render if no data available
-  if (!nextEvent || !nextEventTime || isLoading) return null;
+  const isTooFarFromUser = useMemo(() => {
+    if (!userLocation || !mapCenter) return false;
+    const distance = getDistanceKm(userLocation.lat, userLocation.lng, mapCenter.lat, mapCenter.lng);
+    return distance > MAX_DISTANCE_KM;
+  }, [userLocation, mapCenter]);
+
+  // Don't render if no data available or map center is too far from user
+  if (!nextEvent || !nextEventTime || isLoading || isTooFarFromUser) return null;
 
   const formattedTime = dayjs(nextEventTime).format("h:mm A");
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();

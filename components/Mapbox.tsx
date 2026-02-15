@@ -101,7 +101,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     ref
   ) => {
     const insets = useSafeAreaInsets();
-    const { currentLayer, placeId } = useMapStore();
+    const { currentLayer, placeId, setMapCenter } = useMapStore();
     const { status: permissionStatus } = useLocationPermissionStore();
     const { showSavedOnly } = useFiltersStore();
 
@@ -175,6 +175,16 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onLocationSave]
     );
 
+    const debouncedSetMapCenter = useMemo(
+      () =>
+        debounce(async () => {
+          if (!mapRef.current) return;
+          const center = await mapRef.current.getCenter();
+          setMapCenter({ lat: center[1], lng: center[0] });
+        }, 2000),
+      [setMapCenter]
+    );
+
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
       if (!mapRef.current) return null;
       const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
@@ -190,7 +200,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       const b = await readBoundsIfZoomed();
       throttledSetBounds(b);
       debouncedSaveLocation();
-    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation]);
+      debouncedSetMapCenter();
+    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, debouncedSetMapCenter]);
 
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
