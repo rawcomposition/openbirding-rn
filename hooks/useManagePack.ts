@@ -1,10 +1,32 @@
 import { cleanupPartialInstall, installPackWithTargets, uninstallPack } from "@/lib/database";
 import { downloadWithProgress } from "@/lib/download";
 import { StaticPack, StaticPackResponse } from "@/lib/types";
+import { API_URL } from "@/lib/utils";
 import { useDownloadStore } from "@/stores/downloadStore";
 import { useQueryClient } from "@tanstack/react-query";
+import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { useState } from "react";
+import { Platform } from "react-native";
 import Toast from "react-native-toast-message";
+
+async function logDownload(packId: number) {
+  try {
+    const channel = Updates.channel || (__DEV__ ? "development" : "unknown");
+    const response = await fetch(`${API_URL}/packs/${packId}/log-download`, {
+      method: "POST",
+      headers: {
+        "App-Version": Constants.expoConfig?.version || "unknown",
+        "App-Platform": Platform.OS,
+        "App-Environment": channel,
+        "Download-Method": "manual",
+      },
+    });
+    if (!response.ok) {
+      console.log("Failed to log download:", response.status, response.statusText);
+    }
+  } catch (error) {}
+}
 
 export function useManagePack(packId: number) {
   const [isUninstalling, setIsUninstalling] = useState<boolean>(false);
@@ -56,6 +78,8 @@ export function useManagePack(packId: number) {
         type: "success",
         text1: "Pack Installed",
       });
+
+      logDownload(packId);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         // User cancelled - clean up partial data
