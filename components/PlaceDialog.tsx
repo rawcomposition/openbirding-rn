@@ -93,7 +93,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
 
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
-      <View style={tw`px-4 pb-4 pt-2`}>
+      <View style={tw`px-4 pb-4 pt-2 min-h-[100px]`}>
         {savedPlace?.notes && (
           <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
             <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
@@ -106,6 +106,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
             label="Get Directions"
             onPress={handleGetDirections}
             onLongPress={handleShowProviders}
+            style={tw`flex-none`}
           />
         )}
       </View>
