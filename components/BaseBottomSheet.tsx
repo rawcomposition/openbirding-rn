@@ -4,7 +4,9 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
 
 const EXPANDED_THRESHOLD = 90;
 
@@ -38,43 +40,48 @@ export default function BaseBottomSheet({
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
   const bottomPadding = Math.max(insets.bottom, 16);
-  const isClosingRef = useRef(false);
+  const animatedIndex = useSharedValue(-1);
+  const hasCalledClose = useSharedValue(false);
+
+  const handleAnimatedClose = useCallback(() => {
+    onClose();
+    setIsBottomSheetExpanded(false);
+  }, [onClose, setIsBottomSheetExpanded]);
+
+  // Watch animatedIndex to reliably detect close (onChange/onAnimate sometimes fail to fire)
+  useAnimatedReaction(
+    () => animatedIndex.value,
+    (currentIndex, previousIndex) => {
+      if (currentIndex === -1 && previousIndex !== -1 && !hasCalledClose.value) {
+        hasCalledClose.value = true;
+        scheduleOnRN(handleAnimatedClose);
+      } else if (currentIndex >= 0) {
+        hasCalledClose.value = false;
+      }
+    }
+  );
 
   useEffect(() => {
     if (isOpen) {
-      isClosingRef.current = false;
+      hasCalledClose.value = false;
       bottomSheetRef.current?.snapToIndex(initialIndex);
     } else {
-      isClosingRef.current = true;
       bottomSheetRef.current?.close();
     }
-  }, [isOpen, initialIndex]);
-
-  const handleSheetChanges = useCallback(
-    (index: number) => {
-      if (index === -1) {
-        setIsBottomSheetExpanded(false);
-        isClosingRef.current = false;
-      }
-    },
-    [setIsBottomSheetExpanded]
-  );
+  }, [isOpen, initialIndex, hasCalledClose]);
 
   const handleAnimate = useCallback(
     (_fromIndex: number, toIndex: number) => {
+      // Fires at animation START for responsive expansion state updates
       if (!enableDynamicSizing && snapPoints && snapPoints[toIndex]) {
         const snapPoint = snapPoints[toIndex];
         const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
         setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
       } else if (toIndex === -1) {
-        if (!isClosingRef.current) {
-          isClosingRef.current = true;
-          onClose();
-        }
         setIsBottomSheetExpanded(false);
       }
     },
-    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded, onClose]
+    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
   );
 
   const renderHeader = () => {
@@ -102,8 +109,8 @@ export default function BaseBottomSheet({
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
+        animatedIndex={animatedIndex}
         snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
-        onChange={handleSheetChanges}
         onAnimate={handleAnimate}
         enablePanDownToClose
         enableDynamicSizing={enableDynamicSizing}
