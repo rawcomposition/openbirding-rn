@@ -72,7 +72,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
-      queryClient.invalidateQueries({ queryKey: ["/taxonomy"] });
+      queryClient.invalidateQueries({ queryKey: ["/taxonomy"], refetchType: "all" }); // "all" = refetch even if not mounted
 
       Toast.show({
         type: "success",
