@@ -4,9 +4,9 @@ import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Platform, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
 import SunsetIcon from "./icons/SunsetIcon";
@@ -52,7 +52,20 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     !isBottomSheetExpanded
   );
 
-  if (!shouldShow) return null;
+  // Keep component mounted, animate opacity instead of unmounting.
+  // This prevents GlassView from needing to reinitialize its effect which sometimes causes issues.
+  const opacity = useSharedValue(shouldShow ? 1 : 0);
+
+  useEffect(() => {
+    opacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+  }, [shouldShow, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    pointerEvents: opacity.value === 0 ? "none" : "auto",
+  }));
+
+  if (!nextEvent || !nextEventTime || isLoading) return null;
 
   const formattedTime = dayjs(nextEventTime).format("h:mm A");
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
@@ -91,7 +104,7 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
 
   return (
     <>
-      <Animated.View style={style} entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
+      <Animated.View style={[style, animatedStyle]}>
         {useGlass ? (
           <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={baseStyle}>
             <GlassView style={baseStyle} glassEffectStyle="regular" tintColor={light ? "white" : undefined}>

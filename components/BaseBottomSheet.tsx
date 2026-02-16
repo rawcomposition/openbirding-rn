@@ -38,11 +38,14 @@ export default function BaseBottomSheet({
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
   const bottomPadding = Math.max(insets.bottom, 16);
+  const isClosingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
+      isClosingRef.current = false;
       bottomSheetRef.current?.snapToIndex(initialIndex);
     } else {
+      isClosingRef.current = true;
       bottomSheetRef.current?.close();
     }
   }, [isOpen, initialIndex]);
@@ -50,11 +53,11 @@ export default function BaseBottomSheet({
   const handleSheetChanges = useCallback(
     (index: number) => {
       if (index === -1) {
-        onClose();
         setIsBottomSheetExpanded(false);
+        isClosingRef.current = false;
       }
     },
-    [onClose, setIsBottomSheetExpanded]
+    [setIsBottomSheetExpanded]
   );
 
   const handleAnimate = useCallback(
@@ -64,10 +67,14 @@ export default function BaseBottomSheet({
         const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
         setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
       } else if (toIndex === -1) {
+        if (!isClosingRef.current) {
+          isClosingRef.current = true;
+          onClose();
+        }
         setIsBottomSheetExpanded(false);
       }
     },
-    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
+    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded, onClose]
   );
 
   const renderHeader = () => {

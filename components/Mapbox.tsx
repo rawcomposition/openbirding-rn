@@ -179,13 +179,13 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onLocationSave]
     );
 
-    const debouncedSetMapCenter = useMemo(
+    const throttledSetMapCenter = useMemo(
       () =>
-        debounce(async () => {
+        throttle(async () => {
           if (!mapRef.current) return;
           const center = await mapRef.current.getCenter();
           setMapCenter({ lat: center[1], lng: center[0] });
-        }, 1000),
+        }, 500),
       [setMapCenter]
     );
 
@@ -207,8 +207,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       const b = await readBoundsIfZoomed();
       throttledSetBounds(b);
       debouncedSaveLocation();
-      debouncedSetMapCenter();
-    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, debouncedSetMapCenter]);
+      throttledSetMapCenter();
+    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, throttledSetMapCenter]);
 
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
