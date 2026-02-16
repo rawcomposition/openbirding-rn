@@ -29,6 +29,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const setLifelist = useSettingsStore((s) => s.setLifelist);
   const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
   const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
+  const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
+  const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
   const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
@@ -52,12 +54,14 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
     return data.targets.filter((t) => {
       if (t.percentage < 1) return false;
+      // If showing all species, skip life list filtering
+      if (showAllSpecies) return true;
       // If species is in exclusions, show it as a target (override life list)
       if (exclusionCodes?.has(t.speciesCode)) return true;
       // Otherwise, filter out species on the life list
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
     });
-  }, [data, lifelist, lifelistExclusions]);
+  }, [data, lifelist, lifelistExclusions, showAllSpecies]);
 
   if (isLoading) return null;
 
@@ -114,14 +118,17 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
   const showHeaderMenu = () => {
     const anchor = headerMenuRef.current ? findNodeHandle(headerMenuRef.current) : undefined;
+    const toggleLabel = showAllSpecies ? "Show Targets Only" : "Show All Species";
     showActionSheetWithOptions(
       {
-        options: ["About This Data", "Cancel"],
-        cancelButtonIndex: 1,
+        options: [toggleLabel, "About This Data", "Cancel"],
+        cancelButtonIndex: 2,
         anchor: anchor ?? undefined,
       },
       (buttonIndex) => {
         if (buttonIndex === 0) {
+          setShowAllSpecies(!showAllSpecies);
+        } else if (buttonIndex === 1) {
           setShowDataInfo(true);
         }
       }

@@ -15,6 +15,7 @@ type SettingsState = {
   lifelist: LifeListEntry[] | null;
   lifelistExclusions: string[] | null;
   disableSunTimes: boolean;
+  showAllSpecies: boolean;
 };
 
 type SettingsActions = {
@@ -22,6 +23,7 @@ type SettingsActions = {
   setLifelist: (lifelist: LifeListEntry[] | null) => void;
   setLifelistExclusions: (exclusions: string[] | null) => void;
   setDisableSunTimes: (value: boolean) => void;
+  setShowAllSpecies: (value: boolean) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -70,10 +72,12 @@ export const useSettingsStore = create<SettingsStore>()(
       lifelist: null,
       lifelistExclusions: null,
       disableSunTimes: false,
+      showAllSpecies: false,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
       setDisableSunTimes: (value) => set({ disableSunTimes: value }),
+      setShowAllSpecies: (value) => set({ showAllSpecies: value }),
     }),
     {
       name: "settings",
