@@ -67,9 +67,17 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
             <Pressable
               onPress={() => install(pack)}
               disabled={installDisabled}
-              style={[tw`py-2 rounded-lg border border-gray-200`, installDisabled && tw`opacity-60`]}
+              style={[
+                tw`py-2 rounded-lg border`,
+                canUpdate ? tw`border-blue-500 bg-blue-500` : tw`border-gray-200`,
+                installDisabled && tw`opacity-60`,
+              ]}
             >
-              <Text style={tw`font-medium text-center mx-4 text-gray-700 text-sm`}>{getButtonText()}</Text>
+              <Text
+                style={tw.style(`font-medium text-center mx-4 text-sm`, canUpdate ? `text-white` : `text-gray-700`)}
+              >
+                {getButtonText()}
+              </Text>
             </Pressable>
           </View>
         </View>
