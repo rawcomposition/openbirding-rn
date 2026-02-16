@@ -105,11 +105,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     const ref = menuRefs.current.get(speciesCode);
     const anchor = ref ? findNodeHandle(ref) : undefined;
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const options = ["View in Merlin", "View eBird Map", isExcluded ? "Remove Exclusion" : "Add to Life List"];
+    const options = ["View in Merlin", "View eBird Map", isExcluded ? "Remove Exclusion" : "Add to Life List", "Cancel"];
 
     showActionSheetWithOptions(
       {
         options,
+        cancelButtonIndex: 3,
         anchor: anchor ?? undefined,
       },
       (buttonIndex) => handleActionSelection(buttonIndex, speciesCode, isExcluded)
