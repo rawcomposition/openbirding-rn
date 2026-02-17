@@ -1,25 +1,31 @@
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useManagePack } from "@/hooks/useManagePack";
-import { UPDATE_INTERVAL_LIMIT } from "@/lib/config";
 import tw from "@/lib/tw";
-import React, { memo } from "react";
+import { StaticPack } from "@/lib/types";
+import { formatSize } from "@/lib/utils";
+import React, { memo, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Swipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
 type PackListRowProps = {
-  id: number;
-  name: string;
-  hotspots: number;
+  pack: StaticPack;
 };
 
-const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
-  const { install, uninstall, isDownloading, isInstalling, isUninstalling } = useManagePack(id);
+const PackListRow = memo(({ pack }: PackListRowProps) => {
+  const swipeableRef = useRef<SwipeableMethods>(null);
+  const { install, uninstall, isDownloading, isInstalling, isUninstalling } = useManagePack(pack.id);
   const { data: installedPacks } = useInstalledPacks();
-  const installedPack = installedPacks.get(id);
+  const installedPack = installedPacks.get(pack.id);
+
+  const handleUninstall = () => {
+    swipeableRef.current?.close();
+    uninstall();
+  };
 
   const isInstalled = installedPack !== undefined;
-  const canInstall = !installedPack || new Date(installedPack).getTime() + UPDATE_INTERVAL_LIMIT < Date.now();
-  const installDisabled = isInstalling || isUninstalling || isDownloading || !canInstall;
+  const canUpdate = isInstalled && installedPack.version !== pack.v;
+  const canInstall = !isInstalled || canUpdate;
+  const installDisabled = isInstalling || isUninstalling || isDownloading;
 
   const getButtonText = () => {
     if (isUninstalling) return "Uninstalling";
@@ -33,7 +39,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
 
     return (
       <View style={tw`w-20 bg-red-500 justify-center items-center`}>
-        <Pressable onPress={uninstall} style={tw`w-full h-full justify-center items-center`}>
+        <Pressable onPress={handleUninstall} style={tw`w-full h-full justify-center items-center`}>
           <Text style={tw`text-white font-medium text-sm`}>Uninstall</Text>
         </Pressable>
       </View>
@@ -43,9 +49,11 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
   const content = (
     <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
       <View style={tw`flex-1`}>
-        <Text style={tw`text-gray-900 text-lg font-medium`}>{name}</Text>
+        <Text style={tw`text-gray-900 text-lg font-medium`}>{pack.name}</Text>
         <View style={tw`flex-row items-center`}>
-          <Text style={tw`text-gray-600 text-sm`}>{hotspots.toLocaleString()} hotspots</Text>
+          <Text style={tw`text-gray-600 text-sm`}>
+            {pack.hotspots.toLocaleString()} hotspots · {formatSize(pack.size)}
+          </Text>
           {isInstalled && (
             <View style={tw`ml-2 px-1.5 py-0.5 bg-green-100 rounded border border-green-200`}>
               <Text style={tw`text-green-700 text-xs font-medium`}>Installed</Text>
@@ -57,11 +65,19 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
         <View style={tw`flex-row items-center`}>
           <View style={tw`relative`}>
             <Pressable
-              onPress={() => install({ id, name, hotspots }, "manual")}
+              onPress={() => install(pack)}
               disabled={installDisabled}
-              style={[tw`py-2 rounded-lg border border-gray-200`, installDisabled && tw`opacity-60`]}
+              style={[
+                tw`py-2 rounded-lg border`,
+                canUpdate ? tw`border-blue-500 bg-blue-500` : tw`border-gray-200`,
+                installDisabled && tw`opacity-60`,
+              ]}
             >
-              <Text style={tw`font-medium text-center mx-4 text-gray-700 text-sm`}>{getButtonText()}</Text>
+              <Text
+                style={tw.style(`font-medium text-center mx-4 text-sm`, canUpdate ? `text-white` : `text-gray-700`)}
+              >
+                {getButtonText()}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -71,7 +87,7 @@ const PackListRow = memo(({ id, name, hotspots }: PackListRowProps) => {
 
   if (isInstalled) {
     return (
-      <Swipeable renderRightActions={renderRightActions} enabled={isInstalled}>
+      <Swipeable ref={swipeableRef} renderRightActions={renderRightActions} enabled={isInstalled}>
         {content}
       </Swipeable>
     );

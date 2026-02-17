@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { ApiPackResponse, SavedPlace } from "./types";
+import { SavedPlace, StaticPackHotspot, StaticPackTarget } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let isInstallingPack = false;
@@ -9,6 +9,7 @@ export async function initializeDatabase(): Promise<void> {
     db = await SQLite.openDatabaseAsync("openbirding.db");
     await createTables();
     await createIndexes();
+    await runMigrations();
     console.log("Database initialized successfully");
   } catch (error) {
     console.error("Failed to initialize database:", error);
@@ -24,7 +25,9 @@ async function createTables(): Promise<void> {
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL,
       hotspots INTEGER,
-      installed_at TEXT
+      installed_at TEXT,
+      version TEXT,
+      updated_at TEXT
     );
   `);
 
@@ -66,6 +69,15 @@ async function createTables(): Promise<void> {
       saved_at TEXT NOT NULL
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS targets (
+      id TEXT PRIMARY KEY NOT NULL,
+      data TEXT NOT NULL,
+      pack_id INTEGER,
+      FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
+    );
+  `);
 }
 
 async function createIndexes(): Promise<void> {
@@ -87,9 +99,28 @@ async function createIndexes(): Promise<void> {
   `);
 
   await db.execAsync(`
-    CREATE INDEX IF NOT EXISTS idx_saved_places_saved_at 
+    CREATE INDEX IF NOT EXISTS idx_saved_places_saved_at
     ON saved_places (saved_at);
   `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_targets_pack_id
+    ON targets (pack_id);
+  `);
+}
+
+async function runMigrations(): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const packsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(packs)");
+  const packsColumns = packsTableInfo.map((col) => col.name);
+
+  if (!packsColumns.includes("version")) {
+    await db.execAsync(`ALTER TABLE packs ADD COLUMN version TEXT`);
+  }
+  if (!packsColumns.includes("updated_at")) {
+    await db.execAsync(`ALTER TABLE packs ADD COLUMN updated_at TEXT`);
+  }
 }
 
 export function getDatabase(): SQLite.SQLiteDatabase {
@@ -167,10 +198,15 @@ export async function getPackById(id: number): Promise<{
   name: string;
   hotspots: number;
   installed_at: string;
+  version: string | null;
+  updated_at: string | null;
 } | null> {
   if (!db) throw new Error("Database not initialized");
 
-  const result = await db.getFirstAsync(`SELECT id, name, hotspots, installed_at FROM packs WHERE id = ?`, [id]);
+  const result = await db.getFirstAsync(
+    `SELECT id, name, hotspots, installed_at, version, updated_at FROM packs WHERE id = ?`,
+    [id]
+  );
 
   if (!result) return null;
 
@@ -180,6 +216,8 @@ export async function getPackById(id: number): Promise<{
     name: row.name as string,
     hotspots: row.hotspots as number,
     installed_at: row.installed_at as string,
+    version: row.version as string | null,
+    updated_at: row.updated_at as string | null,
   };
 }
 
@@ -226,35 +264,56 @@ export async function getSavedHotspots(): Promise<
   }));
 }
 
-export function checkIsPackInstalling(): boolean {
-  return isInstallingPack;
+export async function uninstallPack(packId: number): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const database = db;
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
+    await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
+    await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
+  });
 }
 
-export async function installPack(
+export async function installPackWithTargets(
   packId: number,
   packName: string,
-  hotspots: ApiPackResponse["hotspots"]
+  version: string,
+  updatedAt: string,
+  hotspots: StaticPackHotspot[],
+  targets: StaticPackTarget[]
 ): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
+  const totalStart = Date.now();
   isInstallingPack = true;
+
   try {
     const database = db;
+
+    // Optimize SQLite for bulk inserts
+    await database.execAsync(`PRAGMA synchronous = OFF`);
+    await database.execAsync(`PRAGMA journal_mode = MEMORY`);
+    await database.execAsync(`PRAGMA cache_size = -64000`);
+
     await database.withTransactionAsync(async () => {
+      // Delete existing data for this pack
+      await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
       await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
-      await database.runAsync(`INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at) VALUES (?, ?, ?, ?)`, [
-        packId,
-        packName,
-        hotspots.length,
-        new Date().toISOString(),
-      ]);
+      // Insert/update pack record
+      await database.runAsync(
+        `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt]
+      );
 
       if (hotspots.length === 0) {
         return;
       }
 
-      const batchSize = 500;
+      const batchSize = 1000;
+
+      // Batch insert hotspots
       for (let i = 0; i < hotspots.length; i += batchSize) {
         const batch = hotspots.slice(i, i + batchSize);
         const values = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
@@ -278,17 +337,39 @@ export async function installPack(
           params
         );
       }
+
+      // Pre-stringify targets data outside the insert loop for better performance
+      const targetsData = targets.map((target) => ({
+        id: target.id,
+        data: JSON.stringify({ samples: target.samples, species: target.species }),
+      }));
+
+      // Batch insert targets
+      for (let i = 0; i < targetsData.length; i += batchSize) {
+        const batch = targetsData.slice(i, i + batchSize);
+        const values = batch.map(() => "(?, ?, ?)").join(", ");
+        const params = batch.flatMap((target) => [target.id, target.data, packId]);
+
+        await database.runAsync(`INSERT INTO targets (id, data, pack_id) VALUES ${values}`, params);
+      }
     });
+
+    // Reset PRAGMA settings to safe defaults
+    await database.execAsync(`PRAGMA synchronous = NORMAL`);
+    await database.execAsync(`PRAGMA journal_mode = WAL`);
+
+    console.log(`[Pack] Installed in ${((Date.now() - totalStart) / 1000).toFixed(1)}s`);
   } finally {
     isInstallingPack = false;
   }
 }
 
-export async function uninstallPack(packId: number): Promise<void> {
-  if (!db) throw new Error("Database not initialized");
+export async function cleanupPartialInstall(packId: number): Promise<void> {
+  if (!db) return;
 
   const database = db;
   await database.withTransactionAsync(async () => {
+    await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
   });
@@ -436,4 +517,58 @@ export async function searchHotspots(query: string, limit: number, savedOnly = f
     species: row.species as number,
     country: row.country as string | null,
   }));
+}
+
+export type HotspotTarget = {
+  speciesCode: string;
+  observations: number;
+  percentage: number;
+};
+
+export type HotspotTargetsResult = {
+  samples: number;
+  targets: HotspotTarget[];
+  version: string | null;
+};
+
+export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTargetsResult | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const result = await db.getFirstAsync(
+    `SELECT t.data, p.version FROM targets t LEFT JOIN packs p ON t.pack_id = p.id WHERE t.id = ?`,
+    [hotspotId]
+  );
+
+  if (!result) return null;
+
+  const row = result as { data: string; version: string | null };
+  const data = JSON.parse(row.data) as {
+    samples: (number | null)[];
+    species: (string | number)[][];
+  };
+
+  // Sum all non-null samples to get total checklists
+  const totalSamples = data.samples.reduce((sum: number, val) => sum + (val ?? 0), 0);
+
+  if (totalSamples === 0) return { samples: 0, targets: [], version: row.version };
+
+  // Aggregate observations per species and calculate percentages
+  const speciesMap = new Map<string, number>();
+  for (const speciesEntry of data.species) {
+    const speciesCode = String(speciesEntry[0]);
+    // Sum all observation values (everything after the code at index 0)
+    const totalObs = speciesEntry.slice(1).reduce<number>((sum, val) => sum + (typeof val === "number" ? val : 0), 0);
+    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
+  }
+
+  // Convert to array, calculate percentages, and sort by percentage descending
+  const targets: HotspotTarget[] = Array.from(speciesMap.entries())
+    .map(([speciesCode, observations]) => ({
+      speciesCode,
+      observations,
+      percentage: (observations / totalSamples) * 100,
+    }))
+    .sort((a, b) => b.percentage - a.percentage);
+
+  return { samples: totalSamples, targets, version: row.version };
 }

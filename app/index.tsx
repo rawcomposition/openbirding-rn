@@ -6,7 +6,9 @@ import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
 import PlaceDialog from "@/components/PlaceDialog";
+import SunIndicator from "@/components/SunIndicator";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { usePackUpdates } from "@/hooks/usePackUpdates";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
@@ -34,6 +36,7 @@ export default function HomeScreen() {
     setIsHotspotListOpen,
   } = useMapStore();
   const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
+  const { hasUpdates } = usePackUpdates();
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -118,7 +121,7 @@ export default function HomeScreen() {
           onLongPressCoordinates={handleMapLongPress}
           placeCoordinates={customPinCoordinates}
         />
-        {!hasInstalledPacks && !isLoadingInstalledPacks && (
+        {!hasInstalledPacks && !isLoadingInstalledPacks ? (
           <View
             style={[
               tw`absolute left-0 right-0`,
@@ -129,6 +132,11 @@ export default function HomeScreen() {
           >
             <PacksNotice variant="banner" />
           </View>
+        ) : (
+          <SunIndicator
+            style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]}
+            light={currentLayer === "satellite"}
+          />
         )}
         <View
           style={[
@@ -144,9 +152,12 @@ export default function HomeScreen() {
           <FloatingButton onPress={handleOpenHotspotList} light={currentLayer === "satellite"}>
             <MapListIcon size={24} color={tw.color("gray-700")} />
           </FloatingButton>
-          <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
-            <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
-          </FloatingButton>
+          <View style={tw`relative`}>
+            <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
+              <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
+            </FloatingButton>
+            {hasUpdates && <View style={tw`absolute top-4 right-3.5 w-2.5 h-2.5 bg-blue-500 rounded-full`} />}
+          </View>
         </View>
         {isMenuOpen && (
           <TouchableOpacity

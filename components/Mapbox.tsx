@@ -15,6 +15,7 @@ import { useMapStore } from "@/stores/mapStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import debounce from "lodash/debounce";
 import throttle from "lodash/throttle";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
@@ -101,7 +102,11 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     ref
   ) => {
     const insets = useSafeAreaInsets();
-    const { currentLayer, placeId } = useMapStore();
+    const currentLayer = useMapStore((state) => state.currentLayer);
+    const placeId = useMapStore((state) => state.placeId);
+    const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
+    const setIsZoomedTooFarOut = useMapStore((state) => state.setIsZoomedTooFarOut);
     const { status: permissionStatus } = useLocationPermissionStore();
     const { showSavedOnly } = useFiltersStore();
 
@@ -113,7 +118,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [showAttribution, setShowAttribution] = useState(false);
-    const [isZoomedTooFarOut, setIsZoomedTooFarOut] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
 
     const mapStyle = useMemo(() => {
@@ -175,22 +179,36 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [onLocationSave]
     );
 
+    const throttledSetMapCenter = useMemo(
+      () =>
+        throttle(async () => {
+          if (!mapRef.current) return;
+          const center = await mapRef.current.getCenter();
+          setMapCenter({ lat: center[1], lng: center[0] });
+        }, 500),
+      [setMapCenter]
+    );
+
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
       if (!mapRef.current) return null;
       const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
-      setIsZoomedTooFarOut(z < MIN_ZOOM);
+      const zoomedOut = z < MIN_ZOOM;
+      if (zoomedOut !== isZoomedTooFarOut) {
+        setIsZoomedTooFarOut(zoomedOut);
+      }
       if (z >= MIN_ZOOM && b) {
         return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
       }
       return null;
-    }, []);
+    }, [isZoomedTooFarOut, setIsZoomedTooFarOut]);
 
     const syncViewport = useCallback(async () => {
       if (!mapRef.current) return;
       const b = await readBoundsIfZoomed();
       throttledSetBounds(b);
       debouncedSaveLocation();
-    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation]);
+      throttledSetMapCenter();
+    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, throttledSetMapCenter]);
 
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
@@ -519,9 +537,17 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
-            <View style={tw`bg-white/90 rounded-lg p-3 shadow-lg`}>
-              <Text style={tw`text-sm text-gray-700`}>Zoom in to load hotspots</Text>
-            </View>
+            {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+                <View style={tw`flex-row items-center px-4 py-2`}>
+                  <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
+                </View>
+              </GlassView>
+            ) : (
+              <View style={tw`rounded-full overflow-hidden bg-white/90 shadow-md px-4 py-2`}>
+                <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
+              </View>
+            )}
           </View>
         )}
 

@@ -1,7 +1,9 @@
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useLocation } from "@/hooks/useLocation";
+import { STATIC_PACKS_URL } from "@/lib/config";
+import { fetchJson } from "@/lib/download";
 import tw from "@/lib/tw";
-import { Pack } from "@/lib/types";
+import { StaticPack, StaticPacksIndex } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
@@ -26,8 +28,12 @@ export default function PacksList() {
   const [activeTab, setActiveTab] = useState<Tab>(tab || "nearby");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data, isLoading, error } = useQuery<Pack[]>({
-    queryKey: ["/packs"],
+  const { data, isLoading, error } = useQuery<StaticPack[]>({
+    queryKey: ["packs"],
+    queryFn: async () => {
+      const response = await fetchJson<StaticPacksIndex>(STATIC_PACKS_URL);
+      return response.packs;
+    },
   });
 
   const { data: installedPackIds } = useInstalledPacks();
@@ -76,7 +82,7 @@ export default function PacksList() {
     return packs;
   }, [data, activeTab, installedPackIds, searchQuery, userLocation]);
 
-  const keyExtractor = useCallback((item: Pack, i: number) => `${i}-${item.id}`, []);
+  const keyExtractor = useCallback((item: StaticPack) => String(item.id), []);
 
   if (isLoading) {
     return (
@@ -100,9 +106,7 @@ export default function PacksList() {
   const showNoResults =
     activeTab === "nearby" && (isLoadingLocation || locationError !== null || filteredPacks.length === 0);
 
-  const renderPack = ({ item }: { item: Pack }) => (
-    <PackListRow id={item.id} name={item.name} hotspots={item.hotspots} />
-  );
+  const renderPack = ({ item }: { item: StaticPack }) => <PackListRow pack={item} />;
 
   return (
     <View style={tw`flex-1`}>

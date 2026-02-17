@@ -1,33 +1,44 @@
-export type ApiPackResponse = {
-  hotspots: {
-    id: string;
-    name: string;
-    species: number;
-    lat: number;
-    lng: number;
-    country?: string | null;
-    state?: string | null;
-    county?: string | null;
-    countryName?: string | null;
-    stateName?: string | null;
-    countyName?: string | null;
-  }[];
-};
-
-export type ApiPack = {
+export type StaticPack = {
+  v: string;
   id: number;
+  region: string;
   name: string;
   hotspots: number;
+  clusters: number[][];
+  size: number;
+  updatedAt: string;
+  url: string;
 };
 
-export type Pack = {
-  id: number;
+export type StaticPacksIndex = {
+  packs: StaticPack[];
+};
+
+export type StaticPackHotspot = {
+  id: string;
   name: string;
-  hotspots: number;
-  installed_at: string | null;
-  lat?: number | null;
-  lng?: number | null;
-  clusters?: number[][];
+  species: number;
+  lat: number;
+  lng: number;
+  country: string;
+  state: string | null;
+  county: string | null;
+  countryName: string;
+  stateName: string | null;
+  countyName: string | null;
+};
+
+export type StaticPackTarget = {
+  id: string;
+  samples: (number | null)[];
+  species: (string | number)[][];
+};
+
+export type StaticPackResponse = {
+  v: string;
+  updatedAt: string;
+  hotspots: StaticPackHotspot[];
+  targets: StaticPackTarget[];
 };
 
 export type BoundingBox = {

@@ -2,13 +2,28 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+export type LifeListEntry = {
+  code: string;
+  date: string;
+  location: string;
+  checklistId: string | null;
+};
+
 type SettingsState = {
   version: number;
   directionsProvider: string | null;
+  lifelist: LifeListEntry[] | null;
+  lifelistExclusions: string[] | null;
+  disableSunTimes: boolean;
+  showAllSpecies: boolean;
 };
 
 type SettingsActions = {
   setDirectionsProvider: (provider: string | null) => void;
+  setLifelist: (lifelist: LifeListEntry[] | null) => void;
+  setLifelistExclusions: (exclusions: string[] | null) => void;
+  setDisableSunTimes: (value: boolean) => void;
+  setShowAllSpecies: (value: boolean) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -54,7 +69,15 @@ export const useSettingsStore = create<SettingsStore>()(
     (set) => ({
       version: 0,
       directionsProvider: null,
+      lifelist: null,
+      lifelistExclusions: null,
+      disableSunTimes: false,
+      showAllSpecies: false,
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
+      setLifelist: (lifelist) => set({ lifelist }),
+      setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
+      setDisableSunTimes: (value) => set({ disableSunTimes: value }),
+      setShowAllSpecies: (value) => set({ showAllSpecies: value }),
     }),
     {
       name: "settings",

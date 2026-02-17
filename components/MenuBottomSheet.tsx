@@ -1,3 +1,4 @@
+import { usePackUpdates } from "@/hooks/usePackUpdates";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { useRouter } from "expo-router";
@@ -16,6 +17,7 @@ type MenuBottomSheetProps = {
 export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProps) {
   const router = useRouter();
   const { currentLayer, setCurrentLayer } = useMapStore();
+  const { updateCount } = usePackUpdates();
 
   const handleNavigateToPacks = () => {
     onClose();
@@ -32,11 +34,11 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
   };
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" snapPoints={["45%", "90%"]}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options">
       <View style={tw`flex-1`}>
         <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
         <FilterSection />
-        <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} />
+        <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} packUpdateCount={updateCount} />
       </View>
     </BaseBottomSheet>
   );

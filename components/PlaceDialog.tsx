@@ -1,16 +1,16 @@
-import React, { useRef } from "react";
-import { Text, View } from "react-native";
-import type { TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import tw from "@/lib/tw";
-import BaseBottomSheet from "./BaseBottomSheet";
-import DialogHeader from "./DialogHeader";
-import ActionButton from "./ActionButton";
-import DirectionsIcon from "./icons/DirectionsIcon";
 import { useDirections } from "@/hooks/useDirections";
 import { getSavedPlaceById } from "@/lib/database";
+import tw from "@/lib/tw";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import React, { useRef } from "react";
+import type { TouchableOpacity } from "react-native";
+import { Text, View } from "react-native";
 import Toast from "react-native-toast-message";
+import ActionButton from "./ActionButton";
+import BaseBottomSheet from "./BaseBottomSheet";
+import DialogHeader from "./DialogHeader";
+import DirectionsIcon from "./icons/DirectionsIcon";
 
 type Props = {
   isOpen: boolean;
@@ -82,7 +82,6 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       <BaseBottomSheet
         isOpen={isOpen}
         onClose={onClose}
-        snapPoints={[300, 400]}
         headerContent={<DialogHeader onClose={onClose} isPlace isSaved={false} />}
       >
         <View style={tw`px-4 pb-4 pt-2`}>
@@ -93,24 +92,22 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   }
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} snapPoints={[300, 400]} headerContent={headerContent}>
-      <View style={tw`px-4 pb-4 pt-2`}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
+      <View style={tw`px-4 pb-4 pt-2 min-h-[100px]`}>
         {savedPlace?.notes && (
           <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
             <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
           </View>
         )}
         {!!lat && !!lng && (
-          <>
-            <Text style={tw`text-sm font-medium text-gray-700 mb-3`}>External Links</Text>
-            <ActionButton
-              ref={directionsButtonRef}
-              icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
-              label="Get Directions"
-              onPress={handleGetDirections}
-              onLongPress={handleShowProviders}
-            />
-          </>
+          <ActionButton
+            ref={directionsButtonRef}
+            icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
+            label="Get Directions"
+            onPress={handleGetDirections}
+            onLongPress={handleShowProviders}
+            style={tw`flex-none`}
+          />
         )}
       </View>
     </BaseBottomSheet>

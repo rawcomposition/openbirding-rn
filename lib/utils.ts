@@ -1,6 +1,10 @@
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Platform } from "react-native";
 import { hotspotColor } from "./constants";
 import { MapFeature } from "./types";
+
+dayjs.extend(customParseFormat);
 
 type Params = {
   [key: string]: string | number | boolean;
@@ -107,9 +111,7 @@ type Bbox = { west: number; south: number; east: number; north: number };
 export function padBoundsBySize(bbox: Bbox): Bbox {
   // Check if bbox crosses the date line (west > east)
   const crossesDateLine = bbox.west > bbox.east;
-  const width = crossesDateLine
-    ? (180 - bbox.west) + (bbox.east + 180)
-    : bbox.east - bbox.west;
+  const width = crossesDateLine ? 180 - bbox.west + (bbox.east + 180) : bbox.east - bbox.west;
   const height = bbox.north - bbox.south;
   const span = Math.max(width, height);
 
@@ -257,6 +259,15 @@ export const getDirections = (provider: string, lat: number, lng: number): strin
   }
 };
 
+export function formatSize(bytes: number): string {
+  if (bytes >= 1_000_000) {
+    const mb = bytes / 1_000_000;
+    return mb < 10 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+  }
+  const kb = bytes / 1000;
+  return kb < 10 ? `${kb.toFixed(1)} KB` : `${Math.round(kb)} KB`;
+}
+
 export const generateId = (length: number): string => {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let result = "";
@@ -265,3 +276,135 @@ export const generateId = (length: number): string => {
   }
   return result;
 };
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+export function parseCSV(csvText: string): Record<string, string>[] {
+  const lines = csvText.trim().split("\n");
+  if (lines.length < 2) return [];
+
+  const headers = parseCSVLine(lines[0]);
+  const rows: Record<string, string>[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || "";
+    });
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+type LifeListEntry = {
+  code: string;
+  date: string;
+  location: string;
+  checklistId: string;
+};
+
+type TaxonomyEntry = {
+  sciName: string;
+  code: string;
+};
+
+function parseEbirdDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const parsed = dayjs(dateStr, "DD MMM YYYY");
+  return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dateStr;
+}
+
+export type ProcessLifeListResult =
+  | { success: true; entries: LifeListEntry[]; unmatchedCount: number }
+  | { success: false; error: string };
+
+export async function processLifeListCSV(csvText: string): Promise<ProcessLifeListResult> {
+  const rows = parseCSV(csvText);
+
+  if (rows.length === 0) {
+    return { success: false, error: "No data found in the CSV file" };
+  }
+
+  const requiredColumns = ["Countable", "Scientific Name", "Date", "Location", "SubID"];
+  const firstRow = rows[0];
+  const missingColumns = requiredColumns.filter((col) => !(col in firstRow));
+
+  if (missingColumns.length > 0) {
+    return {
+      success: false,
+      error: `Missing columns: ${missingColumns.join(", ")}.`,
+    };
+  }
+
+  const countableRows = rows.filter((row) => row["Countable"] === "1");
+
+  if (countableRows.length === 0) {
+    return { success: false, error: "No countable species found in the life list" };
+  }
+
+  const taxonomyResponse = (await get("/taxonomy")) as unknown as TaxonomyEntry[];
+
+  if (!Array.isArray(taxonomyResponse)) {
+    return { success: false, error: "Failed to fetch taxonomy data" };
+  }
+
+  const sciNameToCode = new Map<string, string>();
+  taxonomyResponse.forEach((entry) => {
+    sciNameToCode.set(entry.sciName, entry.code);
+  });
+
+  const entries: LifeListEntry[] = [];
+  let unmatchedCount = 0;
+
+  countableRows.forEach((row) => {
+    const sciName = row["Scientific Name"];
+    const code = sciNameToCode.get(sciName);
+
+    if (code) {
+      entries.push({
+        code,
+        date: parseEbirdDate(row["Date"]),
+        location: row["Location"] || "",
+        checklistId: row["SubID"] || "",
+      });
+    } else {
+      unmatchedCount++;
+    }
+  });
+
+  if (entries.length === 0) {
+    return { success: false, error: "Could not match any species to the taxonomy" };
+  }
+
+  return { success: true, entries, unmatchedCount };
+}
+
+export function parsePackVersion(version: string | null): string | null {
+  if (!version) return null;
+  // Parse "dec-2025" or "dec-2025-2" format
+  const match = version.match(/^([a-z]+)-(\d{4})(?:-\d+)?$/i);
+  if (!match) return null;
+  const [, month, year] = match;
+  const monthCapitalized = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
+  return `${monthCapitalized} ${year}`;
+}

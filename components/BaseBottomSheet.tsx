@@ -1,45 +1,88 @@
 import tw from "@/lib/tw";
+import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import React, { ReactNode, useEffect, useMemo, useRef } from "react";
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
+import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { scheduleOnRN } from "react-native-worklets";
+
+const EXPANDED_THRESHOLD = 90;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   snapPoints?: (string | number)[];
+  initialIndex?: number;
   children: ReactNode;
   showHeader?: boolean;
   headerContent?: ReactNode;
+  scrollable?: boolean;
+  enableDynamicSizing?: boolean;
 };
 
 export default function BaseBottomSheet({
   isOpen,
   onClose,
   title,
-  snapPoints = ["45%", "90%"],
+  snapPoints,
+  initialIndex = 0,
   children,
   showHeader = true,
   headerContent,
+  scrollable = false,
+  enableDynamicSizing = true,
 }: BaseBottomSheetProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
-
+  const insets = useSafeAreaInsets();
+  const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
+  const bottomPadding = Math.max(insets.bottom, 16);
+  const animatedIndex = useSharedValue(-1);
+  const hasCalledClose = useSharedValue(false);
+
+  const handleAnimatedClose = useCallback(() => {
+    onClose();
+    setIsBottomSheetExpanded(false);
+  }, [onClose, setIsBottomSheetExpanded]);
+
+  // Watch animatedIndex to reliably detect close (onChange/onAnimate sometimes fail to fire)
+  useAnimatedReaction(
+    () => animatedIndex.value,
+    (currentIndex, previousIndex) => {
+      if (currentIndex === -1 && previousIndex !== -1 && !hasCalledClose.value) {
+        hasCalledClose.value = true;
+        scheduleOnRN(handleAnimatedClose);
+      } else if (currentIndex >= 0) {
+        hasCalledClose.value = false;
+      }
+    }
+  );
 
   useEffect(() => {
     if (isOpen) {
-      bottomSheetRef.current?.snapToIndex(1);
+      hasCalledClose.value = false;
+      bottomSheetRef.current?.snapToIndex(initialIndex);
     } else {
       bottomSheetRef.current?.close();
     }
-  }, [isOpen]);
+  }, [isOpen, initialIndex, hasCalledClose]);
 
-  const handleSheetChanges = (index: number) => {
-    if (index === -1) {
-      onClose();
-    }
-  };
+  const handleAnimate = useCallback(
+    (_fromIndex: number, toIndex: number) => {
+      // Fires at animation START for responsive expansion state updates
+      if (!enableDynamicSizing && snapPoints && snapPoints[toIndex]) {
+        const snapPoint = snapPoints[toIndex];
+        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
+        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
+      } else if (toIndex === -1) {
+        setIsBottomSheetExpanded(false);
+      }
+    },
+    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
+  );
 
   const renderHeader = () => {
     if (!showHeader) return null;
@@ -66,17 +109,27 @@ export default function BaseBottomSheet({
       <BottomSheet
         ref={bottomSheetRef}
         index={-1}
-        snapPoints={memoizedSnapPoints}
-        onChange={handleSheetChanges}
+        animatedIndex={animatedIndex}
+        snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
+        onAnimate={handleAnimate}
         enablePanDownToClose
-        bottomInset={0}
+        enableDynamicSizing={enableDynamicSizing}
+        topInset={insets.top}
         backgroundStyle={tw`bg-white rounded-t-3xl`}
         handleIndicatorStyle={tw`bg-gray-300`}
       >
-        <BottomSheetView style={tw`flex-1`}>
-          {renderHeader()}
-          {children}
-        </BottomSheetView>
+        {scrollable ? (
+          <>
+            {renderHeader()}
+            {children}
+          </>
+        ) : (
+          <BottomSheetView style={tw`flex-1`}>
+            {renderHeader()}
+            {children}
+            <View style={{ height: bottomPadding }} />
+          </BottomSheetView>
+        )}
       </BottomSheet>
     </>
   );
