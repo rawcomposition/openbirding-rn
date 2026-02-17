@@ -178,8 +178,6 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     return null;
   };
 
-  const isEmptyState = hasNoLifeList || hasNoSpeciesData || hasSeenAllTargets;
-
   return (
     <View style={tw`mt-4`}>
       <View style={tw`flex-row items-center justify-between`}>
@@ -190,7 +188,6 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           )}
         </View>
         {data?.version &&
-          !isEmptyState &&
           parsePackVersion(data.version) &&
           (useGlass ? (
             <TouchableOpacity
@@ -283,40 +280,41 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
             </TouchableOpacity>
           )}
 
-          {data?.version && parsePackVersion(data.version) && (
-            <InfoModal
-              visible={showDataInfo}
-              onClose={() => setShowDataInfo(false)}
-              title="About This Data"
-              content={
-                <View>
-                  <Text style={tw`text-sm text-gray-700 mb-3`}>
-                    Targets data is updated monthly from the eBird Basic Dataset.
-                  </Text>
-                  <Text style={tw`text-sm text-gray-600 italic`}>
-                    eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
-                    Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
-                  </Text>
-                  {(() => {
-                    const photoCredits = displayedTargets
-                      .map((t) => avicommons[t.speciesCode as keyof typeof avicommons]?.[1])
-                      .filter((author): author is string => !!author);
-                    const uniqueAuthors = [...new Set(photoCredits)];
-                    if (uniqueAuthors.length === 0) return null;
-                    return (
-                      <View style={tw`mt-4 pt-4 border-t border-gray-200`}>
-                        <Text style={tw`text-sm font-medium text-gray-700 mb-2`}>
-                          Photo Credits (in order of appearance)
-                        </Text>
-                        <Text style={tw`text-sm text-gray-600`}>{uniqueAuthors.join(", ")}</Text>
-                      </View>
-                    );
-                  })()}
-                </View>
-              }
-            />
-          )}
         </>
+      )}
+
+      {data?.version && parsePackVersion(data.version) && (
+        <InfoModal
+          visible={showDataInfo}
+          onClose={() => setShowDataInfo(false)}
+          title="About This Data"
+          content={
+            <View>
+              <Text style={tw`text-sm text-gray-700 mb-3`}>
+                Targets data is updated monthly from the eBird Basic Dataset.
+              </Text>
+              <Text style={tw`text-sm text-gray-600 italic`}>
+                eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
+                Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
+              </Text>
+              {(() => {
+                const photoCredits = displayedTargets
+                  .map((t) => avicommons[t.speciesCode as keyof typeof avicommons]?.[1])
+                  .filter((author): author is string => !!author);
+                const uniqueAuthors = [...new Set(photoCredits)];
+                if (uniqueAuthors.length === 0) return null;
+                return (
+                  <View style={tw`mt-4 pt-4 border-t border-gray-200`}>
+                    <Text style={tw`text-sm font-medium text-gray-700 mb-2`}>
+                      Photo Credits (in order of appearance)
+                    </Text>
+                    <Text style={tw`text-sm text-gray-600`}>{uniqueAuthors.join(", ")}</Text>
+                  </View>
+                );
+              })()}
+            </View>
+          }
+        />
       )}
     </View>
   );
