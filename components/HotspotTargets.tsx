@@ -105,7 +105,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     const ref = menuRefs.current.get(speciesCode);
     const anchor = ref ? findNodeHandle(ref) : undefined;
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const options = ["View in Merlin", "View eBird Map", isExcluded ? "Remove Exclusion" : "Add to Life List", "Cancel"];
+    const options = [
+      "View in Merlin",
+      "View eBird Map",
+      isExcluded ? "Remove Exclusion" : "Add to Life List",
+      "Cancel",
+    ];
 
     showActionSheetWithOptions(
       {
@@ -173,6 +178,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     return null;
   };
 
+  const isEmptyState = hasNoLifeList || hasNoSpeciesData || hasSeenAllTargets;
+
   return (
     <View style={tw`mt-4`}>
       <View style={tw`flex-row items-center justify-between`}>
@@ -183,6 +190,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           )}
         </View>
         {data?.version &&
+          !isEmptyState &&
           parsePackVersion(data.version) &&
           (useGlass ? (
             <TouchableOpacity
