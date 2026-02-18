@@ -101,7 +101,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     }
   };
 
-  const headerContent = (dismiss: () => void) => (
+  const headerContent = (dismiss: () => Promise<void>) => (
     <DialogHeader
       onClose={dismiss}
       onSavePress={hotspot ? handleToggleSave : undefined}

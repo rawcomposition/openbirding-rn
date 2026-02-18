@@ -1,31 +1,56 @@
-import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import tw from "@/lib/tw";
-import ModalHeader from "@/components/ModalHeader";
 import IconButton from "@/components/IconButton";
 import Input from "@/components/Input";
 import { savePlace, getSavedPlaceById, deletePlace } from "@/lib/database";
 import Toast from "react-native-toast-message";
 import { generateId } from "@/lib/utils";
-import { useMapStore } from "@/stores/mapStore";
+import BaseBottomSheet from "./BaseBottomSheet";
 
-export default function PlaceEditScreen() {
-  const router = useRouter();
+type PlaceEditSheetProps = {
+  isOpen: boolean;
+  placeId: string | null;
+  lat: number | null;
+  lng: number | null;
+  onSaved: (id: string) => void;
+  onDeleted: () => void;
+  onClose: () => void;
+};
+
+export default function PlaceEditSheet({
+  isOpen,
+  placeId,
+  lat: propLat,
+  lng: propLng,
+  onSaved,
+  onDeleted,
+  onClose,
+}: PlaceEditSheetProps) {
   const queryClient = useQueryClient();
-  const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
-  const params = useLocalSearchParams<{
-    id?: string;
-    lat?: string;
-    lng?: string;
-  }>();
-
-  const placeId = params.id && params.id.trim().length > 0 ? params.id : null;
   const isEditing = !!placeId;
+  const dismissRef = useRef<(() => Promise<void>) | null>(null);
+  const pendingSaveRef = useRef<string | null>(null);
+  const pendingDeleteRef = useRef(false);
+  const titleInputRef = useRef<TextInput>(null);
 
-  const { data, isLoading, error } = useQuery({
+
+  const handleSheetClose = () => {
+    if (pendingSaveRef.current) {
+      const savedId = pendingSaveRef.current;
+      pendingSaveRef.current = null;
+      onSaved(savedId);
+    } else if (pendingDeleteRef.current) {
+      pendingDeleteRef.current = false;
+      onDeleted();
+    } else {
+      onClose();
+    }
+  };
+
+  const { data, isLoading } = useQuery({
     queryKey: ["savedPlace", placeId],
     queryFn: () => getSavedPlaceById(placeId!),
     enabled: !!placeId,
@@ -41,40 +66,44 @@ export default function PlaceEditScreen() {
     }
   }, [data]);
 
-  const lat = data?.lat ?? (params.lat ? parseFloat(params.lat) : null);
-  const lng = data?.lng ?? (params.lng ? parseFloat(params.lng) : null);
+  // Reset form when sheet opens for a new place
+  useEffect(() => {
+    if (isOpen && !placeId) {
+      setTitle("");
+      setNotes("");
+    }
+  }, [isOpen, placeId]);
+
+  const lat = data?.lat ?? propLat;
+  const lng = data?.lng ?? propLng;
 
   const mutation = useMutation({
     mutationFn: savePlace,
-    onSuccess: (savedId) => {
+    onSuccess: async (savedId) => {
       queryClient.invalidateQueries({ queryKey: ["savedPlace", savedId] });
       queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
       queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
       queryClient.refetchQueries({ queryKey: ["savedPlace", savedId], type: "active" });
-      setPlaceId(savedId);
-      setHotspotId(null);
-      setCustomPinCoordinates(null);
-      router.back();
+      pendingSaveRef.current = savedId;
+      await dismissRef.current?.();
     },
-    onError: (error) => {
+    onError: () => {
       Toast.show({ type: "error", text1: "Error saving pin" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: deletePlace,
-    onSuccess: () => {
+    onSuccess: async () => {
       if (placeId) {
         queryClient.invalidateQueries({ queryKey: ["savedPlace", placeId] });
         queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
         queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
-        setPlaceId(null);
-        setHotspotId(null);
-        setCustomPinCoordinates(null);
       }
-      router.back();
+      pendingDeleteRef.current = true;
+      await dismissRef.current?.();
     },
-    onError: (error) => {
+    onError: () => {
       Toast.show({ type: "error", text1: "Error deleting pin" });
     },
   });
@@ -82,10 +111,7 @@ export default function PlaceEditScreen() {
   const canSave = title.trim().length > 0 && lat !== null && lng !== null && !mutation.isPending && !isLoading;
 
   const handleSave = () => {
-    if (!canSave || lat === null || lng === null) {
-      Toast.show({ type: "error", text1: "Invalid coordinates" });
-      return;
-    }
+    if (!canSave || lat === null || lng === null) return;
 
     mutation.mutate({
       id: placeId || generateId(12),
@@ -102,37 +128,28 @@ export default function PlaceEditScreen() {
     deleteMutation.mutate(placeId);
   };
 
-  if (error) {
+  const headerContent = (dismiss: () => Promise<void>) => {
+    dismissRef.current = dismiss;
     return (
-      <KeyboardAvoidingView
-        style={tw`flex-1`}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ModalHeader title="Edit Pin" buttons={[]} />
-        <View style={tw`flex-1 justify-center items-center`}>
-          <Text style={tw`text-red-500 text-center text-base`}>Error loading place: {error.message}</Text>
-        </View>
-      </KeyboardAvoidingView>
+      <View style={tw`flex-row items-center justify-between px-5`}>
+        <IconButton icon="close" variant="muted" onPress={dismiss} />
+        <Text style={tw`text-gray-900 text-xl font-bold`}>{isEditing ? "Edit Pin" : "Save Pin"}</Text>
+        <IconButton icon="checkmark" variant="primary" onPress={handleSave} disabled={!canSave} />
+      </View>
     );
-  }
+  };
 
   return (
-    <KeyboardAvoidingView
-      style={tw`flex-1`}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    <BaseBottomSheet
+      isOpen={isOpen}
+      onClose={handleSheetClose}
+      detents={["auto"]}
+      headerContent={headerContent}
     >
-      <ModalHeader
-        title={isEditing ? "Edit Pin" : "Save Pin"}
-        buttons={[
-          <IconButton key="save" icon="checkmark" variant="primary" onPress={handleSave} disabled={!canSave} />,
-        ]}
-      />
-      <ScrollView style={tw`flex-1`} contentContainerStyle={tw`px-4 py-6`} keyboardShouldPersistTaps="handled">
+      <View style={tw`px-4 py-6`}>
         <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>
-          <Input placeholder="Enter place title" value={title} onChangeText={setTitle} autoFocus returnKeyType="next" />
+          <Input ref={titleInputRef} placeholder="Enter place title" value={title} onChangeText={setTitle} autoFocus returnKeyType="next" />
         </View>
 
         <View style={tw`mb-6`}>
@@ -159,7 +176,7 @@ export default function PlaceEditScreen() {
             <Text style={tw`text-red-500 text-sm ml-1.5`}>Delete Pin</Text>
           </TouchableOpacity>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </BaseBottomSheet>
   );
 }

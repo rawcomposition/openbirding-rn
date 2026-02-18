@@ -1,16 +1,16 @@
 import { useDirections } from "@/hooks/useDirections";
 import { getSavedPlaceById } from "@/lib/database";
 import tw from "@/lib/tw";
+import { useMapStore } from "@/stores/mapStore";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { TouchableOpacity } from "react-native";
 import { Text, View } from "react-native";
-import Toast from "react-native-toast-message";
 import ActionButton from "./ActionButton";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsIcon from "./icons/DirectionsIcon";
+import PlaceEditSheet from "./PlaceEditSheet";
 
 type Props = {
   isOpen: boolean;
@@ -21,9 +21,10 @@ type Props = {
 };
 
 export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: droppedLng, onClose }: Props) {
-  const router = useRouter();
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
+  const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["savedPlace", placeId],
@@ -54,21 +55,24 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   };
 
   const handleSavePress = () => {
-    if (!lat || !lng) {
-      Toast.show({ type: "error", text1: "Invalid coordinates" });
-      return;
-    }
-    router.push({
-      pathname: "/place-edit",
-      params: {
-        id: placeId ?? "",
-        lat: lat?.toString() ?? "",
-        lng: lng?.toString() ?? "",
-      },
-    });
+    setIsEditOpen(true);
   };
 
-  const headerContent = (dismiss: () => void) => (
+  const handleEditSaved = (savedId: string) => {
+    setIsEditOpen(false);
+    setPlaceId(savedId);
+    setHotspotId(null);
+    setCustomPinCoordinates(null);
+  };
+
+  const handleEditDeleted = () => {
+    setIsEditOpen(false);
+    setPlaceId(null);
+    setHotspotId(null);
+    setCustomPinCoordinates(null);
+  };
+
+  const headerContent = (dismiss: () => Promise<void>) => (
     <DialogHeader onClose={dismiss} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
         {savedPlace?.name}
@@ -92,24 +96,37 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   }
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
-      <View style={tw`px-4 pb-4 pt-2 min-h-[100px]`}>
-        {savedPlace?.notes && (
-          <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
-            <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
-          </View>
-        )}
-        {!!lat && !!lng && (
-          <ActionButton
-            ref={directionsButtonRef}
-            icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
-            label="Get Directions"
-            onPress={handleGetDirections}
-            onLongPress={handleShowProviders}
-            style={tw`flex-none`}
-          />
-        )}
-      </View>
-    </BaseBottomSheet>
+    <>
+      <BaseBottomSheet isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
+        <View style={tw`px-4 pb-4 pt-2 min-h-[100px]`}>
+          {savedPlace?.notes && (
+            <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
+              <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
+            </View>
+          )}
+          {!!lat && !!lng && (
+            <ActionButton
+              ref={directionsButtonRef}
+              icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
+              label="Get Directions"
+              onPress={handleGetDirections}
+              onLongPress={handleShowProviders}
+              style={tw`flex-none`}
+            />
+          )}
+        </View>
+      </BaseBottomSheet>
+      {isEditOpen && (
+        <PlaceEditSheet
+          isOpen
+          placeId={placeId ?? null}
+          lat={lat ?? null}
+          lng={lng ?? null}
+          onSaved={handleEditSaved}
+          onDeleted={handleEditDeleted}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
+    </>
   );
 }

@@ -19,27 +19,23 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
   const { currentLayer, setCurrentLayer } = useMapStore();
   const { updateCount } = usePackUpdates();
 
-  const handleNavigateToPacks = () => {
-    onClose();
-    router.push("/packs?tab=installed");
-  };
-
-  const handleNavigateToSettings = () => {
-    onClose();
-    router.push("/settings");
-  };
-
   const handleMapLayerChange = (layer: "default" | "satellite") => {
     setCurrentLayer(layer);
   };
 
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" dimmed>
-      <View>
-        <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
-        <FilterSection />
-        <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} packUpdateCount={updateCount} />
-      </View>
+      {(dismiss) => (
+        <View>
+          <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
+          <FilterSection />
+          <MenuList
+            onNavigateToPacks={async () => { await dismiss(); router.push("/packs?tab=installed"); }}
+            onNavigateToSettings={async () => { await dismiss(); router.push("/settings"); }}
+            packUpdateCount={updateCount}
+          />
+        </View>
+      )}
     </BaseBottomSheet>
   );
 }

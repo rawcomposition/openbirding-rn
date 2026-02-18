@@ -6,7 +6,7 @@ import {
   type DidDismissEvent,
   type SheetDetent,
 } from "@lodev09/react-native-true-sheet";
-import React, { ReactNode, useCallback, useRef } from "react";
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IconButton from "./IconButton";
@@ -19,9 +19,9 @@ type BaseBottomSheetProps = {
   title?: string;
   detents?: SheetDetent[];
   initialIndex?: number;
-  children: ReactNode;
+  children: ReactNode | ((dismiss: () => Promise<void>) => ReactNode);
   showHeader?: boolean;
-  headerContent?: (dismiss: () => void) => ReactNode;
+  headerContent?: (dismiss: () => Promise<void>) => ReactNode;
   scrollable?: boolean;
   dimmed?: boolean;
 };
@@ -42,9 +42,21 @@ export default function BaseBottomSheet({
   const insets = useSafeAreaInsets();
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const bottomPadding = Math.max(insets.bottom, 16);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+    } else {
+      // isOpen went false — dismiss gracefully so the native sheet animates out
+      // before we unmount. onDidDismiss will set shouldRender=false.
+      sheetRef.current?.dismiss();
+    }
+  }, [isOpen]);
 
   const handleDismiss = useCallback(
     (_event: DidDismissEvent) => {
+      setShouldRender(false);
       setIsBottomSheetExpanded(false);
       onClose();
     },
@@ -59,8 +71,8 @@ export default function BaseBottomSheet({
     [setIsBottomSheetExpanded]
   );
 
-  const dismiss = useCallback(() => {
-    sheetRef.current?.dismiss();
+  const dismiss = useCallback(async () => {
+    await sheetRef.current?.dismiss();
   }, []);
 
   const header = showHeader ? (
@@ -76,7 +88,7 @@ export default function BaseBottomSheet({
     )
   ) : undefined;
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return (
     <TrueSheet
@@ -95,10 +107,10 @@ export default function BaseBottomSheet({
       onDetentChange={handleDetentChange}
     >
       {scrollable ? (
-        children
+        typeof children === "function" ? children(dismiss) : children
       ) : (
         <>
-          {children}
+          {typeof children === "function" ? children(dismiss) : children}
           <View style={{ height: bottomPadding }} />
         </>
       )}

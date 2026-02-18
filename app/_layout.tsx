@@ -12,9 +12,9 @@ import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { prefetchTaxonomy } from "@/hooks/useTaxonomy";
 import { initializeDatabase } from "@/lib/database";
 import { asyncStoragePersister, queryClient, shouldPersistQuery } from "@/lib/queryClient";
-import { prefetchTaxonomy } from "@/hooks/useTaxonomy";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -94,16 +94,6 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="settings-life-list-exclusions"
                   options={{ title: "Exclusions", headerBackButtonDisplayMode: "minimal" }}
-                />
-                <Stack.Screen
-                  name="place-edit"
-                  options={{
-                    title: "Edit Place",
-                    presentation: "modal",
-                    gestureEnabled: true,
-                    animation: "slide_from_bottom",
-                    headerShown: false,
-                  }}
                 />
                 <Stack.Screen name="+not-found" />
               </Stack>
