@@ -1,10 +1,15 @@
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
-import { Ionicons } from "@expo/vector-icons";
-import { TrueSheet, type DetentChangeEvent, type DidDismissEvent, type SheetDetent } from "@lodev09/react-native-true-sheet";
+import {
+  TrueSheet,
+  type DetentChangeEvent,
+  type DidDismissEvent,
+  type SheetDetent,
+} from "@lodev09/react-native-true-sheet";
 import React, { ReactNode, useCallback, useRef } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import IconButton from "./IconButton";
 
 const EXPANDED_THRESHOLD = 0.9;
 
@@ -58,20 +63,18 @@ export default function BaseBottomSheet({
     sheetRef.current?.dismiss();
   }, []);
 
-  const header = showHeader
-    ? headerContent
-      ? <>{headerContent(dismiss)}</>
-      : (
-        <View style={tw`flex-row items-start justify-between px-4`}>
-          <View style={tw`pl-1`}>
-            <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
-          </View>
-          <TouchableOpacity onPress={dismiss} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>
-            <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-          </TouchableOpacity>
+  const header = showHeader ? (
+    headerContent ? (
+      <>{headerContent(dismiss)}</>
+    ) : (
+      <View style={tw`flex-row items-start justify-between px-5`}>
+        <View style={tw`pl-1`}>
+          <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
-      )
-    : undefined;
+        <IconButton icon="close" variant="muted" onPress={dismiss} />
+      </View>
+    )
+  ) : undefined;
 
   if (!isOpen) return null;
 

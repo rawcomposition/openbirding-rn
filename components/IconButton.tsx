@@ -1,10 +1,10 @@
+import tw from "@/lib/tw";
+import { Ionicons } from "@expo/vector-icons";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
 import { Platform, TouchableOpacity, ViewStyle } from "react-native";
-import tw from "@/lib/tw";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { Ionicons } from "@expo/vector-icons";
 
-type Variant = "default" | "primary";
+type Variant = "default" | "primary" | "muted";
 
 type IconButtonProps = {
   icon: keyof typeof Ionicons.glyphMap | React.ReactNode;
@@ -25,10 +25,15 @@ export default function IconButton({ icon, variant = "default", onPress, disable
       iconColor: tw.color("white"),
       fallbackBgColor: tw`bg-emerald-400`,
     },
+    muted: {
+      tintColor: tw.color("gray-200/80"),
+      iconColor: tw.color("gray-500"),
+      fallbackBgColor: tw`bg-slate-100`,
+    },
   };
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
-  const size = 40;
+  const size = 42;
   const iconSize = 27;
   const variantStyles = variants[variant];
 
@@ -66,7 +71,7 @@ export default function IconButton({ icon, variant = "default", onPress, disable
       onPress={onPress}
       activeOpacity={0.8}
       disabled={disabled}
-      style={[baseStyle, tw`bg-white shadow-lg`, variantStyles.fallbackBgColor]}
+      style={[baseStyle, variant !== "muted" && tw`shadow-lg`, variantStyles.fallbackBgColor]}
     >
       {renderIcon()}
     </TouchableOpacity>
