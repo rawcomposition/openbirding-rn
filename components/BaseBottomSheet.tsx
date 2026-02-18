@@ -12,50 +12,31 @@ type BaseBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  snapPoints?: (string | number)[];
+  detents?: SheetDetent[];
   initialIndex?: number;
   children: ReactNode;
   showHeader?: boolean;
   headerContent?: (dismiss: () => void) => ReactNode;
   scrollable?: boolean;
-  enableDynamicSizing?: boolean;
   dimmed?: boolean;
 };
-
-function convertSnapPointsToDetents(
-  snapPoints: (string | number)[] | undefined,
-  enableDynamicSizing: boolean
-): SheetDetent[] {
-  if (enableDynamicSizing || !snapPoints) {
-    return ["auto"];
-  }
-  return snapPoints.map((sp) => {
-    if (typeof sp === "string" && sp.endsWith("%")) {
-      return parseFloat(sp) / 100;
-    }
-    return typeof sp === "number" ? sp : 0.5;
-  });
-}
 
 export default function BaseBottomSheet({
   isOpen,
   onClose,
   title,
-  snapPoints,
+  detents = ["auto"],
   initialIndex = 0,
   children,
   showHeader = true,
   headerContent,
   scrollable = false,
-  enableDynamicSizing = true,
   dimmed = false,
 }: BaseBottomSheetProps) {
   const sheetRef = useRef<TrueSheet>(null);
   const insets = useSafeAreaInsets();
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const bottomPadding = Math.max(insets.bottom, 16);
-
-  const detents = convertSnapPointsToDetents(snapPoints, enableDynamicSizing);
 
   const handleDismiss = useCallback(
     (_event: DidDismissEvent) => {
