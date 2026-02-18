@@ -102,7 +102,7 @@ export default function HomeScreen() {
   const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
   const initialZoom = savedLocation?.zoom ?? 2;
 
-  const hasInstalledPacks = installedPacks && installedPacks.size > 0;
+  const hasInstalledPacks = isLoadingInstalledPacks || installedPacks.size > 0;
 
   return (
     <GestureHandlerRootView style={tw`flex-1 bg-white`}>
