@@ -68,8 +68,8 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
     });
   };
 
-  const headerContent = (
-    <DialogHeader onClose={onClose} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
+  const headerContent = (dismiss: () => void) => (
+    <DialogHeader onClose={dismiss} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
       <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
         {savedPlace?.name}
       </Text>
@@ -82,7 +82,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       <BaseBottomSheet
         isOpen={isOpen}
         onClose={onClose}
-        headerContent={<DialogHeader onClose={onClose} isPlace isSaved={false} />}
+        headerContent={(dismiss) => <DialogHeader onClose={dismiss} isPlace isSaved={false} />}
       >
         <View style={tw`px-4 pb-4 pt-2`}>
           <Text style={tw`text-gray-600 text-center text-base`}>Pin not found</Text>

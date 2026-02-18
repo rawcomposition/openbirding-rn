@@ -14,7 +14,7 @@ import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useRef, useState } from "react";
-import { TouchableOpacity, View } from "react-native";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -159,13 +159,6 @@ export default function HomeScreen() {
             {hasUpdates && <View style={tw`absolute top-4 right-3.5 w-2.5 h-2.5 bg-blue-500 rounded-full`} />}
           </View>
         </View>
-        {isMenuOpen && (
-          <TouchableOpacity
-            style={tw`absolute inset-0 bg-transparent`}
-            onPress={handleCloseBottomSheet}
-            activeOpacity={1}
-          />
-        )}
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
         <PlaceDialog

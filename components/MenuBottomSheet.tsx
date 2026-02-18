@@ -34,8 +34,8 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
   };
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options">
-      <View style={tw`flex-1`}>
+    <BaseBottomSheet isOpen={isOpen} onClose={onClose} title="Map Options" dimmed>
+      <View>
         <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
         <FilterSection />
         <MenuList onNavigateToPacks={handleNavigateToPacks} onNavigateToSettings={handleNavigateToSettings} packUpdateCount={updateCount} />

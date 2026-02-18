@@ -1,14 +1,12 @@
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { Platform, Text, TouchableOpacity, View } from "react-native";
-import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
+import { TrueSheet, type DetentChangeEvent, type DidDismissEvent, type SheetDetent } from "@lodev09/react-native-true-sheet";
+import React, { ReactNode, useCallback, useRef } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scheduleOnRN } from "react-native-worklets";
 
-const EXPANDED_THRESHOLD = 90;
+const EXPANDED_THRESHOLD = 0.9;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
@@ -18,10 +16,26 @@ type BaseBottomSheetProps = {
   initialIndex?: number;
   children: ReactNode;
   showHeader?: boolean;
-  headerContent?: ReactNode;
+  headerContent?: (dismiss: () => void) => ReactNode;
   scrollable?: boolean;
   enableDynamicSizing?: boolean;
+  dimmed?: boolean;
 };
+
+function convertSnapPointsToDetents(
+  snapPoints: (string | number)[] | undefined,
+  enableDynamicSizing: boolean
+): SheetDetent[] {
+  if (enableDynamicSizing || !snapPoints) {
+    return ["auto"];
+  }
+  return snapPoints.map((sp) => {
+    if (typeof sp === "string" && sp.endsWith("%")) {
+      return parseFloat(sp) / 100;
+    }
+    return typeof sp === "number" ? sp : 0.5;
+  });
+}
 
 export default function BaseBottomSheet({
   isOpen,
@@ -34,103 +48,76 @@ export default function BaseBottomSheet({
   headerContent,
   scrollable = false,
   enableDynamicSizing = true,
+  dimmed = false,
 }: BaseBottomSheetProps) {
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const sheetRef = useRef<TrueSheet>(null);
   const insets = useSafeAreaInsets();
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
-  const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
   const bottomPadding = Math.max(insets.bottom, 16);
-  const animatedIndex = useSharedValue(-1);
-  const hasCalledClose = useSharedValue(false);
 
-  const handleAnimatedClose = useCallback(() => {
-    onClose();
-    setIsBottomSheetExpanded(false);
-  }, [onClose, setIsBottomSheetExpanded]);
+  const detents = convertSnapPointsToDetents(snapPoints, enableDynamicSizing);
 
-  // Watch animatedIndex to reliably detect close (onChange/onAnimate sometimes fail to fire)
-  useAnimatedReaction(
-    () => animatedIndex.value,
-    (currentIndex, previousIndex) => {
-      if (currentIndex === -1 && previousIndex !== -1 && !hasCalledClose.value) {
-        hasCalledClose.value = true;
-        scheduleOnRN(handleAnimatedClose);
-      } else if (currentIndex >= 0) {
-        hasCalledClose.value = false;
-      }
-    }
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      hasCalledClose.value = false;
-      bottomSheetRef.current?.snapToIndex(initialIndex);
-    } else {
-      bottomSheetRef.current?.close();
-    }
-  }, [isOpen, initialIndex, hasCalledClose]);
-
-  const handleAnimate = useCallback(
-    (_fromIndex: number, toIndex: number) => {
-      // Fires at animation START for responsive expansion state updates
-      if (!enableDynamicSizing && snapPoints && snapPoints[toIndex]) {
-        const snapPoint = snapPoints[toIndex];
-        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
-        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
-      } else if (toIndex === -1) {
-        setIsBottomSheetExpanded(false);
-      }
+  const handleDismiss = useCallback(
+    (_event: DidDismissEvent) => {
+      setIsBottomSheetExpanded(false);
+      onClose();
     },
-    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
+    [onClose, setIsBottomSheetExpanded]
   );
 
-  const renderHeader = () => {
-    if (!showHeader) return null;
+  const handleDetentChange = useCallback(
+    (event: DetentChangeEvent) => {
+      const { detent } = event.nativeEvent;
+      setIsBottomSheetExpanded(detent >= EXPANDED_THRESHOLD);
+    },
+    [setIsBottomSheetExpanded]
+  );
 
-    if (headerContent) {
-      return headerContent;
-    }
+  const dismiss = useCallback(() => {
+    sheetRef.current?.dismiss();
+  }, []);
 
-    return (
-      <View style={tw`flex-row items-start justify-between px-4`}>
-        <View style={tw`pl-1`}>
-          <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
+  const header = showHeader
+    ? headerContent
+      ? <>{headerContent(dismiss)}</>
+      : (
+        <View style={tw`flex-row items-start justify-between px-4`}>
+          <View style={tw`pl-1`}>
+            <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
+          </View>
+          <TouchableOpacity onPress={dismiss} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>
+            <Ionicons name="close" size={26} color={tw.color("gray-500")} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={onClose} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>
-          <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-        </TouchableOpacity>
-      </View>
-    );
-  };
+      )
+    : undefined;
+
+  if (!isOpen) return null;
 
   return (
-    <>
-      {Platform.OS === "android" && isOpen && <View style={tw`absolute bottom-0 left-0 right-0 h-6 bg-white`} />}
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        animatedIndex={animatedIndex}
-        snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
-        onAnimate={handleAnimate}
-        enablePanDownToClose
-        enableDynamicSizing={enableDynamicSizing}
-        topInset={insets.top}
-        backgroundStyle={tw`bg-white rounded-t-3xl`}
-        handleIndicatorStyle={tw`bg-gray-300`}
-      >
-        {scrollable ? (
-          <>
-            {renderHeader()}
-            {children}
-          </>
-        ) : (
-          <BottomSheetView style={tw`flex-1`}>
-            {renderHeader()}
-            {children}
-            <View style={{ height: bottomPadding }} />
-          </BottomSheetView>
-        )}
-      </BottomSheet>
-    </>
+    <TrueSheet
+      ref={sheetRef}
+      initialDetentIndex={initialIndex}
+      detents={detents}
+      scrollable={scrollable}
+      dismissible
+      dimmed={dimmed}
+      backgroundColor="white"
+      grabber
+      grabberOptions={{ color: "#d1d5db" }}
+      header={header}
+      headerStyle={tw`pt-6`}
+      onDidDismiss={handleDismiss}
+      onDetentChange={handleDetentChange}
+    >
+      {scrollable ? (
+        children
+      ) : (
+        <>
+          {children}
+          <View style={{ height: bottomPadding }} />
+        </>
+      )}
+    </TrueSheet>
   );
 }
