@@ -246,6 +246,25 @@ export async function isHotspotSaved(hotspotId: string): Promise<boolean> {
   return !!result;
 }
 
+export async function getSavedHotspotById(
+  hotspotId: string
+): Promise<{ hotspot_id: string; saved_at: string; notes: string | null } | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const row: any = await db.getFirstAsync(
+    `SELECT hotspot_id, saved_at, notes FROM saved_hotspots WHERE hotspot_id = ?`,
+    [hotspotId]
+  );
+
+  if (!row) return null;
+
+  return {
+    hotspot_id: row.hotspot_id as string,
+    saved_at: row.saved_at as string,
+    notes: row.notes as string | null,
+  };
+}
+
 export async function getSavedHotspots(): Promise<
   {
     hotspot_id: string;
