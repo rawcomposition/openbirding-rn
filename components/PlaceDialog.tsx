@@ -2,7 +2,7 @@ import { useDirections } from "@/hooks/useDirections";
 import { getSavedPlaceById } from "@/lib/database";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef, useState } from "react";
 import type { TouchableOpacity } from "react-native";
 import { Text, View } from "react-native";
@@ -21,6 +21,7 @@ type Props = {
 };
 
 export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: droppedLng, onClose }: Props) {
+  const queryClient = useQueryClient();
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
   const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
@@ -58,18 +59,20 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
     setIsEditOpen(true);
   };
 
-  const handleEditSaved = (savedId: string) => {
+  const handleSaved = (savedId: string) => {
     setIsEditOpen(false);
     setPlaceId(savedId);
     setHotspotId(null);
     setCustomPinCoordinates(null);
   };
 
-  const handleEditDeleted = () => {
+  const handleDeleted = () => {
     setIsEditOpen(false);
     setPlaceId(null);
     setHotspotId(null);
     setCustomPinCoordinates(null);
+    queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
+    queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
   };
 
   const headerContent = (dismiss: () => Promise<void>) => (
@@ -122,8 +125,8 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
           placeId={placeId ?? null}
           lat={lat ?? null}
           lng={lng ?? null}
-          onSaved={handleEditSaved}
-          onDeleted={handleEditDeleted}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
           onClose={() => setIsEditOpen(false)}
         />
       )}

@@ -95,11 +95,6 @@ export default function PlaceEditSheet({
   const deleteMutation = useMutation({
     mutationFn: deletePlace,
     onSuccess: async () => {
-      if (placeId) {
-        queryClient.invalidateQueries({ queryKey: ["savedPlace", placeId] });
-        queryClient.invalidateQueries({ queryKey: ["savedPlaces"] });
-        queryClient.refetchQueries({ queryKey: ["savedPlaces"], type: "active" });
-      }
       pendingDeleteRef.current = true;
       await dismissRef.current?.();
     },
