@@ -139,35 +139,13 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
 
   return (
     <>
-      <BaseBottomSheet
-        isOpen={isOpen}
-        onClose={onClose}
-        detents={[0.45, 0.97]}
-        headerContent={headerContent}
-        scrollable
-      >
+      <BaseBottomSheet isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
         <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
           <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
             {hotspot ? (
               <View style={tw`pt-2`}>
-                <View style={tw`gap-3 w-full`}>
-                  <ActionButton
-                    icon={<InfoIcon color={tw.color("blue-500")} size={20} />}
-                    label="View on eBird"
-                    onPress={handleViewDetails}
-                  />
-
-                  <ActionButton
-                    ref={directionsButtonRef}
-                    icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
-                    label="Get Directions"
-                    onPress={handleGetDirections}
-                    onLongPress={handleShowMapProviders}
-                  />
-                </View>
-
                 {isSaved && (
-                  <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mt-3`}>
+                  <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
                     {notes ? (
                       <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
                         <Text style={tw`text-gray-700 flex-1`}>{notes}</Text>
@@ -181,6 +159,22 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                     )}
                   </RNTouchableOpacity>
                 )}
+
+                <View style={tw`gap-3 w-full flex-row`}>
+                  <ActionButton
+                    icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
+                    label="View on eBird"
+                    onPress={handleViewDetails}
+                  />
+
+                  <ActionButton
+                    ref={directionsButtonRef}
+                    icon={<DirectionsIcon color={tw.color("orange-600/90")} size={20} />}
+                    label="Get Directions"
+                    onPress={handleGetDirections}
+                    onLongPress={handleShowMapProviders}
+                  />
+                </View>
 
                 <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
               </View>
