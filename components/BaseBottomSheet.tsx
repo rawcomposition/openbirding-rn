@@ -99,15 +99,18 @@ export default function BaseBottomSheet({
       dismissible
       dimmed={dimmed}
       backgroundColor="white"
-      grabber
-      grabberOptions={{ color: "#d1d5db" }}
+      grabber={false}
       header={header}
       headerStyle={tw`pt-6`}
       onDidDismiss={handleDismiss}
       onDetentChange={handleDetentChange}
     >
       {scrollable ? (
-        typeof children === "function" ? children(dismiss) : children
+        typeof children === "function" ? (
+          children(dismiss)
+        ) : (
+          children
+        )
       ) : (
         <>
           {typeof children === "function" ? children(dismiss) : children}

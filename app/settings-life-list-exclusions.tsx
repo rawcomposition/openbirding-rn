@@ -18,7 +18,6 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import Toast from "react-native-toast-message";
 
 type TaxonomyEntry = {
   name: string;
@@ -134,8 +133,7 @@ export default function LifeListExclusionsPage() {
       .filter(
         (entry) =>
           !exclusionSet.has(entry.code) &&
-          (stripPunctuation(entry.name.toLowerCase()).includes(query) ||
-            entry.code.toLowerCase().includes(query))
+          (stripPunctuation(entry.name.toLowerCase()).includes(query) || entry.code.toLowerCase().includes(query))
       )
       .slice(0, 10);
   }, [searchQuery, taxonomy, lifelistExclusions]);
@@ -153,8 +151,6 @@ export default function LifeListExclusionsPage() {
     const current = lifelistExclusions || [];
     if (!current.includes(code)) {
       setLifelistExclusions([...current, code]);
-      const speciesName = taxonomyMap.get(code) || code;
-      Toast.show({ type: "success", text1: `Added ${speciesName}` });
     }
     setSearchQuery("");
   };
@@ -162,8 +158,6 @@ export default function LifeListExclusionsPage() {
   const handleRemoveExclusion = (code: string) => {
     const current = lifelistExclusions || [];
     setLifelistExclusions(current.filter((c) => c !== code));
-    const speciesName = taxonomyMap.get(code) || `Unknown (${code})`;
-    Toast.show({ type: "success", text1: `Removed ${speciesName}` });
   };
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();

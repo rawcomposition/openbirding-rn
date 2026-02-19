@@ -71,7 +71,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
-  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string, isExcluded: boolean) => {
+  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string, isExcluded: boolean, isOnLifeList: boolean) => {
     if (buttonIndex === 0) {
       Linking.openURL(`merlinbirdid://species/${speciesCode}`).catch(() => {
         Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
@@ -88,6 +88,9 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         // Remove from exclusions
         const current = lifelistExclusions || [];
         setLifelistExclusions(current.filter((c) => c !== speciesCode));
+      } else if (isOnLifeList) {
+        // Remove from life list
+        setLifelist((lifelist || []).filter((e) => e.code !== speciesCode));
       } else {
         // Add to life list
         const newEntry = {
@@ -105,10 +108,16 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     const ref = menuRefs.current.get(speciesCode);
     const anchor = ref ? findNodeHandle(ref) : undefined;
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
+    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
+
+    let lifeListOption = "Add to Life List";
+    if (isExcluded) lifeListOption = "Remove Exclusion";
+    else if (isOnLifeList) lifeListOption = "Remove from Life List";
+
     const options = [
       "View in Merlin",
       "View eBird Map",
-      isExcluded ? "Remove Exclusion" : "Add to Life List",
+      lifeListOption,
       "Cancel",
     ];
 
@@ -116,9 +125,10 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
       {
         options,
         cancelButtonIndex: 3,
+        destructiveButtonIndex: isExcluded || isOnLifeList ? 2 : undefined,
         anchor: anchor ?? undefined,
       },
-      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode, isExcluded)
+      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode, isExcluded, isOnLifeList)
     );
   };
 
