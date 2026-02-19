@@ -79,7 +79,7 @@ export default function BaseBottomSheet({
     headerContent ? (
       <>{headerContent(dismiss)}</>
     ) : (
-      <View style={tw`flex-row items-start justify-between px-5`}>
+      <View style={tw`flex-row items-start justify-between pr-5 pl-5.5`}>
         <View style={tw`pl-1`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
@@ -101,7 +101,7 @@ export default function BaseBottomSheet({
       backgroundColor="white"
       grabber={false}
       header={header}
-      headerStyle={tw`pt-6`}
+      headerStyle={tw`pt-5`}
       onDidDismiss={handleDismiss}
       onDetentChange={handleDetentChange}
     >

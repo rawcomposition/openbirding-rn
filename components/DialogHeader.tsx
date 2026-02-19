@@ -23,7 +23,7 @@ export default function DialogHeader({
   isPlace,
 }: DialogHeaderProps) {
   return (
-    <View style={tw`flex-row items-start justify-between px-5 pb-4`}>
+    <View style={tw`flex-row items-start justify-between pr-5 pl-5 pb-4`}>
       <View style={tw`flex-1 pr-4 pl-1`}>{children}</View>
       <View style={tw`flex-row items-center gap-2`}>
         {onSavePress && (

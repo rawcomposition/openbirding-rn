@@ -1,5 +1,4 @@
 import { usePackUpdates } from "@/hooks/usePackUpdates";
-import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -30,8 +29,14 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
           <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
           <FilterSection />
           <MenuList
-            onNavigateToPacks={async () => { await dismiss(); router.push("/packs?tab=installed"); }}
-            onNavigateToSettings={async () => { await dismiss(); router.push("/settings"); }}
+            onNavigateToPacks={async () => {
+              await dismiss();
+              router.push("/packs?tab=installed");
+            }}
+            onNavigateToSettings={async () => {
+              await dismiss();
+              router.push("/settings");
+            }}
             packUpdateCount={updateCount}
           />
         </View>

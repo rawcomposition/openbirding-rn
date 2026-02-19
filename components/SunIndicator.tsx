@@ -107,7 +107,12 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
       <Animated.View style={[style, animatedStyle]}>
         {useGlass ? (
           <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
-            <GlassView style={baseStyle} glassEffectStyle="clear" tintColor={light ? "white" : undefined} isInteractive>
+            <GlassView
+              style={baseStyle}
+              glassEffectStyle="regular"
+              tintColor={light ? "white" : undefined}
+              isInteractive
+            >
               {pillContent}
             </GlassView>
           </Pressable>
