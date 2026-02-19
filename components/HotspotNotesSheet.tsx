@@ -71,7 +71,7 @@ export default function HotspotNotesSheet({ isOpen, hotspotId, initialNotes, onC
           value={notes}
           onChangeText={setNotes}
           multiline
-          numberOfLines={5}
+          numberOfLines={12}
           returnKeyType="done"
           autoFocus
         />

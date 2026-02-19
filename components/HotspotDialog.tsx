@@ -148,7 +148,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                   <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
                     {notes ? (
                       <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
-                        <Text style={tw`text-gray-700 flex-1`}>{notes}</Text>
+                        <Text style={tw`text-gray-700 flex-1 text-sm`}>{notes}</Text>
                         <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`ml-2 mt-0.5`} />
                       </View>
                     ) : (
