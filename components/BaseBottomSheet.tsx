@@ -39,6 +39,7 @@ export default function BaseBottomSheet({
   dimmed = false,
 }: BaseBottomSheetProps) {
   const sheetRef = useRef<TrueSheet>(null);
+  const dismissingRef = useRef(false);
   const insets = useSafeAreaInsets();
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
   const bottomPadding = Math.max(insets.bottom, 16);
@@ -46,21 +47,26 @@ export default function BaseBottomSheet({
 
   useEffect(() => {
     if (isOpen) {
+      dismissingRef.current = false;
       setShouldRender(true);
-    } else {
+    } else if (!dismissingRef.current) {
       // isOpen went false — dismiss gracefully so the native sheet animates out
       // before we unmount. onDidDismiss will set shouldRender=false.
       sheetRef.current?.dismiss();
     }
   }, [isOpen]);
 
+  const handleWillDismiss = useCallback(() => {
+    dismissingRef.current = true;
+    onClose();
+  }, [onClose]);
+
   const handleDismiss = useCallback(
     (_event: DidDismissEvent) => {
       setShouldRender(false);
       setIsBottomSheetExpanded(false);
-      onClose();
     },
-    [onClose, setIsBottomSheetExpanded]
+    [setIsBottomSheetExpanded]
   );
 
   const handleDetentChange = useCallback(
@@ -102,6 +108,7 @@ export default function BaseBottomSheet({
       grabber={false}
       header={header}
       headerStyle={tw`pt-5`}
+      onWillDismiss={handleWillDismiss}
       onDidDismiss={handleDismiss}
       onDetentChange={handleDetentChange}
     >
