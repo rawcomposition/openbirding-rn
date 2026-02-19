@@ -1,11 +1,6 @@
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
-import {
-  TrueSheet,
-  type DetentChangeEvent,
-  type DidDismissEvent,
-  type SheetDetent,
-} from "@lodev09/react-native-true-sheet";
+import { TrueSheet, type SheetDetent } from "@lodev09/react-native-true-sheet";
 import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -46,36 +41,14 @@ export default function BaseBottomSheet({
   const [shouldRender, setShouldRender] = useState(isOpen);
 
   useEffect(() => {
+    // Handle external dismiss
     if (isOpen) {
       dismissingRef.current = false;
       setShouldRender(true);
     } else if (!dismissingRef.current) {
-      // isOpen went false — dismiss gracefully so the native sheet animates out
-      // before we unmount. onDidDismiss will set shouldRender=false.
       sheetRef.current?.dismiss();
     }
   }, [isOpen]);
-
-  const handleWillDismiss = useCallback(() => {
-    dismissingRef.current = true;
-    onClose();
-  }, [onClose]);
-
-  const handleDismiss = useCallback(
-    (_event: DidDismissEvent) => {
-      setShouldRender(false);
-      setIsBottomSheetExpanded(false);
-    },
-    [setIsBottomSheetExpanded]
-  );
-
-  const handleDetentChange = useCallback(
-    (event: DetentChangeEvent) => {
-      const { detent } = event.nativeEvent;
-      setIsBottomSheetExpanded(detent >= EXPANDED_THRESHOLD);
-    },
-    [setIsBottomSheetExpanded]
-  );
 
   const dismiss = useCallback(async () => {
     await sheetRef.current?.dismiss();
@@ -108,9 +81,17 @@ export default function BaseBottomSheet({
       grabber={false}
       header={header}
       headerStyle={tw`pt-5`}
-      onWillDismiss={handleWillDismiss}
-      onDidDismiss={handleDismiss}
-      onDetentChange={handleDetentChange}
+      onWillDismiss={() => {
+        dismissingRef.current = true;
+        onClose();
+      }}
+      onDidDismiss={() => {
+        setShouldRender(false);
+        setIsBottomSheetExpanded(false);
+      }}
+      onDetentChange={(e) => {
+        setIsBottomSheetExpanded(e.nativeEvent.detent >= EXPANDED_THRESHOLD);
+      }}
     >
       {scrollable ? (
         typeof children === "function" ? (
