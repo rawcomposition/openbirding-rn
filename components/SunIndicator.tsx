@@ -5,7 +5,7 @@ import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { useEffect, useMemo, useState } from "react";
-import { Platform, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Platform, Pressable, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
@@ -106,11 +106,16 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     <>
       <Animated.View style={[style, animatedStyle]}>
         {useGlass ? (
-          <TouchableOpacity onPress={() => setShowModal(true)} activeOpacity={0.8} style={baseStyle}>
-            <GlassView style={baseStyle} glassEffectStyle="regular" tintColor={light ? "white" : undefined}>
+          <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
+            <GlassView
+              style={baseStyle}
+              glassEffectStyle="regular"
+              tintColor={light ? "white" : undefined}
+              isInteractive
+            >
               {pillContent}
             </GlassView>
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <TouchableOpacity
             onPress={() => setShowModal(true)}

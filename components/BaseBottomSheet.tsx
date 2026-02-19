@@ -1,136 +1,110 @@
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
-import { Ionicons } from "@expo/vector-icons";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import React, { ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { Platform, Text, TouchableOpacity, View } from "react-native";
-import { useAnimatedReaction, useSharedValue } from "react-native-reanimated";
+import { TrueSheet, type SheetDetent } from "@lodev09/react-native-true-sheet";
+import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { scheduleOnRN } from "react-native-worklets";
+import IconButton from "./IconButton";
 
-const EXPANDED_THRESHOLD = 90;
+const EXPANDED_THRESHOLD = 0.9;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
-  snapPoints?: (string | number)[];
+  detents?: SheetDetent[];
   initialIndex?: number;
-  children: ReactNode;
+  children: ReactNode | ((dismiss: () => Promise<void>) => ReactNode);
   showHeader?: boolean;
-  headerContent?: ReactNode;
+  headerContent?: (dismiss: () => Promise<void>) => ReactNode;
   scrollable?: boolean;
-  enableDynamicSizing?: boolean;
+  dimmed?: boolean;
 };
 
 export default function BaseBottomSheet({
   isOpen,
   onClose,
   title,
-  snapPoints,
+  detents = ["auto"],
   initialIndex = 0,
   children,
   showHeader = true,
   headerContent,
   scrollable = false,
-  enableDynamicSizing = true,
+  dimmed = false,
 }: BaseBottomSheetProps) {
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const sheetRef = useRef<TrueSheet>(null);
+  const dismissingRef = useRef(false);
   const insets = useSafeAreaInsets();
   const setIsBottomSheetExpanded = useMapStore((state) => state.setIsBottomSheetExpanded);
-  const memoizedSnapPoints = useMemo(() => snapPoints, [snapPoints]);
   const bottomPadding = Math.max(insets.bottom, 16);
-  const animatedIndex = useSharedValue(-1);
-  const hasCalledClose = useSharedValue(false);
-
-  const handleAnimatedClose = useCallback(() => {
-    onClose();
-    setIsBottomSheetExpanded(false);
-  }, [onClose, setIsBottomSheetExpanded]);
-
-  // Watch animatedIndex to reliably detect close (onChange/onAnimate sometimes fail to fire)
-  useAnimatedReaction(
-    () => animatedIndex.value,
-    (currentIndex, previousIndex) => {
-      if (currentIndex === -1 && previousIndex !== -1 && !hasCalledClose.value) {
-        hasCalledClose.value = true;
-        scheduleOnRN(handleAnimatedClose);
-      } else if (currentIndex >= 0) {
-        hasCalledClose.value = false;
-      }
-    }
-  );
+  const [shouldRender, setShouldRender] = useState(isOpen);
 
   useEffect(() => {
+    // Handle external dismiss
     if (isOpen) {
-      hasCalledClose.value = false;
-      bottomSheetRef.current?.snapToIndex(initialIndex);
-    } else {
-      bottomSheetRef.current?.close();
+      dismissingRef.current = false;
+      setShouldRender(true);
+    } else if (!dismissingRef.current) {
+      sheetRef.current?.dismiss();
     }
-  }, [isOpen, initialIndex, hasCalledClose]);
+  }, [isOpen]);
 
-  const handleAnimate = useCallback(
-    (_fromIndex: number, toIndex: number) => {
-      // Fires at animation START for responsive expansion state updates
-      if (!enableDynamicSizing && snapPoints && snapPoints[toIndex]) {
-        const snapPoint = snapPoints[toIndex];
-        const percentage = typeof snapPoint === "string" && snapPoint.endsWith("%") ? parseFloat(snapPoint) : 0;
-        setIsBottomSheetExpanded(percentage >= EXPANDED_THRESHOLD);
-      } else if (toIndex === -1) {
-        setIsBottomSheetExpanded(false);
-      }
-    },
-    [enableDynamicSizing, snapPoints, setIsBottomSheetExpanded]
-  );
+  const dismiss = useCallback(async () => {
+    await sheetRef.current?.dismiss();
+  }, []);
 
-  const renderHeader = () => {
-    if (!showHeader) return null;
-
-    if (headerContent) {
-      return headerContent;
-    }
-
-    return (
-      <View style={tw`flex-row items-start justify-between px-4`}>
+  const header = showHeader ? (
+    headerContent ? (
+      <>{headerContent(dismiss)}</>
+    ) : (
+      <View style={tw`flex-row items-start justify-between pr-5 pl-5.5`}>
         <View style={tw`pl-1`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
-        <TouchableOpacity onPress={onClose} style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}>
-          <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-        </TouchableOpacity>
+        <IconButton icon="close" variant="muted" onPress={dismiss} />
       </View>
-    );
-  };
+    )
+  ) : undefined;
+
+  if (!shouldRender) return null;
 
   return (
-    <>
-      {Platform.OS === "android" && isOpen && <View style={tw`absolute bottom-0 left-0 right-0 h-6 bg-white`} />}
-      <BottomSheet
-        ref={bottomSheetRef}
-        index={-1}
-        animatedIndex={animatedIndex}
-        snapPoints={enableDynamicSizing ? undefined : memoizedSnapPoints}
-        onAnimate={handleAnimate}
-        enablePanDownToClose
-        enableDynamicSizing={enableDynamicSizing}
-        topInset={insets.top}
-        backgroundStyle={tw`bg-white rounded-t-3xl`}
-        handleIndicatorStyle={tw`bg-gray-300`}
-      >
-        {scrollable ? (
-          <>
-            {renderHeader()}
-            {children}
-          </>
+    <TrueSheet
+      ref={sheetRef}
+      initialDetentIndex={initialIndex}
+      detents={detents}
+      scrollable={scrollable}
+      dismissible
+      dimmed={dimmed}
+      backgroundColor="white"
+      grabber={false}
+      header={header}
+      headerStyle={tw`pt-5`}
+      onWillDismiss={() => {
+        dismissingRef.current = true;
+        onClose();
+      }}
+      onDidDismiss={() => {
+        setShouldRender(false);
+        setIsBottomSheetExpanded(false);
+      }}
+      onDetentChange={(e) => {
+        setIsBottomSheetExpanded(e.nativeEvent.detent >= EXPANDED_THRESHOLD);
+      }}
+    >
+      {scrollable ? (
+        typeof children === "function" ? (
+          children(dismiss)
         ) : (
-          <BottomSheetView style={tw`flex-1`}>
-            {renderHeader()}
-            {children}
-            <View style={{ height: bottomPadding }} />
-          </BottomSheetView>
-        )}
-      </BottomSheet>
-    </>
+          children
+        )
+      ) : (
+        <>
+          {typeof children === "function" ? children(dismiss) : children}
+          <View style={{ height: bottomPadding }} />
+        </>
+      )}
+    </TrueSheet>
   );
 }

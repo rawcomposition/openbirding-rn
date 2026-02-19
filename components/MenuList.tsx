@@ -1,7 +1,7 @@
 import tw from "@/lib/tw";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 
 type MenuOption = {
   id: string;
@@ -54,15 +54,10 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings, pack
   );
 
   return (
-    <View style={tw`flex-1 border-t border-gray-200`}>
-      <FlatList
-        data={menuOptions}
-        renderItem={renderMenuItem}
-        keyExtractor={(item) => item.id}
-        style={tw`flex-1`}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
-      />
+    <View style={tw`border-t border-gray-200`}>
+      {menuOptions.map((item) => (
+        <React.Fragment key={item.id}>{renderMenuItem({ item })}</React.Fragment>
+      ))}
     </View>
   );
 }

@@ -2,11 +2,10 @@ import { useDirections } from "@/hooks/useDirections";
 import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useRef } from "react";
 import type { TouchableOpacity } from "react-native";
-import { Alert, Linking, Text, View } from "react-native";
+import { Alert, Linking, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -102,9 +101,9 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     }
   };
 
-  const headerContent = (
+  const headerContent = (dismiss: () => Promise<void>) => (
     <DialogHeader
-      onClose={onClose}
+      onClose={dismiss}
       onSavePress={hotspot ? handleToggleSave : undefined}
       saveDisabled={saveMutation.isPending || unsaveMutation.isPending}
       isSaved={isSaved}
@@ -129,12 +128,11 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     <BaseBottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      snapPoints={["45%", "97%"]}
+      detents={[0.45, 0.97]}
       headerContent={headerContent}
       scrollable
-      enableDynamicSizing={false}
     >
-      <BottomSheetScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
+      <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
         <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
           {hotspot ? (
             <View style={tw`pt-2`}>
@@ -162,7 +160,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
             </View>
           )}
         </View>
-      </BottomSheetScrollView>
+      </ScrollView>
     </BaseBottomSheet>
   );
 }

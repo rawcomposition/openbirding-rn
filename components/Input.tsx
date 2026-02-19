@@ -1,3 +1,4 @@
+import React from "react";
 import { TextInput, View } from "react-native";
 import tw from "@/lib/tw";
 
@@ -13,17 +14,20 @@ type Props = {
   numberOfLines?: number;
 };
 
-export default function Input({
-  placeholder,
-  value,
-  onChangeText,
-  autoFocus,
-  returnKeyType,
-  clearButtonMode = "while-editing",
-  autoCorrect = true,
-  multiline,
-  numberOfLines,
-}: Props) {
+const Input = React.forwardRef<TextInput, Props>(function Input(
+  {
+    placeholder,
+    value,
+    onChangeText,
+    autoFocus,
+    returnKeyType,
+    clearButtonMode = "while-editing",
+    autoCorrect = true,
+    multiline,
+    numberOfLines,
+  },
+  ref
+) {
   const lineHeight = 20;
   const paddingVertical = 12;
   const minHeight = multiline && numberOfLines ? numberOfLines * lineHeight + paddingVertical * 2 : undefined;
@@ -31,12 +35,13 @@ export default function Input({
   return (
     <View
       style={[
-        tw`bg-white ${multiline ? "rounded-2xl" : "rounded-full"} pl-4 pr-3 overflow-hidden`,
+        tw`bg-white border border-gray-200 ${multiline ? "rounded-2xl" : "rounded-full"} pl-4 pr-3 overflow-hidden`,
         minHeight ? { minHeight } : undefined,
       ]}
     >
       <TextInput
-        style={tw`bg-white text-gray-900 text-base leading-5 flex-1 py-3`}
+        ref={ref}
+        style={tw`bg-white text-gray-900 text-base leading-5 py-3 ${multiline ? "flex-1" : ""}`}
         placeholder={placeholder}
         placeholderTextColor={tw.color("gray-400")}
         value={value}
@@ -51,4 +56,6 @@ export default function Input({
       />
     </View>
   );
-}
+});
+
+export default Input;
