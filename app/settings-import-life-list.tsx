@@ -141,7 +141,7 @@ export default function ImportLifeListPage() {
 
   return (
     <ScrollView
-      style={tw`flex-1 bg-gray-100`}
+      style={tw`flex-1 bg-gray-50`}
       contentContainerStyle={tw`px-4 pt-6 pb-10 flex-grow`}
       showsVerticalScrollIndicator={false}
     >

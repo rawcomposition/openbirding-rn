@@ -2,12 +2,13 @@ import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { LifeListEntry, useSettingsStore } from "@/stores/settingsStore";
 import { useActionSheet } from "@expo/react-native-action-sheet";
+import SearchInput from "@/components/SearchInput";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, FlatList, Linking, Platform, Text, TextInput, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Alert, findNodeHandle, FlatList, Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
 
 function formatDate(dateStr: string): string {
@@ -146,7 +147,7 @@ export default function ViewLifeListPage() {
 
   if (!lifelist || lifelist.length === 0) {
     return (
-      <View style={tw`flex-1 bg-gray-100 px-4 pt-6`}>
+      <View style={tw`flex-1 bg-gray-50 px-4 pt-6`}>
         <EmptyState />
       </View>
     );
@@ -183,21 +184,9 @@ export default function ViewLifeListPage() {
   );
 
   return (
-    <View style={tw`flex-1 bg-gray-100`}>
+    <View style={tw`flex-1 bg-gray-50`}>
       <View style={tw`px-4 pt-4 pb-4`}>
-        <View style={tw`flex-row items-center bg-white rounded-lg px-3 py-2`}>
-          <Ionicons name="search" size={20} color={tw.color("gray-400")} style={tw`mr-2`} />
-          <TextInput
-            style={tw`flex-1 text-base text-gray-900`}
-            placeholder="Search..."
-            placeholderTextColor={tw.color("gray-400")}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
+        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search..." />
       </View>
 
       <View style={tw`flex-1 px-4 pb-4`}>

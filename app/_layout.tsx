@@ -95,19 +95,39 @@ export default function RootLayout() {
                 />
                 <Stack.Screen
                   name="settings-map-provider"
-                  options={{ title: "Directions Provider", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Directions Provider",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-import-life-list"
-                  options={{ title: "Import Life List", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Import Life List",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-view-life-list"
-                  options={{ title: "Life List", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Life List",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-life-list-exclusions"
-                  options={{ title: "Exclusions", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Exclusions",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen name="+not-found" />
               </Stack>
