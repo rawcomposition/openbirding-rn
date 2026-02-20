@@ -47,7 +47,7 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
   };
 
   const content = (
-    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/50`}>
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-lg font-medium`}>{pack.name}</Text>
         <View style={tw`flex-row items-center`}>

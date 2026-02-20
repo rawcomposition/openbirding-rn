@@ -9,6 +9,7 @@ import type { TouchableOpacity } from "react-native";
 import { Alert, Linking, TouchableOpacity as RNTouchableOpacity, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
+import ActionButtonRow from "./ActionButtonRow";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import HotspotNotesSheet from "./HotspotNotesSheet";
@@ -160,7 +161,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                   </RNTouchableOpacity>
                 )}
 
-                <View style={tw`gap-3 w-full flex-row`}>
+                <ActionButtonRow>
                   <ActionButton
                     icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
                     label="View on eBird"
@@ -174,7 +175,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                     onPress={handleGetDirections}
                     onLongPress={handleShowMapProviders}
                   />
-                </View>
+                </ActionButtonRow>
 
                 <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
               </View>

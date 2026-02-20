@@ -77,8 +77,22 @@ export default function RootLayout() {
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
-                <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
-                <Stack.Screen name="settings" options={{ title: "Settings" }} />
+                <Stack.Screen
+                  name="packs"
+                  options={{
+                    title: "Hotspot Packs",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="settings"
+                  options={{
+                    title: "Settings",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
+                />
                 <Stack.Screen
                   name="settings-map-provider"
                   options={{ title: "Directions Provider", headerBackButtonDisplayMode: "minimal" }}
