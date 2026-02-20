@@ -201,6 +201,7 @@ export default function PacksList() {
       ) : (
         <View style={tw`flex-1 mx-4 bg-white rounded-xl overflow-hidden`}>
           <FlashList
+            key={activeTab}
             data={filteredPacks}
             renderItem={renderPack}
             keyExtractor={keyExtractor}
