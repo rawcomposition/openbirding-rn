@@ -65,9 +65,7 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     pointerEvents: opacity.value === 0 ? "none" : "auto",
   }));
 
-  if (!nextEvent || !nextEventTime || isLoading) return null;
-
-  const formattedTime = dayjs(nextEventTime).format("h:mm A");
+  const formattedTime = nextEventTime ? dayjs(nextEventTime).format("h:mm A") : "";
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   const IconComponent = nextEvent === "sunrise" ? SunriseIcon : SunsetIcon;
