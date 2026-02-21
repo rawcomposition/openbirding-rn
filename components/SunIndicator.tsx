@@ -3,9 +3,8 @@ import { useSunTimes } from "@/hooks/useSunTimes";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
@@ -26,10 +25,9 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): 
 
 type SunIndicatorProps = {
   style?: StyleProp<ViewStyle>;
-  light?: boolean;
 };
 
-export default function SunIndicator({ style, light }: SunIndicatorProps) {
+export default function SunIndicator({ style }: SunIndicatorProps) {
   const [showModal, setShowModal] = useState(false);
   const { sunrise, sunset, nextEvent, nextEventTime, timeUntilNextEvent, isLoading } = useSunTimes();
   const { location: userLocation } = useLocation();
@@ -66,7 +64,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
   }));
 
   const formattedTime = nextEventTime ? dayjs(nextEventTime).format("h:mm A") : "";
-  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   const IconComponent = nextEvent === "sunrise" ? SunriseIcon : SunsetIcon;
 
@@ -103,26 +100,12 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
   return (
     <>
       <Animated.View style={[style, animatedStyle]}>
-        {useGlass ? (
-          <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
-            <GlassView
-              style={baseStyle}
-              glassEffectStyle="regular"
-              tintColor={light ? "white" : undefined}
-              isInteractive
-            >
-              {pillContent}
-            </GlassView>
-          </Pressable>
-        ) : (
-          <TouchableOpacity
-            onPress={() => setShowModal(true)}
-            activeOpacity={0.8}
-            style={[baseStyle, tw`bg-white/90 shadow-md`]}
-          >
-            {pillContent}
-          </TouchableOpacity>
-        )}
+        <Pressable
+          onPress={() => setShowModal(true)}
+          style={[baseStyle, tw`bg-slate-50/70`]}
+        >
+          {pillContent}
+        </Pressable>
       </Animated.View>
 
       <InfoModal

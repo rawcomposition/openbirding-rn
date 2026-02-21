@@ -1,9 +1,8 @@
-import React from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import tw from "@/lib/tw";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import tw from "@/lib/tw";
+import React from "react";
+import { Pressable, Text, View } from "react-native";
 
 type PacksNoticeProps = {
   variant?: "banner" | "card" | "inline";
@@ -12,7 +11,6 @@ type PacksNoticeProps = {
 
 export default function PacksNotice({ variant = "banner", onPress }: PacksNoticeProps) {
   const router = useRouter();
-  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   const handlePress = () => {
     if (onPress) {
@@ -23,40 +21,19 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
   };
 
   if (variant === "banner") {
-    const containerStyle = tw`mx-4 rounded-2xl overflow-hidden`;
-    const contentStyle = tw`p-4 flex-row items-center`;
-
-    if (useGlass) {
-      return (
-        <View style={containerStyle}>
-          <GlassView style={containerStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.95)">
-            <Pressable onPress={handlePress} style={contentStyle}>
-              <View style={tw`flex-1`}>
-                <Text style={tw`text-gray-900 font-semibold text-base mb-1`}>Download Hotspot Packs</Text>
-                <Text style={tw`text-gray-600 text-sm`}>Get started by downloading hotspot packs for your area</Text>
-              </View>
-              <View style={tw`ml-3`}>
-                <Ionicons name="arrow-forward" size={20} color={tw.color("gray-500")} />
-              </View>
-            </Pressable>
-          </GlassView>
-        </View>
-      );
-    } else {
-      return (
-        <View style={[containerStyle, tw`bg-white shadow-lg`]}>
-          <Pressable onPress={handlePress} style={contentStyle}>
-            <View style={tw`flex-1`}>
-              <Text style={tw`text-gray-900 font-semibold text-base mb-1`}>Download Hotspot Packs</Text>
-              <Text style={tw`text-gray-600 text-sm`}>Get started by downloading hotspot packs for your area</Text>
-            </View>
-            <View style={tw`ml-3`}>
-              <Ionicons name="arrow-forward" size={20} color={tw.color("gray-500")} />
-            </View>
-          </Pressable>
-        </View>
-      );
-    }
+    return (
+      <View style={tw`mx-4 rounded-2xl overflow-hidden bg-slate-50/80`}>
+        <Pressable onPress={handlePress} style={tw`p-4 flex-row items-center`}>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-gray-900 font-semibold text-base mb-1`}>Download Hotspot Packs</Text>
+            <Text style={tw`text-gray-600 text-sm`}>Get started by downloading hotspot packs for your area</Text>
+          </View>
+          <View style={tw`ml-3`}>
+            <Ionicons name="arrow-forward" size={20} color={tw.color("gray-500")} />
+          </View>
+        </Pressable>
+      </View>
+    );
   }
 
   if (variant === "card") {
