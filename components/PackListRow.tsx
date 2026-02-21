@@ -47,7 +47,7 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
   };
 
   const content = (
-    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/70 bg-white`}>
+    <View style={tw`flex-row items-center justify-between p-4 border-b border-gray-200/50`}>
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-lg font-medium`}>{pack.name}</Text>
         <View style={tw`flex-row items-center`}>
@@ -55,8 +55,8 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
             {pack.hotspots.toLocaleString()} hotspots · {formatSize(pack.size)}
           </Text>
           {isInstalled && (
-            <View style={tw`ml-2 px-1.5 py-0.5 bg-green-100 rounded border border-green-200`}>
-              <Text style={tw`text-green-700 text-xs font-medium`}>Installed</Text>
+            <View style={tw`ml-2 px-2 py-0.5 rounded-full bg-emerald-50/80`}>
+              <Text style={tw`text-emerald-600 text-xs font-medium`}>Installed</Text>
             </View>
           )}
         </View>
@@ -68,7 +68,7 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
               onPress={() => install(pack)}
               disabled={installDisabled}
               style={[
-                tw`py-2 rounded-lg border`,
+                tw`py-2 rounded-xl border`,
                 canUpdate ? tw`border-blue-500 bg-blue-500` : tw`border-gray-200`,
                 installDisabled && tw`opacity-60`,
               ]}

@@ -3,6 +3,7 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import React, { ReactNode } from "react";
 import { View } from "react-native";
 import IconButton from "./IconButton";
+import IconButtonGroup from "./IconButtonGroup";
 import StarIcon from "./icons/StarIcon";
 
 type DialogHeaderProps = {
@@ -25,10 +26,9 @@ export default function DialogHeader({
   return (
     <View style={tw`flex-row items-start justify-between pr-5 pl-5 pb-4`}>
       <View style={tw`flex-1 pr-4 pl-1`}>{children}</View>
-      <View style={tw`flex-row items-center gap-2`}>
+      <IconButtonGroup>
         {onSavePress && (
           <IconButton
-            variant="muted"
             onPress={onSavePress}
             disabled={saveDisabled}
             icon={
@@ -44,8 +44,8 @@ export default function DialogHeader({
             }
           />
         )}
-        <IconButton icon="close" variant="muted" onPress={onClose} />
-      </View>
+        <IconButton icon="close" onPress={onClose} />
+      </IconButtonGroup>
     </View>
   );
 }

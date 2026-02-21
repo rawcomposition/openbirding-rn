@@ -62,7 +62,7 @@ export default function BaseBottomSheet({
         <View style={tw`pl-1`}>
           <Text style={tw`text-gray-900 text-xl font-bold text-center`}>{title}</Text>
         </View>
-        <IconButton icon="close" variant="muted" onPress={dismiss} />
+        <IconButton icon="close" onPress={dismiss} />
       </View>
     )
   ) : undefined;

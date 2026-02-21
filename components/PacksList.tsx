@@ -7,11 +7,13 @@ import { StaticPack, StaticPacksIndex } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
+import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
+import SearchInput from "./SearchInput";
 
 type Tab = "all" | "installed" | "nearby";
 
@@ -22,6 +24,64 @@ const tabs = [
 ] as const;
 
 const NEARBY_PACKS_LIMIT = 6;
+const TAB_HEIGHT = 34;
+
+function TabBar({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab: Tab) => void }) {
+  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
+
+  const renderTab = (tab: (typeof tabs)[number]) => {
+    const isActive = activeTab === tab.id;
+
+    const label = (
+      <Text
+        style={tw.style("text-center font-medium text-sm", {
+          "text-emerald-600": isActive,
+          "text-gray-800": !isActive,
+        })}
+      >
+        {tab.label}
+      </Text>
+    );
+
+    if (isActive && useGlass) {
+      return (
+        <Pressable key={tab.id} onPress={() => onTabChange(tab.id)}>
+          <GlassView
+            style={[tw`px-5 items-center justify-center rounded-full`, { height: TAB_HEIGHT }]}
+            glassEffectStyle="regular"
+            isInteractive
+          >
+            {label}
+          </GlassView>
+        </Pressable>
+      );
+    }
+
+    return (
+      <Pressable
+        key={tab.id}
+        onPress={() => onTabChange(tab.id)}
+        style={[
+          tw`px-5 items-center justify-center rounded-full`,
+          { height: TAB_HEIGHT },
+          isActive && !useGlass && tw`bg-white shadow-sm`,
+        ]}
+      >
+        {label}
+      </Pressable>
+    );
+  };
+
+  const tabElements = tabs.map(renderTab);
+
+  return useGlass ? (
+    <GlassContainer style={[tw`flex-row items-center justify-center`, { gap: 4 }]} spacing={4}>
+      {tabElements}
+    </GlassContainer>
+  ) : (
+    <View style={[tw`flex-row items-center justify-center`, { gap: 4 }]}>{tabElements}</View>
+  );
+}
 
 export default function PacksList() {
   const { tab } = useLocalSearchParams<{ tab?: Tab }>();
@@ -42,6 +102,11 @@ export default function PacksList() {
     error: locationError,
     isLoading: isLoadingLocation,
   } = useLocation(activeTab === "nearby");
+
+  const handleTabChange = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    setSearchQuery("");
+  }, []);
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];
@@ -110,44 +175,13 @@ export default function PacksList() {
 
   return (
     <View style={tw`flex-1`}>
-      <View style={tw`flex-row bg-white border-b border-gray-200`}>
-        {tabs.map((tab) => (
-          <Pressable
-            key={tab.id}
-            onPress={() => {
-              setActiveTab(tab.id);
-              setSearchQuery("");
-            }}
-            style={tw.style(`flex-1 py-3 px-4 border-b-2`, {
-              "border-blue-500": activeTab === tab.id,
-              "border-transparent": activeTab !== tab.id,
-            })}
-          >
-            <Text
-              style={tw.style(`text-center font-medium text-sm`, {
-                "text-blue-600": activeTab === tab.id,
-                "text-gray-500": activeTab !== tab.id,
-              })}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
+      <View style={tw`px-4 py-3`}>
+        <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
       </View>
 
       {activeTab === "all" && (
-        <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
-          <TextInput
-            style={tw`bg-gray-100 rounded-lg px-3 py-2 text-base leading-5`}
-            placeholder="Search packs..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-            autoCorrect={false}
-            autoCapitalize="none"
-            autoComplete="off"
-            returnKeyType="search"
-          />
+        <View style={tw`px-4 pb-3`}>
+          <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search packs..." />
         </View>
       )}
 
@@ -162,13 +196,16 @@ export default function PacksList() {
           </Text>
         </View>
       ) : (
-        <FlashList
-          data={filteredPacks}
-          renderItem={renderPack}
-          keyExtractor={keyExtractor}
-          showsVerticalScrollIndicator
-          keyboardShouldPersistTaps="handled"
-        />
+        <View style={tw`flex-1 mx-4 bg-white rounded-xl overflow-hidden`}>
+          <FlashList
+            key={activeTab}
+            data={filteredPacks}
+            renderItem={renderPack}
+            keyExtractor={keyExtractor}
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+          />
+        </View>
       )}
     </View>
   );

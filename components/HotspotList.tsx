@@ -6,15 +6,17 @@ import { Hotspot } from "@/lib/types";
 import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
-import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FilterBottomSheet from "./FilterBottomSheet";
 import HotspotItem from "./HotspotItem";
+import IconButton from "./IconButton";
+import IconButtonGroup from "./IconButtonGroup";
+import SearchInput from "./SearchInput";
 
 type HotspotListProps = {
   isOpen: boolean;
@@ -57,9 +59,10 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   });
 
   const { data: allHotspots = [] } = useQuery({
-    queryKey: hasLocationAccess && location
-      ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
-      : ["allHotspots", showSavedOnly],
+    queryKey:
+      hasLocationAccess && location
+        ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
+        : ["allHotspots", showSavedOnly],
     queryFn: async () => {
       if (hasLocationAccess && location) {
         // Try the smallest buckets first to get a result quickly
@@ -135,45 +138,28 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       onRequestClose={onClose}
       transparent={Platform.OS === "android"} // Avoid backdrop flickering Mapbox issue on Android
     >
-      <View style={[tw`flex-1 bg-white`, Platform.OS === "android" && { paddingTop: insets.top }]}>
-        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-5 border-b border-gray-200`}>
+      <View style={[tw`flex-1 white`, Platform.OS === "android" && { paddingTop: insets.top }]}>
+        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-5`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
           </View>
-          <View style={tw`flex-row items-center gap-2`}>
-            <TouchableOpacity
-              onPress={() => setIsFilterSheetOpen(true)}
-              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
-            >
-              <Ionicons name="filter-outline" size={22} color={tw.color("gray-500")} />
+          <IconButtonGroup>
+            <View>
+              <IconButton icon="filter-outline" onPress={() => setIsFilterSheetOpen(true)} />
               {activeFilterCount > 0 && (
-                <View style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}>
+                <View
+                  style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}
+                >
                   <Text style={tw`text-white text-xs font-semibold`}>{activeFilterCount}</Text>
                 </View>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onClose}
-              style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
-            >
-              <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-            </TouchableOpacity>
-          </View>
+            </View>
+            <IconButton icon="close" onPress={onClose} />
+          </IconButtonGroup>
         </View>
 
-        <View style={tw`px-4 py-3 bg-white border-b border-gray-200`}>
-          <TextInput
-            style={tw`bg-gray-100 rounded-lg px-3 py-2 text-base leading-5`}
-            placeholder="Search all hotspots..."
-            placeholderTextColor={tw.color("gray-400")}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-            autoCorrect={false}
-            autoCapitalize="none"
-            autoComplete="off"
-            returnKeyType="search"
-          />
+        <View style={tw`px-4 py-3`}>
+          <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
         </View>
 
         <FlashList

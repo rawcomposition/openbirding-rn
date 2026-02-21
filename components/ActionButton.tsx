@@ -13,7 +13,7 @@ const ActionButton = forwardRef<React.ComponentRef<typeof TouchableOpacity>, Act
     return (
       <TouchableOpacity
         ref={ref}
-        style={[tw`flex-row items-center justify-center p-3 bg-gray-50 rounded-lg flex-1`, style]}
+        style={[tw`flex-row items-center justify-center p-3 bg-gray-50 rounded-full flex-1`, style]}
         activeOpacity={touchableProps.activeOpacity ?? 0.7}
         {...touchableProps}
       >
