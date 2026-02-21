@@ -3,6 +3,7 @@ import { useSunTimes } from "@/hooks/useSunTimes";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
+import { BlurView } from "expo-blur";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -65,13 +66,6 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
 
   const IconComponent = nextEvent === "sunrise" ? SunriseIcon : SunsetIcon;
 
-  const pillContent = (
-    <View style={tw`flex-row items-center px-3 py-2 gap-2`}>
-      <IconComponent size={17} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
-      <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
-    </View>
-  );
-
   const baseStyle = tw`rounded-full overflow-hidden`;
 
   const modalContent = (
@@ -98,8 +92,12 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
   return (
     <>
       <Animated.View style={[style, animatedStyle]}>
-        <Pressable onPress={() => setShowModal(true)} style={[baseStyle, tw`bg-slate-50/70`]}>
-          {pillContent}
+        <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
+          <BlurView tint="light" intensity={10} style={tw`flex-row items-center px-3 py-2 gap-2`}>
+            <View style={[tw`absolute inset-0 bg-white/70`]} />
+            <IconComponent size={17} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
+            <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
+          </BlurView>
         </Pressable>
       </Animated.View>
 
