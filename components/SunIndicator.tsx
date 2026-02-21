@@ -50,8 +50,6 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
     !isBottomSheetExpanded
   );
 
-  // Keep component mounted, animate opacity instead of unmounting.
-  // This prevents GlassView from needing to reinitialize its effect which sometimes causes issues.
   const opacity = useSharedValue(shouldShow ? 1 : 0);
 
   useEffect(() => {
@@ -100,10 +98,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
   return (
     <>
       <Animated.View style={[style, animatedStyle]}>
-        <Pressable
-          onPress={() => setShowModal(true)}
-          style={[baseStyle, tw`bg-slate-50/70`]}
-        >
+        <Pressable onPress={() => setShowModal(true)} style={[baseStyle, tw`bg-slate-50/70`]}>
           {pillContent}
         </Pressable>
       </Animated.View>

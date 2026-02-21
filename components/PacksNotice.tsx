@@ -22,7 +22,7 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
 
   if (variant === "banner") {
     return (
-      <View style={tw`mx-4 rounded-2xl overflow-hidden bg-slate-50/80`}>
+      <View style={tw`mx-4 rounded-2xl overflow-hidden bg-white/85`}>
         <Pressable onPress={handlePress} style={tw`p-4 flex-row items-center`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 font-semibold text-base mb-1`}>Download Hotspot Packs</Text>
