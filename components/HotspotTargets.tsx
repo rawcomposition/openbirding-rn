@@ -284,9 +284,9 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
             ))}
           </View>
 
-          {hasMore && !showAll && (
-            <TouchableOpacity onPress={() => setShowAll(true)} style={tw`mt-2 text-center py-1 w-full`}>
-              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>View all</Text>
+          {hasMore && (
+            <TouchableOpacity onPress={() => setShowAll(!showAll)} style={tw`mt-2 text-center py-1 w-full`}>
+              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>{showAll ? "View less" : "View all"}</Text>
             </TouchableOpacity>
           )}
 
