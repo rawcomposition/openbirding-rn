@@ -5,9 +5,9 @@ import { fetchJson } from "@/lib/download";
 import tw from "@/lib/tw";
 import { StaticPack, StaticPacksIndex } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
-import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
+import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
@@ -35,8 +35,8 @@ function TabBar({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab:
     const label = (
       <Text
         style={tw.style("text-center font-medium text-sm", {
-          "text-gray-900": isActive,
-          "text-gray-500": !isActive,
+          "text-emerald-600": isActive,
+          "text-gray-800": !isActive,
         })}
       >
         {tab.label}
@@ -103,13 +103,10 @@ export default function PacksList() {
     isLoading: isLoadingLocation,
   } = useLocation(activeTab === "nearby");
 
-  const handleTabChange = useCallback(
-    (tab: Tab) => {
-      setActiveTab(tab);
-      setSearchQuery("");
-    },
-    []
-  );
+  const handleTabChange = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    setSearchQuery("");
+  }, []);
 
   const filteredPacks = useMemo(() => {
     if (!data) return [];
