@@ -1,6 +1,5 @@
 import tw from "@/lib/tw";
 import { processLifeListCSV } from "@/lib/utils";
-import { devLifeList } from "@/lifelist";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -135,6 +134,7 @@ export default function ImportLifeListPage() {
 
   const handleDevImport = async () => {
     setIsLoading(true);
+    const { devLifeList } = require("@/lifelist");
     await processCSV(devLifeList);
     setIsLoading(false);
   };
