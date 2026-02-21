@@ -41,7 +41,10 @@ export default function SearchInput({
   };
 
   const inputContent = (
-    <View style={[tw`flex-row items-center px-3.5`, { height: INPUT_HEIGHT }]}>
+    <Pressable
+      style={[tw`flex-row items-center px-3.5`, { height: INPUT_HEIGHT }]}
+      onPress={() => inputRef.current?.focus()}
+    >
       <Ionicons name="search" size={18} color={tw.color("gray-600")} style={tw`mr-1.5`} />
       <TextInput
         ref={inputRef}
@@ -57,7 +60,7 @@ export default function SearchInput({
         autoComplete={autoComplete}
         returnKeyType={returnKeyType}
       />
-    </View>
+    </Pressable>
   );
 
   const pill = useGlass ? (
