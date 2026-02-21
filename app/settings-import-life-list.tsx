@@ -135,6 +135,11 @@ export default function ImportLifeListPage() {
   const handleDevImport = async () => {
     setIsLoading(true);
     const { devLifeList } = require("@/lifelist");
+    if (!devLifeList) {
+      Toast.show({ type: "error", text1: "No dev lifelist data. Add your CSV to lifelist.ts" });
+      setIsLoading(false);
+      return;
+    }
     await processCSV(devLifeList);
     setIsLoading(false);
   };
