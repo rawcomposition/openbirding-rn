@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ionicons } from "@expo/vector-icons";
-import tw from "@/lib/tw";
 import IconButton from "@/components/IconButton";
 import Input from "@/components/Input";
-import { savePlace, getSavedPlaceById, deletePlace } from "@/lib/database";
-import Toast from "react-native-toast-message";
+import { deletePlace, getSavedPlaceById, savePlace } from "@/lib/database";
+import tw from "@/lib/tw";
 import { generateId } from "@/lib/utils";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useRef, useState } from "react";
+import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 
 type PlaceEditSheetProps = {
@@ -35,7 +35,6 @@ export default function PlaceEditSheet({
   const pendingSaveRef = useRef<string | null>(null);
   const pendingDeleteRef = useRef(false);
   const titleInputRef = useRef<TextInput>(null);
-
 
   const handleSheetClose = () => {
     if (pendingSaveRef.current) {
@@ -135,16 +134,18 @@ export default function PlaceEditSheet({
   };
 
   return (
-    <BaseBottomSheet
-      isOpen={isOpen}
-      onClose={handleSheetClose}
-      detents={["auto"]}
-      headerContent={headerContent}
-    >
+    <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent}>
       <View style={tw`px-4 py-6`}>
         <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>
-          <Input ref={titleInputRef} placeholder="Enter place title" value={title} onChangeText={setTitle} autoFocus returnKeyType="next" />
+          <Input
+            ref={titleInputRef}
+            placeholder="Enter place title"
+            value={title}
+            onChangeText={setTitle}
+            autoFocus
+            returnKeyType="next"
+          />
         </View>
 
         <View style={tw`mb-6`}>

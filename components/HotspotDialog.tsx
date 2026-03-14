@@ -1,15 +1,17 @@
 import { useDirections } from "@/hooks/useDirections";
-import { getHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
+import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
+import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { TouchableOpacity } from "react-native";
-import { Alert, Linking, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, TouchableOpacity as RNTouchableOpacity, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
+import HotspotNotesSheet from "./HotspotNotesSheet";
 import HotspotTargets from "./HotspotTargets";
 import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
@@ -25,6 +27,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   const { openDirections, showProviderPicker } = useDirections();
   const insets = useSafeAreaInsets();
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -38,11 +41,18 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     enabled: !!hotspotId,
   });
 
+  const { data: savedHotspot } = useQuery({
+    queryKey: ["savedHotspot", hotspotId],
+    queryFn: () => (hotspotId ? getSavedHotspotById(hotspotId) : Promise.resolve(null)),
+    enabled: !!hotspotId && isSaved,
+  });
+
   const saveMutation = useMutation({
     mutationFn: ({ hotspotId, notes }: { hotspotId: string; notes?: string }) => saveHotspot(hotspotId, notes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savedHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["isHotspotSaved", hotspotId] });
+      queryClient.invalidateQueries({ queryKey: ["savedHotspot", hotspotId] });
     },
   });
 
@@ -51,6 +61,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["savedHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["isHotspotSaved", hotspotId] });
+      queryClient.invalidateQueries({ queryKey: ["savedHotspot", hotspotId] });
     },
   });
 
@@ -101,6 +112,8 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     }
   };
 
+  const notes = savedHotspot?.notes || "";
+
   const headerContent = (dismiss: () => Promise<void>) => (
     <DialogHeader
       onClose={dismiss}
@@ -125,42 +138,57 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   );
 
   return (
-    <BaseBottomSheet
-      isOpen={isOpen}
-      onClose={onClose}
-      detents={[0.45, 0.97]}
-      headerContent={headerContent}
-      scrollable
-    >
-      <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
-        <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
-          {hotspot ? (
-            <View style={tw`pt-2`}>
-              <View style={tw`gap-3 w-full`}>
-                <ActionButton
-                  icon={<InfoIcon color={tw.color("blue-500")} size={20} />}
-                  label="View on eBird"
-                  onPress={handleViewDetails}
-                />
+    <>
+      <BaseBottomSheet isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
+        <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
+          <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
+            {hotspot ? (
+              <View style={tw`pt-2`}>
+                {isSaved && (
+                  <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
+                    {notes ? (
+                      <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
+                        <Text style={tw`text-gray-700 flex-1 text-sm`}>{notes}</Text>
+                        <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`ml-2 mt-0.5`} />
+                      </View>
+                    ) : (
+                      <View style={tw`flex-row items-center py-1.5 px-2`}>
+                        <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`mr-2`} />
+                        <Text style={tw`text-gray-400 text-sm`}>Add notes...</Text>
+                      </View>
+                    )}
+                  </RNTouchableOpacity>
+                )}
 
-                <ActionButton
-                  ref={directionsButtonRef}
-                  icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
-                  label="Get Directions"
-                  onPress={handleGetDirections}
-                  onLongPress={handleShowMapProviders}
-                />
+                <View style={tw`gap-3 w-full flex-row`}>
+                  <ActionButton
+                    icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
+                    label="View on eBird"
+                    onPress={handleViewDetails}
+                  />
+
+                  <ActionButton
+                    ref={directionsButtonRef}
+                    icon={<DirectionsIcon color={tw.color("orange-600/90")} size={20} />}
+                    label="Get Directions"
+                    onPress={handleGetDirections}
+                    onLongPress={handleShowMapProviders}
+                  />
+                </View>
+
+                <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
               </View>
-
-              <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
-            </View>
-          ) : isLoadingHotspot ? null : (
-            <View style={tw`py-8 items-center`}>
-              <Text style={tw`text-gray-600 text-base`}>Hotspot not found</Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </BaseBottomSheet>
+            ) : isLoadingHotspot ? null : (
+              <View style={tw`py-8 items-center`}>
+                <Text style={tw`text-gray-600 text-base`}>Hotspot not found</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </BaseBottomSheet>
+      {isNotesOpen && hotspotId && (
+        <HotspotNotesSheet isOpen hotspotId={hotspotId} initialNotes={notes} onClose={() => setIsNotesOpen(false)} />
+      )}
+    </>
   );
 }
