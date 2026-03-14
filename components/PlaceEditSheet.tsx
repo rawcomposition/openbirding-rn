@@ -126,7 +126,7 @@ export default function PlaceEditSheet({
     dismissRef.current = dismiss;
     return (
       <View style={tw`flex-row items-center justify-between px-5`}>
-        <IconButton icon="close" variant="muted" onPress={dismiss} />
+        <IconButton icon="close" onPress={dismiss} />
         <Text style={tw`text-gray-900 text-xl font-bold`}>{isEditing ? "Edit Pin" : "Save Pin"}</Text>
         <IconButton icon="checkmark" variant="primary" onPress={handleSave} disabled={!canSave} />
       </View>

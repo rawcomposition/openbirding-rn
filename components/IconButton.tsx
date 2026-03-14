@@ -16,9 +16,9 @@ type IconButtonProps = {
 export default function IconButton({ icon, variant = "default", onPress, disabled }: IconButtonProps) {
   const variants = {
     default: {
-      tintColor: undefined,
-      iconColor: tw.color("gray-700"),
-      fallbackBgColor: tw`bg-white`,
+      tintColor: tw.color("white/60"),
+      iconColor: tw.color("gray-600"),
+      fallbackBgColor: tw`bg-gray-100`,
     },
     primary: {
       tintColor: tw.color("emerald-500"),
@@ -71,7 +71,7 @@ export default function IconButton({ icon, variant = "default", onPress, disable
       onPress={onPress}
       activeOpacity={0.8}
       disabled={disabled}
-      style={[baseStyle, variant !== "muted" && tw`shadow-lg`, variantStyles.fallbackBgColor]}
+      style={[baseStyle, variant === "primary" && tw`shadow-lg`, variantStyles.fallbackBgColor]}
     >
       {renderIcon()}
     </TouchableOpacity>

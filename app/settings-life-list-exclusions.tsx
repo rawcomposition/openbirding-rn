@@ -1,3 +1,4 @@
+import SearchInput from "@/components/SearchInput";
 import { useTaxonomy, useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -13,7 +14,6 @@ import {
   Platform,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   ViewStyle,
@@ -191,22 +191,9 @@ export default function LifeListExclusionsPage() {
   ));
 
   return (
-    <ScrollView style={tw`flex-1 bg-gray-100`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="handled">
+    <ScrollView style={tw`flex-1 bg-gray-50`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="handled">
       <View style={tw`px-4 pt-4 pb-4`}>
-        <View style={tw`flex-row items-center bg-white rounded-lg px-3 py-2`}>
-          <Ionicons name="search" size={20} color={tw.color("gray-400")} style={tw`mr-2`} />
-          <TextInput
-            style={tw`flex-1 text-base text-gray-900`}
-            placeholder="Search species to exclude..."
-            placeholderTextColor={tw.color("gray-400")}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="done"
-          />
-        </View>
+        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search species to exclude..." />
       </View>
 
       {isSearching && (
@@ -227,11 +214,6 @@ export default function LifeListExclusionsPage() {
           <EmptyState />
         ) : (
           <>
-            {!isSearching && (
-              <Text style={tw`text-gray-500 text-xs uppercase px-1 pb-2 font-medium tracking-wide`}>
-                Excluded Species
-              </Text>
-            )}
             {!isSearching &&
               (useGlass ? (
                 <GlassView style={cardStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.7)">

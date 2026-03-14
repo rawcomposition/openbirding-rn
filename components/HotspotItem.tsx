@@ -38,7 +38,7 @@ const HotspotItem = React.memo(
     return (
       <TouchableOpacity
         onPress={handlePress}
-        style={tw`flex-row items-center px-4 py-3 border-b border-gray-200/70 bg-white`}
+        style={tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`}
         activeOpacity={0.7}
       >
         <View style={tw`flex-1`}>

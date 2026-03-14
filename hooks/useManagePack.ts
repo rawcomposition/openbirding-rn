@@ -74,11 +74,6 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["/taxonomy"], refetchType: "all" }); // "all" = refetch even if not mounted
 
-      Toast.show({
-        type: "success",
-        text1: "Pack Installed",
-      });
-
       logDownload(packId);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
@@ -119,11 +114,6 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
-
-      Toast.show({
-        type: "success",
-        text1: "Pack Uninstalled",
-      });
     } catch (error) {
       console.error("Failed to uninstall pack:", error);
 

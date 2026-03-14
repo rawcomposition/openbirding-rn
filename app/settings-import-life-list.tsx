@@ -1,6 +1,5 @@
 import tw from "@/lib/tw";
 import { processLifeListCSV } from "@/lib/utils";
-import { devLifeList } from "@/lifelist";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -135,13 +134,19 @@ export default function ImportLifeListPage() {
 
   const handleDevImport = async () => {
     setIsLoading(true);
+    const { devLifeList } = require("@/lifelist");
+    if (!devLifeList) {
+      Toast.show({ type: "error", text1: "No dev lifelist data. Add your CSV to lifelist.ts" });
+      setIsLoading(false);
+      return;
+    }
     await processCSV(devLifeList);
     setIsLoading(false);
   };
 
   return (
     <ScrollView
-      style={tw`flex-1 bg-gray-100`}
+      style={tw`flex-1 bg-gray-50`}
       contentContainerStyle={tw`px-4 pt-6 pb-10 flex-grow`}
       showsVerticalScrollIndicator={false}
     >
@@ -162,7 +167,7 @@ export default function ImportLifeListPage() {
         <Text style={tw`text-sm text-gray-700 mb-3`}>Select the CSV file (usually in Downloads).</Text>
 
         <TouchableOpacity
-          style={tw`bg-blue-600 rounded-lg py-3 px-4 flex-row items-center justify-center`}
+          style={tw`bg-emerald-600 rounded-lg py-3 px-4 flex-row items-center justify-center`}
           onPress={handleSelectFile}
           activeOpacity={0.7}
           disabled={isLoading}
@@ -208,9 +213,10 @@ export default function ImportLifeListPage() {
         <View style={tw`flex-1 justify-end`}>
           <TouchableOpacity
             onPress={handleReset}
-            style={tw`border border-gray-300 rounded-lg py-2.5 px-4 self-center`}
+            style={tw`border border-gray-300 rounded-full py-2 px-4 self-center flex-row items-center`}
             activeOpacity={0.7}
           >
+            <Ionicons name="close-outline" size={20} color={tw.color("gray-600")} style={tw`mr-1`} />
             <Text style={tw`text-gray-600 text-sm`}>Reset Life List</Text>
           </TouchableOpacity>
         </View>

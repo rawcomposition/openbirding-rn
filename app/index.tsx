@@ -135,7 +135,6 @@ export default function HomeScreen() {
         ) : (
           <SunIndicator
             style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]}
-            light={currentLayer === "satellite"}
           />
         )}
         <View

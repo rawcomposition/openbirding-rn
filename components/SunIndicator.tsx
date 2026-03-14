@@ -3,9 +3,9 @@ import { useSunTimes } from "@/hooks/useSunTimes";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { BlurView } from "expo-blur";
 import React, { useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, StyleProp, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import InfoModal from "./InfoModal";
 import SunriseIcon from "./icons/SunriseIcon";
@@ -26,10 +26,9 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): 
 
 type SunIndicatorProps = {
   style?: StyleProp<ViewStyle>;
-  light?: boolean;
 };
 
-export default function SunIndicator({ style, light }: SunIndicatorProps) {
+export default function SunIndicator({ style }: SunIndicatorProps) {
   const [showModal, setShowModal] = useState(false);
   const { sunrise, sunset, nextEvent, nextEventTime, timeUntilNextEvent, isLoading } = useSunTimes();
   const { location: userLocation } = useLocation();
@@ -52,8 +51,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     !isBottomSheetExpanded
   );
 
-  // Keep component mounted, animate opacity instead of unmounting.
-  // This prevents GlassView from needing to reinitialize its effect which sometimes causes issues.
   const opacity = useSharedValue(shouldShow ? 1 : 0);
 
   useEffect(() => {
@@ -65,19 +62,9 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
     pointerEvents: opacity.value === 0 ? "none" : "auto",
   }));
 
-  if (!nextEvent || !nextEventTime || isLoading) return null;
-
-  const formattedTime = dayjs(nextEventTime).format("h:mm A");
-  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
+  const formattedTime = nextEventTime ? dayjs(nextEventTime).format("h:mm A") : "";
 
   const IconComponent = nextEvent === "sunrise" ? SunriseIcon : SunsetIcon;
-
-  const pillContent = (
-    <View style={tw`flex-row items-center px-3 py-2 gap-2`}>
-      <IconComponent size={17} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
-      <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
-    </View>
-  );
 
   const baseStyle = tw`rounded-full overflow-hidden`;
 
@@ -105,26 +92,13 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
   return (
     <>
       <Animated.View style={[style, animatedStyle]}>
-        {useGlass ? (
-          <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
-            <GlassView
-              style={baseStyle}
-              glassEffectStyle="regular"
-              tintColor={light ? "white" : undefined}
-              isInteractive
-            >
-              {pillContent}
-            </GlassView>
-          </Pressable>
-        ) : (
-          <TouchableOpacity
-            onPress={() => setShowModal(true)}
-            activeOpacity={0.8}
-            style={[baseStyle, tw`bg-white/90 shadow-md`]}
-          >
-            {pillContent}
-          </TouchableOpacity>
-        )}
+        <Pressable onPress={() => setShowModal(true)} style={baseStyle}>
+          <BlurView tint="light" intensity={10} style={tw`flex-row items-center px-3 py-2 gap-2`}>
+            <View style={[tw`absolute inset-0 bg-white/70`]} />
+            <IconComponent size={17} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
+            <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
+          </BlurView>
+        </Pressable>
       </Animated.View>
 
       <InfoModal

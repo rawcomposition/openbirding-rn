@@ -3,6 +3,7 @@ import { View, Text, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tw from "@/lib/tw";
 import IconButton from "./IconButton";
+import IconButtonGroup from "./IconButtonGroup";
 import { useRouter } from "expo-router";
 
 type ModalHeaderProps = {
@@ -23,11 +24,11 @@ export default function ModalHeader({ buttons, title }: ModalHeaderProps) {
     >
       <IconButton icon="close" onPress={() => router.back()} />
       <Text style={tw`text-lg font-bold`}>{title}</Text>
-      <View style={tw`flex-row items-center gap-2`}>
+      <IconButtonGroup>
         {buttons.map((button, index) => (
           <React.Fragment key={index}>{button}</React.Fragment>
         ))}
-      </View>
+      </IconButtonGroup>
     </View>
   );
 }

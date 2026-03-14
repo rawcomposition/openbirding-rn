@@ -77,23 +77,57 @@ export default function RootLayout() {
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
-                <Stack.Screen name="packs" options={{ title: "Hotspot Packs" }} />
-                <Stack.Screen name="settings" options={{ title: "Settings" }} />
+                <Stack.Screen
+                  name="packs"
+                  options={{
+                    title: "Hotspot Packs",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="settings"
+                  options={{
+                    title: "Settings",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
+                />
                 <Stack.Screen
                   name="settings-map-provider"
-                  options={{ title: "Directions Provider", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Directions Provider",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-import-life-list"
-                  options={{ title: "Import Life List", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Import Life List",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-view-life-list"
-                  options={{ title: "Life List", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Life List",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen
                   name="settings-life-list-exclusions"
-                  options={{ title: "Exclusions", headerBackButtonDisplayMode: "minimal" }}
+                  options={{
+                    title: "Exclusions",
+                    headerBackButtonDisplayMode: "minimal",
+                    headerStyle: { backgroundColor: "#f9fafb" },
+                    headerShadowVisible: false,
+                  }}
                 />
                 <Stack.Screen name="+not-found" />
               </Stack>

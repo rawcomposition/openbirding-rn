@@ -1,8 +1,8 @@
 import tw from "@/lib/tw";
 import { useFiltersStore } from "@/stores/filtersStore";
-import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
-import { Animated, Modal, Pressable, Switch, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Modal, Pressable, Switch, Text, View } from "react-native";
+import IconButton from "./IconButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type FilterBottomSheetProps = {
@@ -79,12 +79,7 @@ export default function FilterBottomSheet({ isOpen, onClose }: FilterBottomSheet
 
             <View style={tw`flex-row items-center justify-between px-5 pb-3`}>
               <Text style={tw`text-gray-900 text-xl font-bold`}>Filters</Text>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={tw`w-10 h-10 items-center justify-center bg-slate-100 rounded-full`}
-              >
-                <Ionicons name="close" size={26} color={tw.color("gray-500")} />
-              </TouchableOpacity>
+              <IconButton icon="close" onPress={handleClose} />
             </View>
 
             <View style={tw`px-5 pt-2 pb-4`}>
