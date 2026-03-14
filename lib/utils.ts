@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { Platform } from "react-native";
 import { hotspotColor } from "./constants";
+import { getTaxonomy } from "./taxonomy";
 import { MapFeature } from "./types";
 
 dayjs.extend(customParseFormat);
@@ -323,11 +324,6 @@ type LifeListEntry = {
   checklistId: string;
 };
 
-type TaxonomyEntry = {
-  sciName: string;
-  code: string;
-};
-
 function parseEbirdDate(dateStr: string): string {
   if (!dateStr) return "";
   const parsed = dayjs(dateStr, "DD MMM YYYY");
@@ -362,9 +358,9 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
     return { success: false, error: "No countable species found in the life list" };
   }
 
-  const taxonomyResponse = (await get("/taxonomy")) as unknown as TaxonomyEntry[];
+  const taxonomyResponse = await getTaxonomy();
 
-  if (!Array.isArray(taxonomyResponse)) {
+  if (taxonomyResponse.length === 0) {
     return { success: false, error: "Failed to fetch taxonomy data" };
   }
 

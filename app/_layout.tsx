@@ -1,7 +1,7 @@
 import tw from "@/lib/tw";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -12,9 +12,9 @@ import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { prefetchTaxonomy } from "@/hooks/useTaxonomy";
 import { initializeDatabase } from "@/lib/database";
-import { asyncStoragePersister, queryClient, shouldPersistQuery } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { ensureTaxonomyLoaded } from "@/lib/taxonomy";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -40,7 +40,7 @@ export default function RootLayout() {
     };
 
     initDatabase();
-    prefetchTaxonomy();
+    ensureTaxonomyLoaded();
     useLocationPermissionStore.getState().requestPermission();
   }, []);
 
@@ -65,15 +65,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ActionSheetProvider>
-          <PersistQueryClientProvider
-            client={queryClient}
-            persistOptions={{
-              persister: asyncStoragePersister,
-              dehydrateOptions: {
-                shouldDehydrateQuery: shouldPersistQuery,
-              },
-            }}
-          >
+          <QueryClientProvider client={queryClient}>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
@@ -164,7 +156,7 @@ export default function RootLayout() {
               <DownloadOverlay />
               <StatusBar style="auto" />
             </ThemeProvider>
-          </PersistQueryClientProvider>
+          </QueryClientProvider>
         </ActionSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
