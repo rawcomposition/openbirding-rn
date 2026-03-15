@@ -8,9 +8,10 @@ import { useActionSheet } from "@expo/react-native-action-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, Image, Linking, Platform, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Alert, findNodeHandle, Linking, Platform, Pressable, Text, TouchableOpacity, View } from "react-native";
 import InfoModal from "./InfoModal";
 
 const INITIAL_LIMIT = 10;
@@ -71,7 +72,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
-  const handleActionSelection = (buttonIndex: number | undefined, speciesCode: string, isExcluded: boolean, isOnLifeList: boolean) => {
+  const handleActionSelection = (
+    buttonIndex: number | undefined,
+    speciesCode: string,
+    isExcluded: boolean,
+    isOnLifeList: boolean
+  ) => {
     if (buttonIndex === 0) {
       Linking.openURL(`merlinbirdid://species/${speciesCode}`).catch(() => {
         Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
@@ -114,12 +120,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     if (isExcluded) lifeListOption = "Remove Exclusion";
     else if (isOnLifeList) lifeListOption = "Remove from Life List";
 
-    const options = [
-      "View in Merlin",
-      "View eBird Map",
-      lifeListOption,
-      "Cancel",
-    ];
+    const options = ["View in Merlin", "View eBird Map", lifeListOption, "Cancel"];
 
     showActionSheetWithOptions(
       {
@@ -242,7 +243,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                         source={{
                           uri: `https://static.avicommons.org/${t.speciesCode}-${
                             avicommons[t.speciesCode as keyof typeof avicommons][0]
-                          }-240.jpg`,
+                          }-160.webp`,
                         }}
                         style={tw`w-20 h-15 rounded mr-3 bg-gray-200`}
                       />
@@ -286,10 +287,11 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
           {hasMore && (
             <TouchableOpacity onPress={() => setShowAll(!showAll)} style={tw`mt-2 text-center py-1 w-full`}>
-              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>{showAll ? "View less" : "View all"}</Text>
+              <Text style={tw`text-sm font-medium text-blue-600 text-center`}>
+                {showAll ? "View less" : "View all"}
+              </Text>
             </TouchableOpacity>
           )}
-
         </>
       )}
 
@@ -304,8 +306,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                 Targets data is updated monthly from the eBird Basic Dataset.
               </Text>
               <Text style={tw`text-sm text-gray-600 italic`}>
-                eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell
-                Lab of Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
+                eBird Basic Dataset. Version: EBD_rel{parsePackVersion(data.version)?.replace(" ", "-")}. Cornell Lab of
+                Ornithology, Ithaca, New York. {parsePackVersion(data.version)}.
               </Text>
               {(() => {
                 const photoCredits = displayedTargets
