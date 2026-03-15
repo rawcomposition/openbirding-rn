@@ -126,14 +126,19 @@ export async function fetchAndSaveTaxonomy(): Promise<TaxonomyEntry[] | null> {
 }
 
 export async function getTaxonomy(): Promise<TaxonomyEntry[]> {
+  const cached = queryClient.getQueryData<TaxonomyEntry[]>(TAXONOMY_QUERY_KEY);
+  if (isValidTaxonomy(cached)) return cached;
+
   const local = await readLocalTaxonomy();
-  if (local) return local;
+  if (local) {
+    queryClient.setQueryData(TAXONOMY_QUERY_KEY, local);
+    return local;
+  }
 
   const fetched = await fetchAndSaveTaxonomy();
   if (fetched) return fetched;
 
-  const cached = queryClient.getQueryData<TaxonomyEntry[]>(TAXONOMY_QUERY_KEY);
-  return isValidTaxonomy(cached) ? cached : [];
+  throw new Error("Taxonomy unavailable");
 }
 
 export async function ensureTaxonomyLoaded(): Promise<void> {

@@ -358,9 +358,10 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
     return { success: false, error: "No countable species found in the life list" };
   }
 
-  const taxonomyResponse = await getTaxonomy();
-
-  if (taxonomyResponse.length === 0) {
+  let taxonomyResponse;
+  try {
+    taxonomyResponse = await getTaxonomy();
+  } catch {
     return { success: false, error: "Failed to fetch taxonomy data" };
   }
 

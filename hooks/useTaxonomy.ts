@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { getTaxonomy, type TaxonomyEntry } from "@/lib/taxonomy";
 
+const TEN_MINUTES_MS = 10 * 60 * 1000;
+
 const taxonomyQueryOptions = {
   queryKey: ["taxonomy"],
   queryFn: getTaxonomy,
-  staleTime: 0,
+  staleTime: TEN_MINUTES_MS,
   gcTime: Infinity,
-  refetchOnMount: "always" as const,
   refetchOnReconnect: true,
 };
 
