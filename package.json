@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "generate-markers": "tsx ./scripts/generate-markers.ts"
+    "generate-markers": "tsx ./scripts/generate-markers.ts",
+    "update-avicommons": "tsx ./scripts/update-avicommons.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
