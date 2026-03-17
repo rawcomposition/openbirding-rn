@@ -35,7 +35,9 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
 
   const savedPlace = placeId
     ? data
-    : { lat: droppedLat, lng: droppedLng, name: `${droppedLat}, ${droppedLng}`, notes: "" };
+    : droppedLat !== null && droppedLng !== null
+      ? { lat: droppedLat, lng: droppedLng, name: `${droppedLat}, ${droppedLng}`, notes: "" }
+      : null;
   const lat = savedPlace?.lat;
   const lng = savedPlace?.lng;
 
@@ -77,10 +79,16 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
 
   const headerContent = (dismiss: () => Promise<void>) => (
     <DialogHeader onClose={dismiss} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
-      <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
-        {savedPlace?.name}
-      </Text>
-      <Text style={tw`text-gray-600 text-sm mt-1`}>{placeId ? "Saved Pin" : "Dropped Pin"}</Text>
+      {savedPlace?.name ? (
+        <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
+          {savedPlace.name}
+        </Text>
+      ) : (
+        <View style={tw`h-7`} />
+      )}
+      {!!savedPlace && (
+        <Text style={tw`text-gray-600 text-sm mt-1`}>{placeId ? "Saved Pin" : "Dropped Pin"}</Text>
+      )}
     </DialogHeader>
   );
 

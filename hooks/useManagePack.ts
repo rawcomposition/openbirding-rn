@@ -1,6 +1,7 @@
 import { cleanupPartialInstall, installPackWithTargets, uninstallPack } from "@/lib/database";
 import { downloadWithProgress } from "@/lib/download";
 import { StaticPack, StaticPackResponse } from "@/lib/types";
+import { refreshTaxonomy } from "@/lib/taxonomy";
 import { API_URL } from "@/lib/utils";
 import { useDownloadStore } from "@/stores/downloadStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -72,7 +73,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
-      queryClient.invalidateQueries({ queryKey: ["/taxonomy"], refetchType: "all" }); // "all" = refetch even if not mounted
+      refreshTaxonomy();
 
       logDownload(packId);
     } catch (error) {

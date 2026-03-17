@@ -1,33 +1,18 @@
-import { queryClient } from "@/lib/queryClient";
-import { get } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { getTaxonomy, type TaxonomyEntry } from "@/lib/taxonomy";
 
-type TaxonomyEntry = {
-  name: string;
-  sciName: string;
-  code: string;
-};
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const TEN_MINUTES_MS = 10 * 60 * 1000;
 
 const taxonomyQueryOptions = {
-  queryKey: ["/taxonomy"] as const,
-  queryFn: async () => {
-    const data = (await get("/taxonomy")) as unknown as TaxonomyEntry[];
-    console.log(`[Taxonomy] Loaded ${data.length} species`);
-    return data;
-  },
-  staleTime: ONE_DAY_MS,
+  queryKey: ["taxonomy"],
+  queryFn: getTaxonomy,
+  staleTime: TEN_MINUTES_MS,
   gcTime: Infinity,
-  meta: { persist: true },
+  refetchOnReconnect: true,
 };
 
 export function useTaxonomy() {
   return useQuery<TaxonomyEntry[]>(taxonomyQueryOptions);
-}
-
-export function prefetchTaxonomy() {
-  return queryClient.prefetchQuery(taxonomyQueryOptions);
 }
 
 export function useTaxonomyMap() {
