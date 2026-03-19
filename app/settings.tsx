@@ -182,6 +182,10 @@ export default function SettingsPage() {
       </SettingsGroup>
 
       <SettingsGroup header="Support">
+        <SettingsRow
+          label="Support the Developer"
+          onPress={() => Linking.openURL("https://openbirding.org/support")}
+        />
         <SettingsRow label="Privacy Policy" onPress={handlePrivacyPolicyPress} />
         <SettingsRow label="Feedback" onPress={handleContactPress} isLast />
       </SettingsGroup>
