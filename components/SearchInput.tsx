@@ -37,7 +37,7 @@ export default function SearchInput({
 
   const handleClear = () => {
     onChangeText("");
-    inputRef.current?.blur();
+    setTimeout(() => inputRef.current?.blur(), 0);
   };
 
   const inputContent = (

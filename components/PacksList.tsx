@@ -9,7 +9,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useLocalSearchParams } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
 import PackListRow from "./PackListRow";
 import PacksNotice from "./PacksNotice";
@@ -87,6 +87,7 @@ export default function PacksList() {
   const { tab } = useLocalSearchParams<{ tab?: Tab }>();
   const [activeTab, setActiveTab] = useState<Tab>(tab || "nearby");
   const [searchQuery, setSearchQuery] = useState("");
+  const listRef = useRef<any>(null);
 
   const { data, isLoading, error } = useQuery<StaticPack[]>({
     queryKey: ["packs"],
@@ -151,6 +152,10 @@ export default function PacksList() {
     return packs;
   }, [data, activeTab, installedPackIds, searchQuery, userLocation]);
 
+  useEffect(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filteredPacks]);
+
   const keyExtractor = useCallback((item: StaticPack) => String(item.id), []);
 
   if (isLoading) {
@@ -202,6 +207,7 @@ export default function PacksList() {
       ) : (
         <View style={tw`flex-1 mx-4 bg-white rounded-xl overflow-hidden`}>
           <FlashList
+            ref={listRef}
             key={activeTab}
             data={filteredPacks}
             renderItem={renderPack}
