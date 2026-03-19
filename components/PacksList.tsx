@@ -141,7 +141,11 @@ export default function PacksList() {
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      packs = packs.filter((pack) => pack.name.toLowerCase().includes(query));
+      packs = packs.filter(
+        (pack) =>
+          pack.name.toLowerCase().includes(query) ||
+          pack.tags?.some((tag) => tag.toLowerCase().includes(query))
+      );
     }
 
     return packs;
