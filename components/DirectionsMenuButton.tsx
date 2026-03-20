@@ -25,7 +25,7 @@ export default function DirectionsMenuButton({ latitude, longitude }: Props) {
   };
 
   const buttonContent = (
-    <View style={tw`flex-row items-center justify-center p-3 bg-gray-50 rounded-full flex-1`}>
+    <View style={tw`flex-row items-center justify-center p-3 bg-gray-50 rounded-full`}>
       <DirectionsIcon color={tw.color("orange-600/90")} size={20} />
       <Text style={tw`text-gray-700 text-base font-medium ml-3`}>Get Directions</Text>
     </View>

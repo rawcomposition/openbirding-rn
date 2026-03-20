@@ -173,7 +173,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                 <Section>
                   <Button
                     label={showAllSpecies ? "Show Targets Only" : "Show All Species"}
-                    systemImage={showAllSpecies ? "target" : "list.bullet"}
+                    systemImage={showAllSpecies ? "target" : "bird"}
                     onPress={() => setShowAllSpecies(!showAllSpecies)}
                   />
                   <Button
@@ -230,7 +230,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                               <Section>
                                 <Button
                                   label="View in Merlin"
-                                  systemImage="bird"
+                                  systemImage="arrow.up.forward.app"
                                   onPress={() => {
                                     Linking.openURL(`merlinbirdid://species/${t.speciesCode}`).catch(() => {
                                       Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");

@@ -1,5 +1,4 @@
 import tw from "@/lib/tw";
-import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -64,7 +63,6 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ActionSheetProvider>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
@@ -157,7 +155,6 @@ export default function RootLayout() {
               <StatusBar style="auto" />
             </ThemeProvider>
           </QueryClientProvider>
-        </ActionSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

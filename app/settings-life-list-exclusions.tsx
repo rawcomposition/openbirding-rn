@@ -2,21 +2,12 @@ import SearchInput from "@/components/SearchInput";
 import { useTaxonomy, useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useActionSheet } from "@expo/react-native-action-sheet";
+import { Button, Host, Menu, RNHostView, Section } from "@expo/ui/swift-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Linking,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 
 type TaxonomyEntry = {
   name: string;
@@ -73,38 +64,43 @@ function ExclusionItem({
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(code) ?? `Unknown (${code})`;
-  const menuRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { showActionSheetWithOptions } = useActionSheet();
-
-  const showMenu = () => {
-    const anchor = (menuRef.current as any)?.__nativeTag as number | undefined;
-    showActionSheetWithOptions(
-      {
-        options: ["View in Merlin", "Remove from Exclusions", "Cancel"],
-        destructiveButtonIndex: 1,
-        cancelButtonIndex: 2,
-        anchor: anchor ?? undefined,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) {
-          Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
-            Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-          });
-        } else if (buttonIndex === 1) {
-          onRemove();
-        }
-      }
-    );
-  };
 
   return (
     <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-base font-medium`}>{speciesName}</Text>
       </View>
-      <TouchableOpacity ref={menuRef} onPress={showMenu} style={tw`p-2 -mr-2`}>
-        <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
-      </TouchableOpacity>
+      <Host style={tw`p-2 -mr-2`}>
+        <Menu
+          label={
+            <RNHostView matchContents>
+              <View style={tw`w-8 h-8 items-center justify-center`}>
+                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
+              </View>
+            </RNHostView>
+          }
+        >
+          <Section>
+            <Button
+              label="View in Merlin"
+              systemImage="arrow.up.forward.app"
+              onPress={() => {
+                Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
+                  Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+                });
+              }}
+            />
+          </Section>
+          <Section>
+            <Button
+              label="Remove"
+              systemImage="minus.circle"
+              role="destructive"
+              onPress={onRemove}
+            />
+          </Section>
+        </Menu>
+      </Host>
     </View>
   );
 }
