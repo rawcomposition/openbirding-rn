@@ -87,25 +87,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     }
   };
 
-  const getLifeListLabel = (speciesCode: string) => {
+  const getLifeListMenuProps = (speciesCode: string) => {
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
     const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
-    if (isExcluded) return "Remove Exclusion";
-    if (isOnLifeList) return "Remove from Life List";
-    return "Add to Life List";
-  };
-
-  const getLifeListIcon = (speciesCode: string) => {
-    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
-    if (isExcluded || isOnLifeList) return "minus.circle";
-    return "plus.circle";
-  };
-
-  const isDestructiveLifeListAction = (speciesCode: string) => {
-    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
-    return isExcluded || isOnLifeList;
+    if (isExcluded) return { label: "Remove Exclusion", icon: "minus.circle" as const, isDestructive: true };
+    if (isOnLifeList) return { label: "Remove from Life List", icon: "minus.circle" as const, isDestructive: true };
+    return { label: "Add to Life List", icon: "plus.circle" as const, isDestructive: false };
   };
 
   const renderEmptyState = () => {
@@ -248,12 +235,17 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                                 />
                               </Section>
                               <Section>
-                                <Button
-                                  label={getLifeListLabel(t.speciesCode)}
-                                  systemImage={getLifeListIcon(t.speciesCode)}
-                                  role={isDestructiveLifeListAction(t.speciesCode) ? "destructive" : undefined}
-                                  onPress={() => handleLifeListAction(t.speciesCode)}
-                                />
+                                {(() => {
+                                  const { label, icon, isDestructive } = getLifeListMenuProps(t.speciesCode);
+                                  return (
+                                    <Button
+                                      label={label}
+                                      systemImage={icon}
+                                      role={isDestructive ? "destructive" : undefined}
+                                      onPress={() => handleLifeListAction(t.speciesCode)}
+                                    />
+                                  );
+                                })()}
                               </Section>
                             </Menu>
                           </Host>

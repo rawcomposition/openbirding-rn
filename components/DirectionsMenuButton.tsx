@@ -3,9 +3,8 @@ import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
 import { Alert, Linking, Text, View } from "react-native";
+import { ACTION_BUTTON_MIN_HEIGHT } from "./ActionButton";
 import DirectionsIcon from "./icons/DirectionsIcon";
-
-const ACTION_BUTTON_MIN_HEIGHT = 48;
 
 type Props = {
   latitude: number;

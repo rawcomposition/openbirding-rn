@@ -2,7 +2,7 @@ import tw from "@/lib/tw";
 import React, { ReactNode, forwardRef } from "react";
 import { Text, TouchableOpacity, TouchableOpacityProps } from "react-native";
 
-const ACTION_BUTTON_MIN_HEIGHT = 48;
+export const ACTION_BUTTON_MIN_HEIGHT = 48;
 
 type ActionButtonProps = {
   icon: ReactNode;
