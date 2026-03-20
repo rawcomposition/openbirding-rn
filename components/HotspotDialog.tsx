@@ -1,11 +1,9 @@
-import { useDirections } from "@/hooks/useDirections";
 import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useRef, useState } from "react";
-import type { TouchableOpacity } from "react-native";
+import React, { useState } from "react";
 import { Alert, Linking, TouchableOpacity as RNTouchableOpacity, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
@@ -13,8 +11,8 @@ import ActionButtonRow from "./ActionButtonRow";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import HotspotNotesSheet from "./HotspotNotesSheet";
+import DirectionsMenuButton from "./DirectionsMenuButton";
 import HotspotTargets from "./HotspotTargets";
-import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
 
 type HotspotDialogProps = {
@@ -25,8 +23,6 @@ type HotspotDialogProps = {
 
 export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
-  const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { openDirections, showProviderPicker } = useDirections();
   const insets = useSafeAreaInsets();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
 
@@ -74,21 +70,6 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
     });
   };
 
-  const handleGetDirections = () => {
-    if (!hotspot) return;
-    openDirections({
-      coordinates: { latitude: hotspot.lat, longitude: hotspot.lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
-
-  const handleShowMapProviders = () => {
-    if (!hotspot) return;
-    showProviderPicker({
-      coordinates: { latitude: hotspot.lat, longitude: hotspot.lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
 
   const handleViewDetails = () => {
     if (!hotspot) return;
@@ -168,13 +149,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                     onPress={handleViewDetails}
                   />
 
-                  <ActionButton
-                    ref={directionsButtonRef}
-                    icon={<DirectionsIcon color={tw.color("orange-600/90")} size={20} />}
-                    label="Get Directions"
-                    onPress={handleGetDirections}
-                    onLongPress={handleShowMapProviders}
-                  />
+                  <DirectionsMenuButton latitude={hotspot.lat} longitude={hotspot.lng} />
                 </ActionButtonRow>
 
                 <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />

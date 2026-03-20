@@ -9,7 +9,6 @@ import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
-  findNodeHandle,
   Linking,
   Platform,
   ScrollView,
@@ -78,7 +77,7 @@ function ExclusionItem({
   const { showActionSheetWithOptions } = useActionSheet();
 
   const showMenu = () => {
-    const anchor = menuRef.current ? findNodeHandle(menuRef.current) : undefined;
+    const anchor = (menuRef.current as any)?.__nativeTag as number | undefined;
     showActionSheetWithOptions(
       {
         options: ["View in Merlin", "Remove from Exclusions", "Cancel"],

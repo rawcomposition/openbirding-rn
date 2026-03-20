@@ -4,14 +4,16 @@ import { getTargetsForHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useActionSheet } from "@expo/react-native-action-sheet";
+import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
+import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
+
 import { Ionicons } from "@expo/vector-icons";
+
 import { useQuery } from "@tanstack/react-query";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, Linking, Platform, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Linking, Pressable, Text, TouchableOpacity, View } from "react-native";
 import InfoModal from "./InfoModal";
 
 const INITIAL_LIMIT = 10;
@@ -34,10 +36,6 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
-  const menuRefs = useRef<Map<string, React.ComponentRef<typeof TouchableOpacity>>>(new Map());
-  const headerMenuRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { showActionSheetWithOptions } = useActionSheet();
-  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   useEffect(() => {
     setShowAll(false);
@@ -55,11 +53,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
     return data.targets.filter((t) => {
       if (t.percentage < 1) return false;
-      // If showing all species, skip life list filtering
       if (showAllSpecies) return true;
-      // If species is in exclusions, show it as a target (override life list)
       if (exclusionCodes?.has(t.speciesCode)) return true;
-      // Otherwise, filter out species on the life list
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
     });
   }, [data, lifelist, lifelistExclusions, showAllSpecies]);
@@ -72,84 +67,45 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
-  const handleActionSelection = (
-    buttonIndex: number | undefined,
-    speciesCode: string,
-    isExcluded: boolean,
-    isOnLifeList: boolean
-  ) => {
-    if (buttonIndex === 0) {
-      Linking.openURL(`merlinbirdid://species/${speciesCode}`).catch(() => {
-        Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-      });
-    } else if (buttonIndex === 1) {
-      const delta = 0.05;
-      const url = `https://ebird.org/map/${speciesCode}?gp=true&yr=all&env.minX=${(lng - delta).toFixed(3)}&env.minY=${(
-        lat - delta
-      ).toFixed(3)}&env.maxX=${(lng + delta).toFixed(3)}&env.maxY=${(lat + delta).toFixed(3)}`;
-      console.log(url);
-      Linking.openURL(url);
-    } else if (buttonIndex === 2) {
-      if (isExcluded) {
-        // Remove from exclusions
-        const current = lifelistExclusions || [];
-        setLifelistExclusions(current.filter((c) => c !== speciesCode));
-      } else if (isOnLifeList) {
-        // Remove from life list
-        setLifelist((lifelist || []).filter((e) => e.code !== speciesCode));
-      } else {
-        // Add to life list
-        const newEntry = {
-          code: speciesCode,
-          date: new Date().toISOString().split("T")[0],
-          location: "N/A",
-          checklistId: null,
-        };
-        setLifelist([...(lifelist || []), newEntry]);
-      }
-    }
-  };
-
-  const showActionSheet = (speciesCode: string) => {
-    const ref = menuRefs.current.get(speciesCode);
-    const anchor = ref ? findNodeHandle(ref) : undefined;
+  const handleLifeListAction = (speciesCode: string) => {
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
     const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
 
-    let lifeListOption = "Add to Life List";
-    if (isExcluded) lifeListOption = "Remove Exclusion";
-    else if (isOnLifeList) lifeListOption = "Remove from Life List";
-
-    const options = ["View in Merlin", "View eBird Map", lifeListOption, "Cancel"];
-
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 3,
-        destructiveButtonIndex: isExcluded || isOnLifeList ? 2 : undefined,
-        anchor: anchor ?? undefined,
-      },
-      (buttonIndex) => handleActionSelection(buttonIndex, speciesCode, isExcluded, isOnLifeList)
-    );
+    if (isExcluded) {
+      const current = lifelistExclusions || [];
+      setLifelistExclusions(current.filter((c) => c !== speciesCode));
+    } else if (isOnLifeList) {
+      setLifelist((lifelist || []).filter((e) => e.code !== speciesCode));
+    } else {
+      const newEntry = {
+        code: speciesCode,
+        date: new Date().toISOString().split("T")[0],
+        location: "N/A",
+        checklistId: null,
+      };
+      setLifelist([...(lifelist || []), newEntry]);
+    }
   };
 
-  const showHeaderMenu = () => {
-    const anchor = headerMenuRef.current ? findNodeHandle(headerMenuRef.current) : undefined;
-    const toggleLabel = showAllSpecies ? "Show Targets Only" : "Show All Species";
-    showActionSheetWithOptions(
-      {
-        options: [toggleLabel, "About This Data", "Cancel"],
-        cancelButtonIndex: 2,
-        anchor: anchor ?? undefined,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) {
-          setShowAllSpecies(!showAllSpecies);
-        } else if (buttonIndex === 1) {
-          setShowDataInfo(true);
-        }
-      }
-    );
+  const getLifeListLabel = (speciesCode: string) => {
+    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
+    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
+    if (isExcluded) return "Remove Exclusion";
+    if (isOnLifeList) return "Remove from Life List";
+    return "Add to Life List";
+  };
+
+  const getLifeListIcon = (speciesCode: string) => {
+    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
+    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
+    if (isExcluded || isOnLifeList) return "minus.circle";
+    return "plus.circle";
+  };
+
+  const isDestructiveLifeListAction = (speciesCode: string) => {
+    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
+    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
+    return isExcluded || isOnLifeList;
   };
 
   const renderEmptyState = () => {
@@ -199,32 +155,36 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           )}
         </View>
         {data?.version &&
-          parsePackVersion(data.version) &&
-          (useGlass ? (
-            <TouchableOpacity
-              ref={headerMenuRef}
-              onPress={showHeaderMenu}
-              activeOpacity={0.8}
-              style={tw`w-8 h-8 rounded-full items-center justify-center`}
-            >
-              <GlassView
-                style={tw`w-8 h-8 rounded-full items-center justify-center`}
-                glassEffectStyle="regular"
-                isInteractive
+          parsePackVersion(data.version) && (
+            <Host style={tw`w-8 h-8`}>
+              <Menu
+                label={
+                  <RNHostView matchContents>
+                    <View style={tw`w-8 h-8 items-center justify-center`}>
+                      <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
+                    </View>
+                  </RNHostView>
+                }
+                modifiers={[
+                  contentShape(shapes.circle()),
+                  glassEffect({ glass: { variant: "regular", interactive: true }, shape: "circle" }),
+                ]}
               >
-                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-700")} />
-              </GlassView>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              ref={headerMenuRef}
-              onPress={showHeaderMenu}
-              activeOpacity={0.8}
-              style={tw`w-8 h-8 rounded-full items-center justify-center bg-white shadow-lg`}
-            >
-              <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-700")} />
-            </TouchableOpacity>
-          ))}
+                <Section>
+                  <Button
+                    label={showAllSpecies ? "Show Targets Only" : "Show All Species"}
+                    systemImage={showAllSpecies ? "target" : "list.bullet"}
+                    onPress={() => setShowAllSpecies(!showAllSpecies)}
+                  />
+                  <Button
+                    label="About This Data"
+                    systemImage="info.circle"
+                    onPress={() => setShowDataInfo(true)}
+                  />
+                </Section>
+              </Menu>
+            </Host>
+          )}
       </View>
 
       {renderEmptyState()}
@@ -257,15 +217,46 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                           <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
                             {taxonomyMap.get(t.speciesCode) || "Unknown species"}
                           </Text>
-                          <TouchableOpacity
-                            ref={(ref) => {
-                              if (ref) menuRefs.current.set(t.speciesCode, ref);
-                            }}
-                            onPress={() => showActionSheet(t.speciesCode)}
-                            style={tw`px-1.5 py-2 ml-1 mt-px`}
-                          >
-                            <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
-                          </TouchableOpacity>
+                          <Host style={tw`ml-1`}>
+                            <Menu
+                              label={
+                                <RNHostView matchContents>
+                                  <View style={tw`px-1.5 py-2 mt-px`}>
+                                    <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
+                                  </View>
+                                </RNHostView>
+                              }
+                            >
+                              <Section>
+                                <Button
+                                  label="View in Merlin"
+                                  systemImage="bird"
+                                  onPress={() => {
+                                    Linking.openURL(`merlinbirdid://species/${t.speciesCode}`).catch(() => {
+                                      Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+                                    });
+                                  }}
+                                />
+                                <Button
+                                  label="View eBird Map"
+                                  systemImage="map"
+                                  onPress={() => {
+                                    const delta = 0.05;
+                                    const url = `https://ebird.org/map/${t.speciesCode}?gp=true&yr=all&env.minX=${(lng - delta).toFixed(3)}&env.minY=${(lat - delta).toFixed(3)}&env.maxX=${(lng + delta).toFixed(3)}&env.maxY=${(lat + delta).toFixed(3)}`;
+                                    Linking.openURL(url);
+                                  }}
+                                />
+                              </Section>
+                              <Section>
+                                <Button
+                                  label={getLifeListLabel(t.speciesCode)}
+                                  systemImage={getLifeListIcon(t.speciesCode)}
+                                  role={isDestructiveLifeListAction(t.speciesCode) ? "destructive" : undefined}
+                                  onPress={() => handleLifeListAction(t.speciesCode)}
+                                />
+                              </Section>
+                            </Menu>
+                          </Host>
                         </View>
 
                         <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>

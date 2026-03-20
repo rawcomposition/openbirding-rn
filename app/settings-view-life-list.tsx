@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, FlatList, Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Alert, FlatList, Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
 
 function formatDate(dateStr: string): string {
@@ -70,7 +70,7 @@ function LifeListItem({
   const { showActionSheetWithOptions } = useActionSheet();
 
   const showMenu = () => {
-    const anchor = menuRef.current ? findNodeHandle(menuRef.current) : undefined;
+    const anchor = (menuRef.current as any)?.__nativeTag as number | undefined;
     showActionSheetWithOptions(
       {
         options: ["View in Merlin", "Remove from Life List", "Cancel"],
