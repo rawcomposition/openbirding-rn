@@ -4,14 +4,22 @@ import { getMarkerColor } from "@/lib/utils";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { Alert, Linking, TouchableOpacity as RNTouchableOpacity, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  Linking,
+  TouchableOpacity as RNTouchableOpacity,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import ActionButtonRow from "./ActionButtonRow";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
-import HotspotNotesSheet from "./HotspotNotesSheet";
 import DirectionsMenuButton from "./DirectionsMenuButton";
+import HotspotNotesSheet from "./HotspotNotesSheet";
 import HotspotTargets from "./HotspotTargets";
 import InfoIcon from "./icons/InfoIcon";
 
@@ -24,7 +32,9 @@ type HotspotDialogProps = {
 export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const useStackedActionButtons = fontScale >= 1.25;
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -61,15 +71,6 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
       queryClient.invalidateQueries({ queryKey: ["savedHotspot", hotspotId] });
     },
   });
-
-  const handleOpenTargets = () => {
-    if (!hotspot) return;
-    const url = `https://ebird.org/targets?r1=${hotspot.id}&bmo=1&emo=12&r2=world&t2=life`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Error", "Could not open eBird link");
-    });
-  };
-
 
   const handleViewDetails = () => {
     if (!hotspot) return;
@@ -142,14 +143,19 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                   </RNTouchableOpacity>
                 )}
 
-                <ActionButtonRow>
+                <ActionButtonRow stacked={useStackedActionButtons}>
                   <ActionButton
                     icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
                     label="View on eBird"
+                    stacked={useStackedActionButtons}
                     onPress={handleViewDetails}
                   />
 
-                  <DirectionsMenuButton latitude={hotspot.lat} longitude={hotspot.lng} />
+                  <DirectionsMenuButton
+                    latitude={hotspot.lat}
+                    longitude={hotspot.lng}
+                    stacked={useStackedActionButtons}
+                  />
                 </ActionButtonRow>
 
                 <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
