@@ -13,8 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Linking, Pressable, Text, TouchableOpacity, View } from "react-native";
-import InfoModal from "./InfoModal";
+import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import BaseBottomSheet from "./BaseBottomSheet";
 
 const INITIAL_LIMIT = 10;
 
@@ -39,6 +39,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
   useEffect(() => {
     setShowAll(false);
+    setShowDataInfo(false);
   }, [hotspotId]);
 
   const { data, isLoading } = useQuery({
@@ -279,12 +280,16 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
       )}
 
       {data?.version && parsePackVersion(data.version) && (
-        <InfoModal
-          visible={showDataInfo}
+        <BaseBottomSheet
+          isOpen={showDataInfo}
           onClose={() => setShowDataInfo(false)}
           title="About This Data"
-          content={
-            <View>
+          detents={[0.45, 0.9]}
+          initialIndex={0}
+          scrollable
+        >
+          <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
+            <View style={tw`px-4 pt-2 pb-6`}>
               <Text style={tw`text-sm text-gray-700 mb-3`}>
                 Targets data is updated monthly from the eBird Basic Dataset.
               </Text>
@@ -308,8 +313,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                 );
               })()}
             </View>
-          }
-        />
+          </ScrollView>
+        </BaseBottomSheet>
       )}
     </View>
   );
