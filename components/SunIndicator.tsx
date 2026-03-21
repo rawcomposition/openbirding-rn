@@ -5,7 +5,7 @@ import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
 import { BlurView } from "expo-blur";
 import React, { useEffect, useMemo } from "react";
-import { Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
+import { PixelRatio, Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import BaseBottomSheet from "./BaseBottomSheet";
 import SunriseIcon from "./icons/SunriseIcon";
@@ -66,6 +66,8 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
   const formattedTime = nextEventTime ? dayjs(nextEventTime).format("h:mm A") : "";
 
   const IconComponent = nextEvent === "sunrise" ? SunriseIcon : SunsetIcon;
+  const fontScale = PixelRatio.getFontScale();
+  const scaledIconSize = Math.round(17 * fontScale);
 
   const baseStyle = tw`rounded-full overflow-hidden`;
 
@@ -145,13 +147,13 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
         <Pressable onPress={() => setIsDetailsOpen(true)} style={baseStyle}>
           <BlurView tint="light" intensity={10} style={tw`flex-row items-center px-3 py-2 gap-2`}>
             <View style={[tw`absolute inset-0 bg-white/70`]} />
-            <IconComponent size={17} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
+            <IconComponent size={scaledIconSize} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
             <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
           </BlurView>
         </Pressable>
       </Animated.View>
 
-      <BaseBottomSheet isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Daylight">
+      <BaseBottomSheet isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Daylight" dimmed>
         {sheetContent}
       </BaseBottomSheet>
     </>

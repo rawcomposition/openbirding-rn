@@ -562,7 +562,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           <Text style={tw`text-xs text-gray-600 font-bold`}>i</Text>
         </TouchableOpacity>
 
-        <BaseBottomSheet isOpen={showAttribution} onClose={() => setShowAttribution(false)} title="Map Attribution">
+        <BaseBottomSheet isOpen={showAttribution} onClose={() => setShowAttribution(false)} title="Map Attribution" dimmed>
           <View style={tw`px-4 pt-2`}>
             <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
             <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>

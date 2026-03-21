@@ -284,6 +284,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           isOpen={showDataInfo}
           onClose={() => setShowDataInfo(false)}
           title="About This Data"
+          dimmed
           detents={[0.45, 0.9]}
           initialIndex={0}
           scrollable

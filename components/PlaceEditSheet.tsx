@@ -134,7 +134,7 @@ export default function PlaceEditSheet({
   };
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent}>
+    <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent} dimmed>
       <View style={tw`px-4 py-6`}>
         <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>

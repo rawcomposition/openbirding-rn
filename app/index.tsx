@@ -47,7 +47,6 @@ export default function HomeScreen() {
     if (hotspotId) setHotspotId(null);
     if (placeId) setPlaceId(null);
     if (customPinCoordinates) setCustomPinCoordinates(null);
-    if (isSunDetailsOpen) setIsSunDetailsOpen(false);
     if (isMapAttributionOpen) setIsMapAttributionOpen(false);
   };
 
