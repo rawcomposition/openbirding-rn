@@ -49,8 +49,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
     !isLoading &&
     !isTooFarFromUser &&
     !isZoomedTooFarOut &&
-    !isBottomSheetExpanded &&
-    !isDetailsOpen
+    !isBottomSheetExpanded
   );
 
   const opacity = useSharedValue(shouldShow ? 1 : 0);
@@ -88,10 +87,10 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
   }, [sunrise, sunset]);
 
   const sheetContent = (
-    <View style={tw`px-5 pt-1 pb-2`}>
+    <View style={tw`px-5 pt-1`}>
       {/* Countdown hero */}
-      <View style={tw`items-center mb-5`}>
-        <View style={tw`bg-amber-50 rounded-2xl px-5 py-4 items-center w-full`}>
+      <View style={tw`items-center mb-4`}>
+        <View style={tw`px-5 py-2 items-center w-full`}>
           <View style={tw`mb-2`}>
             {nextEvent === "sunrise" ? (
               <SunriseIcon size={32} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
@@ -107,7 +106,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
       </View>
 
       {/* Daylight progress bar */}
-      <View style={tw`mb-5`}>
+      <View style={tw`mb-3`}>
         <View style={tw`flex-row justify-between mb-2`}>
           <View style={tw`flex-row items-center gap-1.5`}>
             <SunriseIcon size={16} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
@@ -134,7 +133,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
           />
         </View>
         {totalDaylight && (
-          <Text style={tw`text-xs text-gray-400 text-center mt-2`}>{totalDaylight} of daylight</Text>
+          <Text style={tw`text-xs text-gray-500 text-center mt-2`}>{totalDaylight} of daylight</Text>
         )}
       </View>
     </View>
@@ -152,7 +151,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
         </Pressable>
       </Animated.View>
 
-      <BaseBottomSheet isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Daylight Times">
+      <BaseBottomSheet isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Daylight">
         {sheetContent}
       </BaseBottomSheet>
     </>
