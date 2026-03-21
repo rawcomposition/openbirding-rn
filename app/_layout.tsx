@@ -41,7 +41,14 @@ export default function RootLayout() {
 
     initDatabase();
     ensureTaxonomyLoaded();
-    useLocationPermissionStore.getState().requestPermission();
+
+    const permissionTimeout = setTimeout(() => {
+      void useLocationPermissionStore.getState().requestPermission();
+    }, 300);
+
+    return () => {
+      clearTimeout(permissionTimeout);
+    };
   }, []);
 
   useManagedSplashScreen(loaded && (dbInitialized || dbError !== null), 500);
