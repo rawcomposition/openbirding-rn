@@ -563,7 +563,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         </TouchableOpacity>
 
         <BaseBottomSheet isOpen={showAttribution} onClose={() => setShowAttribution(false)} title="Map Attribution" dimmed>
-          <View style={tw`px-4 pt-2`}>
+          <View style={tw`px-6 pt-2`}>
             <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
             <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>
             <TouchableOpacity onPress={() => Linking.openURL("https://www.openstreetmap.org/edit")} style={tw`mb-2`}>

@@ -290,7 +290,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           scrollable
         >
           <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
-            <View style={tw`px-4 pt-2 pb-6`}>
+            <View style={tw`px-6 pt-2 pb-6`}>
               <Text style={tw`text-sm text-gray-700 mb-3`}>
                 Targets data is updated monthly from the eBird Basic Dataset.
               </Text>
@@ -300,16 +300,21 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
               </Text>
               {(() => {
                 const photoCredits = displayedTargets
-                  .map((t) => avicommons[t.speciesCode as keyof typeof avicommons]?.[1])
-                  .filter((author): author is string => !!author);
-                const uniqueAuthors = [...new Set(photoCredits)];
-                if (uniqueAuthors.length === 0) return null;
+                  .map((t) => {
+                    const author = avicommons[t.speciesCode as keyof typeof avicommons]?.[1];
+                    if (!author) return null;
+                    return { name: taxonomyMap.get(t.speciesCode) || t.speciesCode, author };
+                  })
+                  .filter((c): c is { name: string; author: string } => !!c);
+                if (photoCredits.length === 0) return null;
                 return (
                   <View style={tw`mt-4 pt-4 border-t border-gray-200`}>
-                    <Text style={tw`text-sm font-medium text-gray-700 mb-2`}>
-                      Photo Credits (in order of appearance)
-                    </Text>
-                    <Text style={tw`text-sm text-gray-600`}>{uniqueAuthors.join(", ")}</Text>
+                    <Text style={tw`text-sm font-medium text-gray-700 mb-2`}>Photo Credits</Text>
+                    {photoCredits.map((c, i) => (
+                      <Text key={i} style={tw`text-sm text-gray-600 mb-1`}>
+                        {c.name} — {c.author}
+                      </Text>
+                    ))}
                   </View>
                 );
               })()}
