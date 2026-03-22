@@ -4,12 +4,11 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.6.1",
+    version: "1.6.2",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true,
     ios: {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
@@ -57,8 +56,10 @@ module.exports = ({ config }) => ({
       ],
       "expo-sqlite",
       "expo-web-browser",
+      "expo-font",
+      "expo-image",
     ],
-    experiments: { typedRoutes: true },
+    experiments: { typedRoutes: true, reactCompiler: true },
     extra: {
       router: {},
       eas: { projectId: "2944a151-98b6-4d2a-9104-65facf9def35" },

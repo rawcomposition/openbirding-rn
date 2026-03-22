@@ -1,5 +1,4 @@
 import tw from "@/lib/tw";
-import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -12,6 +11,7 @@ import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { useManagedSplashScreen } from "@/hooks/useManagedSplashScreen";
 import { initializeDatabase } from "@/lib/database";
 import { queryClient } from "@/lib/queryClient";
 import { ensureTaxonomyLoaded } from "@/lib/taxonomy";
@@ -41,8 +41,17 @@ export default function RootLayout() {
 
     initDatabase();
     ensureTaxonomyLoaded();
-    useLocationPermissionStore.getState().requestPermission();
+
+    const permissionTimeout = setTimeout(() => {
+      void useLocationPermissionStore.getState().requestPermission();
+    }, 300);
+
+    return () => {
+      clearTimeout(permissionTimeout);
+    };
   }, []);
+
+  useManagedSplashScreen(loaded && (dbInitialized || dbError !== null), 500);
 
   if (!loaded) {
     return null;
@@ -64,100 +73,98 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ActionSheetProvider>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
-                <Stack.Screen
-                  name="packs"
-                  options={{
-                    title: "Hotspot Packs",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings"
-                  options={{
-                    title: "Settings",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings-map-provider"
-                  options={{
-                    title: "Directions Provider",
-                    headerBackButtonDisplayMode: "minimal",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings-import-life-list"
-                  options={{
-                    title: "Import Life List",
-                    headerBackButtonDisplayMode: "minimal",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings-view-life-list"
-                  options={{
-                    title: "Life List",
-                    headerBackButtonDisplayMode: "minimal",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings-life-list-exclusions"
-                  options={{
-                    title: "Exclusions",
-                    headerBackButtonDisplayMode: "minimal",
-                    headerStyle: { backgroundColor: "#f9fafb" },
-                    headerShadowVisible: false,
-                  }}
-                />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <Toast
-                config={{
-                  success: ({ text1 }) => (
-                    <View style={toastStyles}>
-                      <View style={tw`mr-1.5`}>
-                        <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-                      </View>
-                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                    </View>
-                  ),
-                  error: ({ text1 }) => (
-                    <View style={toastStyles}>
-                      <View style={tw`mr-1.5`}>
-                        <Ionicons name="alert-circle" size={20} color="#DC2626" />
-                      </View>
-                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                    </View>
-                  ),
-                  info: ({ text1 }) => (
-                    <View style={toastStyles}>
-                      <View style={tw`mr-1.5`}>
-                        <Ionicons name="information-circle" size={20} color="#2563EB" />
-                      </View>
-                      <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
-                    </View>
-                  ),
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
+              <Stack.Screen
+                name="packs"
+                options={{
+                  title: "Hotspot Packs",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
                 }}
-                position="top"
-                topOffset={65}
               />
-              <DownloadOverlay />
-              <StatusBar style="auto" />
-            </ThemeProvider>
-          </QueryClientProvider>
-        </ActionSheetProvider>
+              <Stack.Screen
+                name="settings"
+                options={{
+                  title: "Settings",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings-map-provider"
+                options={{
+                  title: "Directions Provider",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings-import-life-list"
+                options={{
+                  title: "Import Life List",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings-view-life-list"
+                options={{
+                  title: "Life List",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings-life-list-exclusions"
+                options={{
+                  title: "Exclusions",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <Toast
+              config={{
+                success: ({ text1 }) => (
+                  <View style={toastStyles}>
+                    <View style={tw`mr-1.5`}>
+                      <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                    </View>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                  </View>
+                ),
+                error: ({ text1 }) => (
+                  <View style={toastStyles}>
+                    <View style={tw`mr-1.5`}>
+                      <Ionicons name="alert-circle" size={20} color="#DC2626" />
+                    </View>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                  </View>
+                ),
+                info: ({ text1 }) => (
+                  <View style={toastStyles}>
+                    <View style={tw`mr-1.5`}>
+                      <Ionicons name="information-circle" size={20} color="#2563EB" />
+                    </View>
+                    <Text style={tw`text-gray-800 font-medium text-base`}>{text1}</Text>
+                  </View>
+                ),
+              }}
+              position="top"
+              topOffset={65}
+            />
+            <DownloadOverlay />
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

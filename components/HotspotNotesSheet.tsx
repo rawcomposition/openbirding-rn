@@ -64,7 +64,7 @@ export default function HotspotNotesSheet({ isOpen, hotspotId, initialNotes, onC
   };
 
   return (
-    <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent}>
+    <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent} dimmed>
       <View style={tw`px-4 py-6`}>
         <Input
           placeholder="Add a private note..."

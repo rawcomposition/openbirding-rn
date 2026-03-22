@@ -19,6 +19,10 @@ type MapStore = {
   setIsZoomedTooFarOut: (zoomed: boolean) => void;
   isBottomSheetExpanded: boolean;
   setIsBottomSheetExpanded: (expanded: boolean) => void;
+  isSunDetailsOpen: boolean;
+  setIsSunDetailsOpen: (isOpen: boolean) => void;
+  isMapAttributionOpen: boolean;
+  setIsMapAttributionOpen: (isOpen: boolean) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -38,4 +42,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsZoomedTooFarOut: (zoomed) => set({ isZoomedTooFarOut: zoomed }),
   isBottomSheetExpanded: false,
   setIsBottomSheetExpanded: (expanded) => set({ isBottomSheetExpanded: expanded }),
+  isSunDetailsOpen: false,
+  setIsSunDetailsOpen: (isOpen) => set({ isSunDetailsOpen: isOpen }),
+  isMapAttributionOpen: false,
+  setIsMapAttributionOpen: (isOpen) => set({ isMapAttributionOpen: isOpen }),
 }));

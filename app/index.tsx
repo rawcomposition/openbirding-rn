@@ -34,6 +34,10 @@ export default function HomeScreen() {
     setCustomPinCoordinates,
     isHotspotListOpen,
     setIsHotspotListOpen,
+    isSunDetailsOpen,
+    setIsSunDetailsOpen,
+    isMapAttributionOpen,
+    setIsMapAttributionOpen,
   } = useMapStore();
   const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
   const { hasUpdates } = usePackUpdates();
@@ -43,6 +47,7 @@ export default function HomeScreen() {
     if (hotspotId) setHotspotId(null);
     if (placeId) setPlaceId(null);
     if (customPinCoordinates) setCustomPinCoordinates(null);
+    if (isMapAttributionOpen) setIsMapAttributionOpen(false);
   };
 
   const handleHotspotSelect = (id: string) => {
@@ -133,9 +138,7 @@ export default function HomeScreen() {
             <PacksNotice variant="banner" />
           </View>
         ) : (
-          <SunIndicator
-            style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]}
-          />
+          <SunIndicator style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]} />
         )}
         <View
           style={[

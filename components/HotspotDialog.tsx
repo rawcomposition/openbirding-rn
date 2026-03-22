@@ -1,20 +1,26 @@
-import { useDirections } from "@/hooks/useDirections";
 import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useRef, useState } from "react";
-import type { TouchableOpacity } from "react-native";
-import { Alert, Linking, TouchableOpacity as RNTouchableOpacity, ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  Linking,
+  TouchableOpacity as RNTouchableOpacity,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import ActionButtonRow from "./ActionButtonRow";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
+import DirectionsMenuButton from "./DirectionsMenuButton";
 import HotspotNotesSheet from "./HotspotNotesSheet";
 import HotspotTargets from "./HotspotTargets";
-import DirectionsIcon from "./icons/DirectionsIcon";
 import InfoIcon from "./icons/InfoIcon";
 
 type HotspotDialogProps = {
@@ -25,10 +31,10 @@ type HotspotDialogProps = {
 
 export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
-  const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { openDirections, showProviderPicker } = useDirections();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const useStackedActionButtons = fontScale >= 1.25;
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -65,30 +71,6 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
       queryClient.invalidateQueries({ queryKey: ["savedHotspot", hotspotId] });
     },
   });
-
-  const handleOpenTargets = () => {
-    if (!hotspot) return;
-    const url = `https://ebird.org/targets?r1=${hotspot.id}&bmo=1&emo=12&r2=world&t2=life`;
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Error", "Could not open eBird link");
-    });
-  };
-
-  const handleGetDirections = () => {
-    if (!hotspot) return;
-    openDirections({
-      coordinates: { latitude: hotspot.lat, longitude: hotspot.lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
-
-  const handleShowMapProviders = () => {
-    if (!hotspot) return;
-    showProviderPicker({
-      coordinates: { latitude: hotspot.lat, longitude: hotspot.lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
 
   const handleViewDetails = () => {
     if (!hotspot) return;
@@ -161,19 +143,18 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                   </RNTouchableOpacity>
                 )}
 
-                <ActionButtonRow>
+                <ActionButtonRow stacked={useStackedActionButtons}>
                   <ActionButton
                     icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
                     label="View on eBird"
+                    stacked={useStackedActionButtons}
                     onPress={handleViewDetails}
                   />
 
-                  <ActionButton
-                    ref={directionsButtonRef}
-                    icon={<DirectionsIcon color={tw.color("orange-600/90")} size={20} />}
-                    label="Get Directions"
-                    onPress={handleGetDirections}
-                    onLongPress={handleShowMapProviders}
+                  <DirectionsMenuButton
+                    latitude={hotspot.lat}
+                    longitude={hotspot.lng}
+                    stacked={useStackedActionButtons}
                   />
                 </ActionButtonRow>
 

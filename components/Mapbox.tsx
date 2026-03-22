@@ -21,7 +21,7 @@ import throttle from "lodash/throttle";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import InfoModal from "./InfoModal";
+import BaseBottomSheet from "./BaseBottomSheet";
 
 const starImage = require("@/assets/images/star.png");
 const starLightImage = require("@/assets/images/star-light.png");
@@ -107,6 +107,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const setMapCenter = useMapStore((state) => state.setMapCenter);
     const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
     const setIsZoomedTooFarOut = useMapStore((state) => state.setIsZoomedTooFarOut);
+    const showAttribution = useMapStore((state) => state.isMapAttributionOpen);
+    const setShowAttribution = useMapStore((state) => state.setIsMapAttributionOpen);
     const { status: permissionStatus } = useLocationPermissionStore();
     const { showSavedOnly } = useFiltersStore();
 
@@ -117,7 +119,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const userCoordRef = useRef<[number, number] | null>(null);
 
     const [isMapReady, setIsMapReady] = useState(false);
-    const [showAttribution, setShowAttribution] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
 
     const mapStyle = useMemo(() => {
@@ -561,20 +562,15 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           <Text style={tw`text-xs text-gray-600 font-bold`}>i</Text>
         </TouchableOpacity>
 
-        <InfoModal
-          visible={showAttribution}
-          onClose={() => setShowAttribution(false)}
-          title="Map Attribution"
-          content={
-            <View>
-              <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
-              <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>
-              <TouchableOpacity onPress={() => Linking.openURL("https://www.openstreetmap.org/edit")} style={tw`mb-2`}>
-                <Text style={tw`text-sm text-blue-500 underline`}>Improve this map</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
+        <BaseBottomSheet isOpen={showAttribution} onClose={() => setShowAttribution(false)} title="Map Attribution" dimmed>
+          <View style={tw`px-6 pt-2`}>
+            <Text style={tw`text-sm text-gray-700 mb-2`}>© OpenStreetMap contributors</Text>
+            <Text style={tw`text-sm text-gray-700 mb-2`}>© Mapbox</Text>
+            <TouchableOpacity onPress={() => Linking.openURL("https://www.openstreetmap.org/edit")} style={tw`mb-2`}>
+              <Text style={tw`text-sm text-blue-500 underline`}>Improve this map</Text>
+            </TouchableOpacity>
+          </View>
+        </BaseBottomSheet>
       </View>
     );
   }

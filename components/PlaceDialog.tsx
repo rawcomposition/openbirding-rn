@@ -1,15 +1,12 @@
-import { useDirections } from "@/hooks/useDirections";
 import { getSavedPlaceById } from "@/lib/database";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useRef, useState } from "react";
-import type { TouchableOpacity } from "react-native";
+import React, { useState } from "react";
 import { Text, View } from "react-native";
-import ActionButton from "./ActionButton";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
-import DirectionsIcon from "./icons/DirectionsIcon";
+import DirectionsMenuButton from "./DirectionsMenuButton";
 import PlaceEditSheet from "./PlaceEditSheet";
 
 type Props = {
@@ -22,8 +19,6 @@ type Props = {
 
 export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: droppedLng, onClose }: Props) {
   const queryClient = useQueryClient();
-  const directionsButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { openDirections, showProviderPicker } = useDirections();
   const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -40,22 +35,6 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
       : null;
   const lat = savedPlace?.lat;
   const lng = savedPlace?.lng;
-
-  const handleGetDirections = () => {
-    if (!lat || !lng) return;
-    openDirections({
-      coordinates: { latitude: lat, longitude: lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
-
-  const handleShowProviders = () => {
-    if (!lat || !lng) return;
-    showProviderPicker({
-      coordinates: { latitude: lat, longitude: lng },
-      anchorRef: directionsButtonRef,
-    });
-  };
 
   const handleSavePress = () => {
     setIsEditOpen(true);
@@ -116,14 +95,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
             </View>
           )}
           {!!lat && !!lng && (
-            <ActionButton
-              ref={directionsButtonRef}
-              icon={<DirectionsIcon color={tw.color("orange-600")} size={20} />}
-              label="Get Directions"
-              onPress={handleGetDirections}
-              onLongPress={handleShowProviders}
-              style={tw`flex-none`}
-            />
+            <DirectionsMenuButton latitude={lat} longitude={lng} />
           )}
         </View>
       </BaseBottomSheet>

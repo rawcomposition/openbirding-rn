@@ -1,3 +1,5 @@
+// Requires `sharp` installed locally (npm install --no-save sharp). It's not in
+// package.json because it fails to compile on EAS build servers.
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";

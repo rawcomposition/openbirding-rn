@@ -1,14 +1,14 @@
+import SearchInput from "@/components/SearchInput";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { LifeListEntry, useSettingsStore } from "@/stores/settingsStore";
-import { useActionSheet } from "@expo/react-native-action-sheet";
-import SearchInput from "@/components/SearchInput";
+import { Button, Host, Menu, RNHostView, Section } from "@expo/ui/swift-ui";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, findNodeHandle, FlatList, Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, FlatList, Linking, Platform, Text, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
 
 function formatDate(dateStr: string): string {
@@ -66,29 +66,6 @@ function LifeListItem({
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
-  const menuRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  const { showActionSheetWithOptions } = useActionSheet();
-
-  const showMenu = () => {
-    const anchor = menuRef.current ? findNodeHandle(menuRef.current) : undefined;
-    showActionSheetWithOptions(
-      {
-        options: ["View in Merlin", "Remove from Life List", "Cancel"],
-        destructiveButtonIndex: 1,
-        cancelButtonIndex: 2,
-        anchor: anchor ?? undefined,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) {
-          Linking.openURL(`merlinbirdid://species/${item.code}`).catch(() => {
-            Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-          });
-        } else if (buttonIndex === 1) {
-          onRemove();
-        }
-      }
-    );
-  };
 
   return (
     <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
@@ -103,9 +80,32 @@ function LifeListItem({
         </View>
         <Text style={tw`text-gray-500 text-sm mt-0.5`}>{formatDate(item.date)}</Text>
       </View>
-      <TouchableOpacity ref={menuRef} onPress={showMenu} style={tw`p-2 -mr-2`}>
-        <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
-      </TouchableOpacity>
+      <Host style={tw`p-2 -mr-2`}>
+        <Menu
+          label={
+            <RNHostView matchContents>
+              <View style={tw`w-8 h-8 items-center justify-center`}>
+                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
+              </View>
+            </RNHostView>
+          }
+        >
+          <Section>
+            <Button
+              label="View in Merlin"
+              systemImage="arrow.up.forward.app"
+              onPress={() => {
+                Linking.openURL(`merlinbirdid://species/${item.code}`).catch(() => {
+                  Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+                });
+              }}
+            />
+          </Section>
+          <Section>
+            <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
+          </Section>
+        </Menu>
+      </Host>
     </View>
   );
 }
@@ -155,9 +155,7 @@ export default function ViewLifeListPage() {
 
   const handleRemove = (item: LifeListEntry) => {
     if (!lifelist) return;
-    const updated = lifelist.filter(
-      (entry) => !(entry.code === item.code && entry.checklistId === item.checklistId)
-    );
+    const updated = lifelist.filter((entry) => !(entry.code === item.code && entry.checklistId === item.checklistId));
     setLifelist(updated);
     const speciesName = taxonomyMap.get(item.code) ?? item.code;
     Toast.show({ type: "success", text1: `Removed ${speciesName}` });
