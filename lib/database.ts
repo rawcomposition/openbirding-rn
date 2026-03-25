@@ -613,7 +613,7 @@ export async function getPinnedTargets(hotspotId: string): Promise<string[]> {
 export async function pinTarget(hotspotId: string, speciesCode: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
   await db.runAsync(
-    `INSERT OR IGNORE INTO pinned_targets (hotspot_id, code, pinned_at) VALUES (?, ?, ?)`,
+    `INSERT OR REPLACE INTO pinned_targets (hotspot_id, code, pinned_at) VALUES (?, ?, ?)`,
     [hotspotId, speciesCode, new Date().toISOString()]
   );
 }

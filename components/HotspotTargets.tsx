@@ -109,6 +109,28 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     }
   };
 
+  const handlePinAction = async (speciesCode: string, isPinned: boolean) => {
+    const previousPinnedTargets = pinnedTargets;
+    const nextPinnedTargets = isPinned
+      ? previousPinnedTargets.filter((code) => code !== speciesCode)
+      : [...previousPinnedTargets, speciesCode];
+
+    queryClient.setQueryData<string[]>(["pinnedTargets", hotspotId], nextPinnedTargets);
+
+    try {
+      if (isPinned) {
+        await unpinTarget(hotspotId, speciesCode);
+      } else {
+        await pinTarget(hotspotId, speciesCode);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["pinnedTargets", hotspotId] });
+    } catch {
+      queryClient.setQueryData<string[]>(["pinnedTargets", hotspotId], previousPinnedTargets);
+      Alert.alert("Couldn't Update Pin", "Try again.");
+    }
+  };
+
   const getLifeListMenuProps = (speciesCode: string) => {
     const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
     const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
@@ -205,7 +227,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
               const isPinned = pinnedTargets.includes(t.speciesCode);
               const prevIsPinned = idx > 0 && pinnedTargets.includes(displayedTargets[idx - 1].speciesCode);
               const showPinnedHeader = isPinned && idx === 0;
-              const showOtherHeader = !isPinned && (idx === 0 || prevIsPinned);
+              const showOtherHeader = pinnedFilteredTargets.length > 0 && !isPinned && (idx === 0 || prevIsPinned);
               return (
               <View key={t.speciesCode}>
                 {showPinnedHeader && (
@@ -276,13 +298,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                                 <Button
                                   label={isPinned ? "Unpin Target" : "Pin Target"}
                                   systemImage={isPinned ? "pin.slash" : "pin"}
-                                  onPress={async () => {
-                                    if (isPinned) {
-                                      await unpinTarget(hotspotId, t.speciesCode);
-                                    } else {
-                                      await pinTarget(hotspotId, t.speciesCode);
-                                    }
-                                    queryClient.invalidateQueries({ queryKey: ["pinnedTargets", hotspotId] });
+                                  onPress={() => {
+                                    void handlePinAction(t.speciesCode, isPinned);
                                   }}
                                 />
                               </Section>
