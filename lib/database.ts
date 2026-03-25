@@ -78,6 +78,15 @@ async function createTables(): Promise<void> {
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS pinned_targets (
+      hotspot_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      pinned_at TEXT NOT NULL,
+      PRIMARY KEY (hotspot_id, code)
+    );
+  `);
 }
 
 async function createIndexes(): Promise<void> {
@@ -590,4 +599,26 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
     .sort((a, b) => b.percentage - a.percentage);
 
   return { samples: totalSamples, targets, version: row.version };
+}
+
+export async function getPinnedTargets(hotspotId: string): Promise<string[]> {
+  if (!db) throw new Error("Database not initialized");
+  const rows = await db.getAllAsync<{ code: string }>(
+    `SELECT code FROM pinned_targets WHERE hotspot_id = ? ORDER BY pinned_at`,
+    [hotspotId]
+  );
+  return rows.map((r) => r.code);
+}
+
+export async function pinTarget(hotspotId: string, speciesCode: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+  await db.runAsync(
+    `INSERT OR IGNORE INTO pinned_targets (hotspot_id, code, pinned_at) VALUES (?, ?, ?)`,
+    [hotspotId, speciesCode, new Date().toISOString()]
+  );
+}
+
+export async function unpinTarget(hotspotId: string, speciesCode: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+  await db.runAsync(`DELETE FROM pinned_targets WHERE hotspot_id = ? AND code = ?`, [hotspotId, speciesCode]);
 }

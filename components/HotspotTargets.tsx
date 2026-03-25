@@ -1,6 +1,6 @@
 import avicommons from "@/avicommons";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
-import { getTargetsForHotspot } from "@/lib/database";
+import { getTargetsForHotspot, getPinnedTargets, pinTarget, unpinTarget } from "@/lib/database";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -9,10 +9,10 @@ import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
 
@@ -42,23 +42,39 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     setShowDataInfo(false);
   }, [hotspotId]);
 
+  const queryClient = useQueryClient();
+
   const { data, isLoading } = useQuery({
     queryKey: ["hotspotTargets", hotspotId],
     queryFn: () => getTargetsForHotspot(hotspotId),
     enabled: !!hotspotId && !hasNoLifeList,
   });
 
-  const filteredTargets = useMemo(() => {
+  const { data: pinnedTargets = [] } = useQuery({
+    queryKey: ["pinnedTargets", hotspotId],
+    queryFn: () => getPinnedTargets(hotspotId),
+    enabled: !!hotspotId,
+  });
+
+  const filteredTargets = (() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
     const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
-    return data.targets.filter((t) => {
+    const pinnedSet = new Set(pinnedTargets);
+    const filtered = data.targets.filter((t) => {
       if (t.percentage < 1) return false;
       if (showAllSpecies) return true;
       if (exclusionCodes?.has(t.speciesCode)) return true;
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
     });
-  }, [data, lifelist, lifelistExclusions, showAllSpecies]);
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedSet.has(a.speciesCode);
+      const bPinned = pinnedSet.has(b.speciesCode);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+  })();
 
   if (isLoading) return null;
 
@@ -180,24 +196,42 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
       {filteredTargets.length > 0 && !hasNoLifeList && (
         <>
           <View style={tw`mt-3 -mx-4`}>
-            {displayedTargets.map((t, idx) => (
+            {displayedTargets.map((t, idx) => {
+              const isPinned = pinnedTargets.includes(t.speciesCode);
+              const prevIsPinned = idx > 0 && pinnedTargets.includes(displayedTargets[idx - 1].speciesCode);
+              const showPinnedHeader = isPinned && idx === 0;
+              const showOtherHeader = !isPinned && (idx === 0 || prevIsPinned);
+              return (
               <View key={t.speciesCode}>
-                {idx > 0 && <View style={tw`h-px bg-gray-100`} />}
+                {showPinnedHeader && (
+                  <Text style={tw`px-5 pt-2 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Pinned</Text>
+                )}
+                {showOtherHeader && (
+                  <Text style={tw`px-5 pt-3 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Other Targets</Text>
+                )}
+                {idx > 0 && !showOtherHeader && <View style={tw`h-px bg-gray-100`} />}
 
                 <View style={tw`px-5 py-3`}>
                   <View style={tw`flex-row items-center`}>
-                    {avicommons[t.speciesCode as keyof typeof avicommons] ? (
-                      <Image
-                        source={{
-                          uri: `https://static.avicommons.org/${t.speciesCode}-${
-                            avicommons[t.speciesCode as keyof typeof avicommons][0]
-                          }-160.webp`,
-                        }}
-                        style={tw`w-20 h-15 rounded mr-3 bg-gray-200`}
-                      />
-                    ) : (
-                      <View style={tw`w-20 h-15 rounded mr-3 bg-gray-200`} />
-                    )}
+                    <View style={tw`w-20 h-15 mr-3`}>
+                      {avicommons[t.speciesCode as keyof typeof avicommons] ? (
+                        <Image
+                          source={{
+                            uri: `https://static.avicommons.org/${t.speciesCode}-${
+                              avicommons[t.speciesCode as keyof typeof avicommons][0]
+                            }-160.webp`,
+                          }}
+                          style={tw`w-20 h-15 rounded bg-gray-200`}
+                        />
+                      ) : (
+                        <View style={tw`w-20 h-15 rounded bg-gray-200`} />
+                      )}
+                      {isPinned && (
+                        <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
+                          <Ionicons name="pin" size={10} color="white" />
+                        </View>
+                      )}
+                    </View>
 
                     <View style={tw`flex-1`}>
                       <View style={tw`flex-row items-center justify-between`}>
@@ -234,6 +268,18 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                                     Linking.openURL(url);
                                   }}
                                 />
+                                <Button
+                                  label={isPinned ? "Unpin Target" : "Pin Target"}
+                                  systemImage={isPinned ? "pin.slash" : "pin"}
+                                  onPress={async () => {
+                                    if (isPinned) {
+                                      await unpinTarget(hotspotId, t.speciesCode);
+                                    } else {
+                                      await pinTarget(hotspotId, t.speciesCode);
+                                    }
+                                    queryClient.invalidateQueries({ queryKey: ["pinnedTargets", hotspotId] });
+                                  }}
+                                />
                               </Section>
                               <Section>
                                 {(() => {
@@ -266,7 +312,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                   </View>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
 
           {hasMore && (
