@@ -26,7 +26,7 @@ import BaseBottomSheet from "./BaseBottomSheet";
 const starImage = require("@/assets/images/star.png");
 const starLightImage = require("@/assets/images/star-light.png");
 
-const hotspotImages = {
+const markerImages = {
   "hotspot-0": require("@/assets/markers/hotspot-0.png"),
   "hotspot-1": require("@/assets/markers/hotspot-1.png"),
   "hotspot-2": require("@/assets/markers/hotspot-2.png"),
@@ -47,7 +47,28 @@ const hotspotImages = {
   "saved-hotspot-7": require("@/assets/markers/saved-hotspot-7.png"),
   "saved-hotspot-8": require("@/assets/markers/saved-hotspot-8.png"),
   "saved-hotspot-9": require("@/assets/markers/saved-hotspot-9.png"),
-  "place-star": require("@/assets/markers/place-star.png"),
+  "place-hike": require("@/assets/markers/place-hike.png"),
+  "place-mountain": require("@/assets/markers/place-mountain.png"),
+  "place-tent": require("@/assets/markers/place-tent.png"),
+  "place-house": require("@/assets/markers/place-house.png"),
+  "place-airbnb": require("@/assets/markers/place-airbnb.png"),
+  "place-bed": require("@/assets/markers/place-bed.png"),
+  "place-bins": require("@/assets/markers/place-bins.png"),
+  "place-camera": require("@/assets/markers/place-camera.png"),
+  "place-airport": require("@/assets/markers/place-airport.png"),
+  "place-boat": require("@/assets/markers/place-boat.png"),
+  "place-car": require("@/assets/markers/place-car.png"),
+  "place-bus": require("@/assets/markers/place-bus.png"),
+  "place-utensils": require("@/assets/markers/place-utensils.png"),
+  "place-mug": require("@/assets/markers/place-mug.png"),
+  "place-trolley": require("@/assets/markers/place-trolley.png"),
+  "place-bike": require("@/assets/markers/place-bike.png"),
+  "place-dog": require("@/assets/markers/place-dog.png"),
+  "place-fuel": require("@/assets/markers/place-fuel.png"),
+  "place-parking": require("@/assets/markers/place-parking.png"),
+  "place-building": require("@/assets/markers/place-building.png"),
+  "place-hotspot": require("@/assets/markers/place-hotspot.png"),
+  "place-star": require("@/assets/markers/place-star.png"), // backwards compat for old saved places
 };
 
 type Bounds = { west: number; south: number; east: number; north: number };
@@ -334,7 +355,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             animationDuration={0}
           />
 
-          <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...hotspotImages }} />
+          <Mapbox.Images images={{ star: starImage, "star-light": starLightImage, ...markerImages }} />
 
           {isMapReady && permissionStatus === "granted" && (
             <>

@@ -78,8 +78,13 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
 
   if (isLoading) return null;
 
-  const displayedTargets = showAll ? filteredTargets : filteredTargets.slice(0, INITIAL_LIMIT);
-  const hasMore = filteredTargets.length > INITIAL_LIMIT;
+  const pinnedSet = new Set(pinnedTargets);
+  const pinnedFilteredTargets = filteredTargets.filter((t) => pinnedSet.has(t.speciesCode));
+  const unpinnedFilteredTargets = filteredTargets.filter((t) => !pinnedSet.has(t.speciesCode));
+  const displayedTargets = showAll
+    ? filteredTargets
+    : [...pinnedFilteredTargets, ...unpinnedFilteredTargets.slice(0, INITIAL_LIMIT)];
+  const hasMore = unpinnedFilteredTargets.length > INITIAL_LIMIT;
 
   const hasNoSpeciesData = !data || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;

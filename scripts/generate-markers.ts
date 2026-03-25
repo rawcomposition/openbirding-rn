@@ -4,26 +4,23 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 import { hotspotColor } from "../lib/constants";
+import { placeIcons, getIconSvg } from "../lib/placeIcons";
 
 const OUT_DIR = path.join(__dirname, "..", "assets", "markers");
 const SIZE = 64;
 
 const circleSvg = fs.readFileSync(path.join(__dirname, "..", "assets", "images", "marker-base.svg"), "utf8");
-const starSvg = fs.readFileSync(path.join(__dirname, "..", "assets", "images", "star-base.svg"), "utf8");
 
 function tintSvg(svg: string, color: string) {
   return svg.replace("CURRENT_COLOR", color);
 }
 
-const PLACE_ICONS = [
-  {
-    name: "star",
-    color: "#0284c7",
-    iconColor: "white",
-  },
-];
+function makeIconSvg(iconName: string, color: string): string {
+  const iconDef = getIconSvg(iconName as any);
+  return `<svg viewBox="${iconDef.viewBox}" xmlns="http://www.w3.org/2000/svg" fill="${color}"><path d="${iconDef.path}"/></svg>`;
+}
 
-const HOTSPOT_STAR_COLOR = {
+const HOTSPOT_STAR_COLOR: Record<number, string> = {
   0: "#444",
   1: "white",
   2: "white",
@@ -35,6 +32,8 @@ const HOTSPOT_STAR_COLOR = {
   8: "white",
   9: "white",
 };
+
+const starSvg = fs.readFileSync(path.join(__dirname, "..", "assets", "images", "star-base.svg"), "utf8");
 
 async function makeHotspotMarker({
   name,
@@ -49,7 +48,7 @@ async function makeHotspotMarker({
 }) {
   const tintedBaseSvg = tintSvg(circleSvg, color);
   const base = sharp(Buffer.from(tintedBaseSvg)).resize(SIZE, SIZE);
-  const tintedStarSvg = tintSvg(starSvg, HOTSPOT_STAR_COLOR[colorIndex as keyof typeof HOTSPOT_STAR_COLOR]);
+  const tintedStarSvg = tintSvg(starSvg, HOTSPOT_STAR_COLOR[colorIndex]);
   const star = sharp(Buffer.from(tintedStarSvg)).resize(parseInt(String(SIZE * 0.58)), parseInt(String(SIZE * 0.58)));
 
   const layers: sharp.OverlayOptions[] = [];
@@ -64,20 +63,27 @@ async function makeHotspotMarker({
   await base.composite(layers).png().toFile(path.join(OUT_DIR, name));
 }
 
-async function makePlaceMarker({ name, color, iconColor }: { name: string; color: string; iconColor: string }) {
+async function makePlaceMarker({
+  name,
+  color,
+  iconName,
+  iconColor,
+}: {
+  name: string;
+  color: string;
+  iconName: string;
+  iconColor: string;
+}) {
   const tintedBaseSvg = tintSvg(circleSvg, color);
   const base = sharp(Buffer.from(tintedBaseSvg)).resize(SIZE, SIZE);
-  const tintedStarSvg = tintSvg(starSvg, iconColor);
-  const star = sharp(Buffer.from(tintedStarSvg)).resize(parseInt(String(SIZE * 0.58)), parseInt(String(SIZE * 0.58)));
+  const iconSvgStr = makeIconSvg(iconName, iconColor);
+  const iconSize = parseInt(String(SIZE * 0.45));
+  const icon = sharp(Buffer.from(iconSvgStr)).resize(iconSize, iconSize, { fit: "inside" });
 
-  const layers = [
-    {
-      input: await star.toBuffer(),
-      gravity: "center",
-    },
-  ];
-
-  await base.composite(layers).png().toFile(path.join(OUT_DIR, name));
+  await base
+    .composite([{ input: await icon.toBuffer(), gravity: "center" }])
+    .png()
+    .toFile(path.join(OUT_DIR, name));
 }
 
 async function main() {
@@ -99,11 +105,12 @@ async function main() {
     });
   }
 
-  for (const icon of PLACE_ICONS) {
+  for (const [markerName, def] of Object.entries(placeIcons)) {
     await makePlaceMarker({
-      name: `place-${icon.name}.png`,
-      color: icon.color,
-      iconColor: icon.iconColor,
+      name: `place-${markerName}.png`,
+      color: def.color,
+      iconName: def.icon,
+      iconColor: "white",
     });
   }
 
