@@ -15,6 +15,7 @@ import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
+import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
 
@@ -255,7 +256,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                       )}
                       {isPinned && (
                         <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
-                          <Ionicons name="pin" size={10} color="white" />
+                          <IconSymbol name="pin.fill" size={10} color="white" />
                         </View>
                       )}
                     </View>
