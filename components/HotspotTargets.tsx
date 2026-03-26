@@ -4,102 +4,21 @@ import { getTargetsForHotspot, getPinnedTargets, pinTarget, unpinTarget } from "
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Host, Button, Menu, Section, RNHostView, Toggle } from "@expo/ui/swift-ui";
-import { contentShape, glassEffect, menuActionDismissBehavior, shapes } from "@expo/ui/swift-ui/modifiers";
+import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
+import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { memo, useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
+import MonthStrip from "./MonthStrip";
 import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function formatMonthLabel(sorted: number[]): string {
-  // Check if it's a single contiguous range
-  const isContiguous = sorted.every((m, i) => i === 0 || m === sorted[i - 1] + 1);
-
-  if (isContiguous && sorted.length >= 2) {
-    return `${MONTH_LABELS[sorted[0]]}\u2013${MONTH_LABELS[sorted[sorted.length - 1]]}`;
-  }
-
-  // Comma separated, truncate if too long
-  const full = sorted.map((i) => MONTH_LABELS[i]).join(", ");
-  if (full.length <= 9) return full;
-
-  let result = MONTH_LABELS[sorted[0]];
-  for (let i = 1; i < sorted.length; i++) {
-    const next = `${result}, ${MONTH_LABELS[sorted[i]]}`;
-    if (next.length > 9) return `${result}..`;
-    result = next;
-  }
-  return result;
-}
-
-const MonthFilterMenu = memo(function MonthFilterMenu({
-  onChange,
-}: {
-  onChange: (months: number[]) => void;
-}) {
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
-  const isAllYear = selectedMonths.length === 0;
-  const sorted = [...selectedMonths].sort((a, b) => a - b);
-  const label = isAllYear ? "All Year" : formatMonthLabel(sorted);
-
-  const handleToggle = useCallback((month: number) => {
-    setSelectedMonths((prev) => {
-      const next = prev.includes(month) ? prev.filter((m) => m !== month) : [...prev, month];
-      onChange(next);
-      return next;
-    });
-  }, [onChange]);
-
-  const handleAllYear = useCallback(() => {
-    setSelectedMonths([]);
-    onChange([]);
-  }, [onChange]);
-
-  return (
-    <Host style={tw`self-start`}>
-      <Menu
-        label={
-          <RNHostView matchContents>
-            <View style={[tw`flex-row items-center justify-between bg-gray-100 rounded-full px-3 py-1`, { minWidth: 86 }]}>
-              <Text style={tw`text-xs font-semibold text-gray-700`} numberOfLines={1}>{label}</Text>
-              <Ionicons name="chevron-down" size={12} color={tw.color("gray-500")} style={tw`ml-1`} />
-            </View>
-          </RNHostView>
-        }
-      >
-        <Section modifiers={[menuActionDismissBehavior("disabled")]}>
-          <Button
-            label="All Year"
-            systemImage={isAllYear ? "checkmark" : undefined}
-            onPress={handleAllYear}
-          />
-          {MONTH_NAMES.map((name, i) => (
-            <Button
-              key={i}
-              label={name}
-              systemImage={selectedMonths.includes(i) ? "checkmark" : undefined}
-              onPress={() => handleToggle(i)}
-            />
-          ))}
-        </Section>
-      </Menu>
-    </Host>
-  );
-}, () => true);
 
 type HotspotTargetsProps = {
   hotspotId: string;
@@ -110,7 +29,8 @@ type HotspotTargetsProps = {
 export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
-  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const selectedMonths = useSettingsStore((s) => s.targetMonths);
+  const setSelectedMonths = useSettingsStore((s) => s.setTargetMonths);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
@@ -126,9 +46,20 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     setShowDataInfo(false);
   }, [hotspotId]);
 
-  const handleMonthsChange = useCallback((months: number[]) => {
-    setSelectedMonths(months);
-  }, []);
+  const handleToggleMonth = (month: number) => {
+    if (selectedMonths.length === 0) {
+      setSelectedMonths([month]);
+    } else {
+      const next = selectedMonths.includes(month)
+        ? selectedMonths.filter((m) => m !== month)
+        : [...selectedMonths, month];
+      setSelectedMonths(next);
+    }
+  };
+
+  const handleSelectAllYear = () => {
+    setSelectedMonths([]);
+  };
 
   const queryClient = useQueryClient();
 
@@ -274,12 +205,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     <View style={tw`mt-4`}>
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1`}>
-          <View style={tw`flex-row items-center gap-2`}>
-            <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-            {!hasNoLifeList && !hasNoTargetData && (
-              <MonthFilterMenu onChange={handleMonthsChange} />
-            )}
-          </View>
+          <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
           {data?.samples && data.samples > 0 && !hasNoLifeList && (
             <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
           )}
@@ -316,6 +242,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
             </Host>
           )}
       </View>
+
+      {!hasNoLifeList && !hasNoTargetData && (
+        <View style={tw`mt-3`}>
+          <MonthStrip selectedMonths={selectedMonths} onToggleMonth={handleToggleMonth} onSelectAllYear={handleSelectAllYear} />
+        </View>
+      )}
 
       {renderEmptyState()}
 
