@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import MonthStrip from "./MonthStrip";
 import { IconSymbol } from "./ui/IconSymbol";
@@ -125,8 +126,11 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         date: new Date().toISOString().split("T")[0],
         location: "N/A",
         checklistId: null,
+        isManual: true,
       };
       setLifelist([...(lifelist || []), newEntry]);
+      const speciesName = taxonomyMap.get(speciesCode) ?? speciesCode;
+      Toast.show({ type: "success", text1: `Added ${speciesName} to life list` });
     }
   };
 

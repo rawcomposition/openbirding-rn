@@ -1,5 +1,5 @@
 import SearchInput from "@/components/SearchInput";
-import { useTaxonomy, useTaxonomyMap } from "@/hooks/useTaxonomy";
+import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Button, Host, Menu, RNHostView, Section } from "@expo/ui/swift-ui";
@@ -8,12 +8,6 @@ import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View, ViewStyle } from "react-native";
-
-type TaxonomyEntry = {
-  name: string;
-  sciName: string;
-  code: string;
-};
 
 function EmptyState() {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
@@ -28,7 +22,7 @@ function EmptyState() {
       <Ionicons name="eye-off-outline" size={48} color={tw.color("gray-400")} style={tw`mb-3`} />
       <Text style={tw`text-gray-500 text-base text-center`}>No exclusions yet</Text>
       <Text style={tw`text-gray-400 text-sm text-center mt-1`}>
-        Search above to add species to exclude from targets
+        Species you exclude won't show up as targets
       </Text>
     </View>
   );
@@ -42,7 +36,7 @@ function EmptyState() {
   );
 }
 
-function SearchResultItem({ entry, onAdd }: { entry: TaxonomyEntry; onAdd: () => void }) {
+function SearchResultItem({ entry, onAdd }: { entry: { code: string; name: string }; onAdd: () => void }) {
   return (
     <TouchableOpacity style={tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`} onPress={onAdd}>
       <Text style={tw`text-gray-900 text-base flex-1`}>{entry.name}</Text>
@@ -107,9 +101,9 @@ function ExclusionItem({
 
 export default function LifeListExclusionsPage() {
   const navigation = useNavigation();
+  const lifelist = useSettingsStore((state) => state.lifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
-  const { data: taxonomy } = useTaxonomy();
   const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -119,19 +113,23 @@ export default function LifeListExclusionsPage() {
   }, [navigation, lifelistExclusions?.length]);
 
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || !taxonomy) return [];
+    if (!searchQuery.trim() || !lifelist) return [];
     const stripPunctuation = (s: string) => s.replace(/[^\w\s]/g, "");
     const query = stripPunctuation(searchQuery.toLowerCase().trim());
     const exclusionSet = new Set(lifelistExclusions || []);
 
-    return taxonomy
-      .filter(
-        (entry) =>
-          !exclusionSet.has(entry.code) &&
-          (stripPunctuation(entry.name.toLowerCase()).includes(query) || entry.code.toLowerCase().includes(query))
-      )
+    return lifelist
+      .filter((entry) => {
+        if (exclusionSet.has(entry.code)) return false;
+        const name = taxonomyMap.get(entry.code) ?? "";
+        return stripPunctuation(name.toLowerCase()).includes(query) || entry.code.toLowerCase().includes(query);
+      })
+      .map((entry) => ({
+        code: entry.code,
+        name: taxonomyMap.get(entry.code) ?? entry.code,
+      }))
       .slice(0, 10);
-  }, [searchQuery, taxonomy, lifelistExclusions]);
+  }, [searchQuery, lifelist, lifelistExclusions, taxonomyMap]);
 
   const excludedSpecies = useMemo(() => {
     if (!lifelistExclusions) return [];
@@ -165,7 +163,11 @@ export default function LifeListExclusionsPage() {
   const isSearching = searchQuery.trim().length > 0;
 
   const searchContent =
-    searchResults.length === 0 ? (
+    !lifelist || lifelist.length === 0 ? (
+      <View style={tw`p-6 items-center`}>
+        <Text style={tw`text-gray-500 text-base text-center`}>You haven't imported a life list yet</Text>
+      </View>
+    ) : searchResults.length === 0 ? (
       <View style={tw`p-6 items-center`}>
         <Text style={tw`text-gray-500 text-base text-center`}>No matching species found</Text>
       </View>
@@ -188,7 +190,7 @@ export default function LifeListExclusionsPage() {
   return (
     <ScrollView style={tw`flex-1 bg-gray-50`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="handled">
       <View style={tw`px-4 pt-4 pb-4`}>
-        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search species to exclude..." />
+        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search life list..." />
       </View>
 
       {isSearching && (

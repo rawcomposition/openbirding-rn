@@ -18,7 +18,7 @@ export default function MonthStrip({ selectedMonths, onToggleMonth, onSelectAllY
         onPress={onSelectAllYear}
         activeOpacity={0.7}
         style={[
-          tw`h-7 rounded-full items-center justify-center px-2.5 mr-1.5`,
+          tw`h-6 rounded-full items-center justify-center px-2.5 mr-1.5`,
           isAllYear ? tw`bg-emerald-600` : {},
         ]}
       >
@@ -43,7 +43,7 @@ export default function MonthStrip({ selectedMonths, onToggleMonth, onSelectAllY
             onPress={() => onToggleMonth(i)}
             activeOpacity={1}
             style={[
-              tw`flex-1 h-7 items-center justify-center`,
+              tw`flex-1 h-6 items-center justify-center`,
               isSelected && tw`bg-emerald-600`,
               isSelected && (!roundLeft || !roundRight) && { transform: [{ scaleX: 1.05 }] },
               isSelected && {

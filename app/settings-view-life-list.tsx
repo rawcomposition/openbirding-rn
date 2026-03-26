@@ -55,14 +55,16 @@ function LifeListItem({
   item,
   isLast,
   taxonomyMap,
-  onRemove,
   isExcluded,
+  onToggleExclusion,
+  onRemove,
 }: {
   item: LifeListEntry;
   isLast: boolean;
   taxonomyMap: Map<string, string>;
-  onRemove: () => void;
   isExcluded: boolean;
+  onToggleExclusion: () => void;
+  onRemove?: () => void;
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
@@ -102,8 +104,18 @@ function LifeListItem({
             />
           </Section>
           <Section>
-            <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
+            <Button
+              label={isExcluded ? "Remove Exclusion" : "Exclude from Targets"}
+              systemImage={isExcluded ? "arrow.uturn.backward" : "eye.slash"}
+              role={isExcluded ? undefined : "destructive"}
+              onPress={onToggleExclusion}
+            />
           </Section>
+          {onRemove && (
+            <Section>
+              <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
+            </Section>
+          )}
         </Menu>
       </Host>
     </View>
@@ -115,6 +127,7 @@ export default function ViewLifeListPage() {
   const lifelist = useSettingsStore((state) => state.lifelist);
   const setLifelist = useSettingsStore((state) => state.setLifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
+  const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -153,6 +166,19 @@ export default function ViewLifeListPage() {
     );
   }
 
+  const handleToggleExclusion = (item: LifeListEntry) => {
+    const current = lifelistExclusions || [];
+    const isExcluded = current.includes(item.code);
+    const speciesName = taxonomyMap.get(item.code) ?? item.code;
+    if (isExcluded) {
+      setLifelistExclusions(current.filter((c) => c !== item.code));
+      Toast.show({ type: "success", text1: `Removed exclusion for ${speciesName}` });
+    } else {
+      setLifelistExclusions([...current, item.code]);
+      Toast.show({ type: "success", text1: `Excluded ${speciesName}` });
+    }
+  };
+
   const handleRemove = (item: LifeListEntry) => {
     if (!lifelist) return;
     const updated = lifelist.filter((entry) => !(entry.code === item.code && entry.checklistId === item.checklistId));
@@ -166,8 +192,9 @@ export default function ViewLifeListPage() {
       item={item}
       isLast={index === filteredList.length - 1}
       taxonomyMap={taxonomyMap}
-      onRemove={() => handleRemove(item)}
       isExcluded={lifelistExclusions?.includes(item.code) ?? false}
+      onToggleExclusion={() => handleToggleExclusion(item)}
+      onRemove={item.isManual ? () => handleRemove(item) : undefined}
     />
   );
 

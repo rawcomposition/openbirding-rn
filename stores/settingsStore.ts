@@ -7,6 +7,7 @@ export type LifeListEntry = {
   date: string;
   location: string;
   checklistId: string | null;
+  isManual?: boolean;
 };
 
 type SettingsState = {
