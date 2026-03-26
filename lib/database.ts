@@ -455,6 +455,12 @@ export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> 
   };
 }
 
+export async function savePlaceNotes(id: string, notes: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  await db.runAsync(`UPDATE saved_places SET notes = ? WHERE id = ?`, [notes || null, id]);
+}
+
 export async function deletePlace(id: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 

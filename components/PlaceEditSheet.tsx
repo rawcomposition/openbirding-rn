@@ -83,13 +83,11 @@ export default function PlaceEditSheet({
   });
 
   const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
   const [icon, setIcon] = useState<PlaceIconT>("hotspot");
 
   useEffect(() => {
     if (data) {
       setTitle(data.name);
-      setNotes(data.notes || "");
       setIcon((data.icon as PlaceIconT) || "hotspot");
     }
   }, [data]);
@@ -98,7 +96,6 @@ export default function PlaceEditSheet({
   useEffect(() => {
     if (isOpen && !placeId) {
       setTitle("");
-      setNotes("");
       setIcon("hotspot");
     }
   }, [isOpen, placeId]);
@@ -140,7 +137,7 @@ export default function PlaceEditSheet({
     mutation.mutate({
       id: placeId || generateId(12),
       name: title.trim(),
-      notes: notes.trim(),
+      notes: data?.notes?.trim() || "",
       lat,
       lng,
       icon,
@@ -173,8 +170,8 @@ export default function PlaceEditSheet({
             placeholder="Enter place title"
             value={title}
             onChangeText={setTitle}
-            autoFocus
-            returnKeyType="next"
+            autoFocus={!isEditing}
+            returnKeyType="done"
           />
         </View>
 
@@ -184,6 +181,7 @@ export default function PlaceEditSheet({
             data={placeIconKeys}
             numColumns={7}
             scrollEnabled={false}
+            keyboardShouldPersistTaps="handled"
             columnWrapperStyle={tw`justify-between`}
             keyExtractor={(item) => item}
             renderItem={({ item: key }) => (
@@ -199,19 +197,6 @@ export default function PlaceEditSheet({
                 <Image source={placeIconImages[key]} style={tw`w-8 h-8`} />
               </TouchableOpacity>
             )}
-          />
-        </View>
-
-        <View style={tw`mb-6`}>
-          <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Notes</Text>
-          <Input
-            placeholder="Add notes (optional)"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={5}
-            returnKeyType="done"
-            clearButtonMode="while-editing"
           />
         </View>
 
