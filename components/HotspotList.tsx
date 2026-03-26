@@ -99,14 +99,13 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
-  const { listRef, onScroll, cancelPendingRestore } = useScrollRestore(isOpen, searchUpdatedAt);
+  const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
-      cancelPendingRestore();
       onSelectHotspot(hotspot.id, hotspot.lat, hotspot.lng);
     },
-    [cancelPendingRestore, onSelectHotspot]
+    [onSelectHotspot]
   );
 
   const renderHotspotItem = useCallback(
@@ -172,8 +171,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
           onScroll={onScroll}
-          onTouchStart={cancelPendingRestore}
-          onScrollBeginDrag={cancelPendingRestore}
           keyboardShouldPersistTaps="handled"
         />
 
