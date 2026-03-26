@@ -4,20 +4,102 @@ import { getTargetsForHotspot, getPinnedTargets, pinTarget, unpinTarget } from "
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
-import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
+import { Host, Button, Menu, Section, RNHostView, Toggle } from "@expo/ui/swift-ui";
+import { contentShape, glassEffect, menuActionDismissBehavior, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function formatMonthLabel(sorted: number[]): string {
+  // Check if it's a single contiguous range
+  const isContiguous = sorted.every((m, i) => i === 0 || m === sorted[i - 1] + 1);
+
+  if (isContiguous && sorted.length >= 2) {
+    return `${MONTH_LABELS[sorted[0]]}\u2013${MONTH_LABELS[sorted[sorted.length - 1]]}`;
+  }
+
+  // Comma separated, truncate if too long
+  const full = sorted.map((i) => MONTH_LABELS[i]).join(", ");
+  if (full.length <= 9) return full;
+
+  let result = MONTH_LABELS[sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const next = `${result}, ${MONTH_LABELS[sorted[i]]}`;
+    if (next.length > 9) return `${result}..`;
+    result = next;
+  }
+  return result;
+}
+
+const MonthFilterMenu = memo(function MonthFilterMenu({
+  onChange,
+}: {
+  onChange: (months: number[]) => void;
+}) {
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  const isAllYear = selectedMonths.length === 0;
+  const sorted = [...selectedMonths].sort((a, b) => a - b);
+  const label = isAllYear ? "All Year" : formatMonthLabel(sorted);
+
+  const handleToggle = useCallback((month: number) => {
+    setSelectedMonths((prev) => {
+      const next = prev.includes(month) ? prev.filter((m) => m !== month) : [...prev, month];
+      onChange(next);
+      return next;
+    });
+  }, [onChange]);
+
+  const handleAllYear = useCallback(() => {
+    setSelectedMonths([]);
+    onChange([]);
+  }, [onChange]);
+
+  return (
+    <Host style={tw`self-start`}>
+      <Menu
+        label={
+          <RNHostView matchContents>
+            <View style={[tw`flex-row items-center justify-between bg-gray-100 rounded-full px-3 py-1`, { minWidth: 86 }]}>
+              <Text style={tw`text-xs font-semibold text-gray-700`} numberOfLines={1}>{label}</Text>
+              <Ionicons name="chevron-down" size={12} color={tw.color("gray-500")} style={tw`ml-1`} />
+            </View>
+          </RNHostView>
+        }
+      >
+        <Section modifiers={[menuActionDismissBehavior("disabled")]}>
+          <Button
+            label="All Year"
+            systemImage={isAllYear ? "checkmark" : undefined}
+            onPress={handleAllYear}
+          />
+          {MONTH_NAMES.map((name, i) => (
+            <Button
+              key={i}
+              label={name}
+              systemImage={selectedMonths.includes(i) ? "checkmark" : undefined}
+              onPress={() => handleToggle(i)}
+            />
+          ))}
+        </Section>
+      </Menu>
+    </Host>
+  );
+}, () => true);
 
 type HotspotTargetsProps = {
   hotspotId: string;
@@ -28,6 +110,7 @@ type HotspotTargetsProps = {
 export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
@@ -43,12 +126,17 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     setShowDataInfo(false);
   }, [hotspotId]);
 
+  const handleMonthsChange = useCallback((months: number[]) => {
+    setSelectedMonths(months);
+  }, []);
+
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["hotspotTargets", hotspotId],
-    queryFn: () => getTargetsForHotspot(hotspotId),
+    queryKey: ["hotspotTargets", hotspotId, selectedMonths],
+    queryFn: () => getTargetsForHotspot(hotspotId, selectedMonths.length > 0 ? selectedMonths : undefined),
     enabled: !!hotspotId && !hasNoLifeList,
+    placeholderData: (prev) => prev,
   });
 
   const { data: pinnedTargets = [] } = useQuery({
@@ -87,7 +175,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     : [...pinnedFilteredTargets, ...unpinnedFilteredTargets.slice(0, INITIAL_LIMIT)];
   const hasMore = unpinnedFilteredTargets.length > INITIAL_LIMIT;
 
-  const hasNoSpeciesData = !data || data.targets.length === 0;
+  const hasNoTargetData = !data;
+  const hasNoSpeciesData = hasNoTargetData || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
   const handleLifeListAction = (speciesCode: string) => {
@@ -157,10 +246,14 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     }
 
     if (hasNoSpeciesData) {
+      const message =
+        selectedMonths.length > 0
+          ? "No checklist data for the selected months."
+          : "No species data available for this hotspot.";
       return (
         <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
           <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
-          <Text style={tw`text-sm text-gray-600 flex-1`}>No species data available for this hotspot.</Text>
+          <Text style={tw`text-sm text-gray-600 flex-1`}>{message}</Text>
         </View>
       );
     }
@@ -181,7 +274,12 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     <View style={tw`mt-4`}>
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1`}>
-          <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
+          <View style={tw`flex-row items-center gap-2`}>
+            <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
+            {!hasNoLifeList && !hasNoTargetData && (
+              <MonthFilterMenu onChange={handleMonthsChange} />
+            )}
+          </View>
           {data?.samples && data.samples > 0 && !hasNoLifeList && (
             <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
           )}

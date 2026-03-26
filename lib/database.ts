@@ -565,7 +565,7 @@ export type HotspotTargetsResult = {
   version: string | null;
 };
 
-export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTargetsResult | null> {
+export async function getTargetsForHotspot(hotspotId: string, months?: number[]): Promise<HotspotTargetsResult | null> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
@@ -581,18 +581,25 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
     species: (string | number)[][];
   };
 
-  // Sum all non-null samples to get total checklists
-  const totalSamples = data.samples.reduce((sum: number, val) => sum + (val ?? 0), 0);
+  // Determine which month indices to aggregate (0-11)
+  const monthIndices = months && months.length > 0 ? months : data.samples.map((_, i) => i);
+
+  const totalSamples = monthIndices.reduce((sum, i) => sum + (data.samples[i] ?? 0), 0);
 
   if (totalSamples === 0) return { samples: 0, targets: [], version: row.version };
 
-  // Aggregate observations per species and calculate percentages
+  // Aggregate observations per species for selected months
   const speciesMap = new Map<string, number>();
   for (const speciesEntry of data.species) {
     const speciesCode = String(speciesEntry[0]);
-    // Sum all observation values (everything after the code at index 0)
-    const totalObs = speciesEntry.slice(1).reduce<number>((sum, val) => sum + (typeof val === "number" ? val : 0), 0);
-    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
+    // Species entry layout: [code, janObs, febObs, ..., decObs] — index i+1 for month i
+    const totalObs = monthIndices.reduce((sum, i) => {
+      const val = speciesEntry[i + 1];
+      return sum + (typeof val === "number" ? val : 0);
+    }, 0);
+    if (totalObs > 0) {
+      speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
+    }
   }
 
   // Convert to array, calculate percentages, and sort by percentage descending
