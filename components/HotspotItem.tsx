@@ -36,6 +36,7 @@ const HotspotItem = React.memo(
     }, [item, onSelect]);
 
     return (
+      // Prevent the parent list from canceling row presses after the list is reopened.
       <Pressable
         onPress={handlePress}
         cancelable={false}
