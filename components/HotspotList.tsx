@@ -99,13 +99,14 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
-  const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
+  const { listRef, onScroll, cancelPendingRestore } = useScrollRestore(isOpen, searchUpdatedAt);
 
   const handleSelectHotspot = useCallback(
     (hotspot: Hotspot & { distance?: number }) => {
+      cancelPendingRestore();
       onSelectHotspot(hotspot.id, hotspot.lat, hotspot.lng);
     },
-    [onSelectHotspot]
+    [cancelPendingRestore, onSelectHotspot]
   );
 
   const renderHotspotItem = useCallback(
@@ -128,7 +129,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const headerText = hasLocationAccess ? "Nearby Hotspots" : "Hotspots";
 
-  const keyExtractor = useCallback((item: Hotspot & { distance?: number }, i: number) => `${i}-${item.id}`, []);
+  const keyExtractor = useCallback((item: Hotspot & { distance?: number }) => item.id, []);
 
   return (
     <Modal
@@ -171,6 +172,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
           onScroll={onScroll}
+          onTouchStart={cancelPendingRestore}
+          onScrollBeginDrag={cancelPendingRestore}
           keyboardShouldPersistTaps="handled"
         />
 

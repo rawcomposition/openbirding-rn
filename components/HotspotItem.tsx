@@ -3,7 +3,7 @@ import { Hotspot } from "@/lib/types";
 import { getMarkerColor } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 const MILES_COUNTRIES = ["US", "GB", "MM", "LR", "PR", "VI", "GU", "MP", "AS", "KY", "TC", "VG", "AI", "MS", "FK"];
 
@@ -36,10 +36,10 @@ const HotspotItem = React.memo(
     }, [item, onSelect]);
 
     return (
-      <TouchableOpacity
+      <Pressable
         onPress={handlePress}
-        style={tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`}
-        activeOpacity={0.7}
+        cancelable={false}
+        style={({ pressed }) => [tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`, pressed && tw`opacity-70`]}
       >
         <View style={tw`flex-1`}>
           <Text style={tw`text-gray-900 text-base font-medium`} numberOfLines={1}>
@@ -54,7 +54,7 @@ const HotspotItem = React.memo(
           <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, item.country)}</Text>
         )}
         <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
-      </TouchableOpacity>
+      </Pressable>
     );
   },
   (prevProps, nextProps) => {
