@@ -77,7 +77,7 @@ async function makePlaceMarker({
   const tintedBaseSvg = tintSvg(circleSvg, color);
   const base = sharp(Buffer.from(tintedBaseSvg)).resize(SIZE, SIZE);
   const iconSvgStr = makeIconSvg(iconName, iconColor);
-  const iconSize = parseInt(String(SIZE * 0.45));
+  const iconSize = parseInt(String(SIZE * 0.5));
   const icon = sharp(Buffer.from(iconSvgStr)).resize(iconSize, iconSize, { fit: "inside" });
 
   await base
