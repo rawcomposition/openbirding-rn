@@ -114,15 +114,15 @@ export default function LifeListExclusionsPage() {
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim() || !lifelist) return [];
-    const stripPunctuation = (s: string) => s.replace(/[^\w\s]/g, "");
-    const query = stripPunctuation(searchQuery.toLowerCase().trim());
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const query = normalize(searchQuery);
     const exclusionSet = new Set(lifelistExclusions || []);
 
     return lifelist
       .filter((entry) => {
         if (exclusionSet.has(entry.code)) return false;
         const name = taxonomyMap.get(entry.code) ?? "";
-        return stripPunctuation(name.toLowerCase()).includes(query) || entry.code.toLowerCase().includes(query);
+        return normalize(name).includes(query) || normalize(entry.code).includes(query);
       })
       .map((entry) => ({
         code: entry.code,

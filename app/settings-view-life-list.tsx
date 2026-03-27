@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
+import debounce from "lodash/debounce";
 import React, { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Linking, Platform, Text, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
@@ -130,26 +131,35 @@ export default function ViewLifeListPage() {
   const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
+
+  useEffect(() => {
+    debouncedSetQuery(searchQuery);
+    return () => debouncedSetQuery.cancel();
+  }, [searchQuery, debouncedSetQuery]);
 
   useEffect(() => {
     const title = lifelist?.length ? `Life List (${lifelist.length})` : "Life List";
     navigation.setOptions({ title });
   }, [navigation, lifelist?.length]);
 
-  const filteredList = useMemo(() => {
+  const sortedList = useMemo(() => {
     if (!lifelist) return [];
+    return [...lifelist].sort((a, b) => b.date.localeCompare(a.date));
+  }, [lifelist]);
 
-    const sorted = [...lifelist].sort((a, b) => b.date.localeCompare(a.date));
+  const filteredList = useMemo(() => {
+    if (!debouncedQuery.trim()) return sortedList;
 
-    if (!searchQuery.trim()) return sorted;
-
-    const stripPunctuation = (s: string) => s.replace(/[^\w\s]/g, "");
-    const query = stripPunctuation(searchQuery.toLowerCase().trim());
-    return sorted.filter((item) => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const query = normalize(debouncedQuery);
+    return sortedList.filter((item) => {
       const speciesName = taxonomyMap.get(item.code) ?? "";
-      return item.code.toLowerCase().includes(query) || stripPunctuation(speciesName.toLowerCase()).includes(query);
+      return normalize(item.code).includes(query) || normalize(speciesName).includes(query);
     });
-  }, [lifelist, searchQuery, taxonomyMap]);
+  }, [sortedList, debouncedQuery, taxonomyMap]);
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
