@@ -45,7 +45,7 @@ function EmptyState() {
 
 function DebouncedSearch({ onSearch, placeholder }: { onSearch: (query: string) => void; placeholder: string }) {
   const [value, setValue] = useState("");
-  const debouncedOnSearch = useMemo(() => debounce(onSearch, 150), [onSearch]);
+  const debouncedOnSearch = useMemo(() => debounce(onSearch, 300), [onSearch]);
 
   useEffect(() => {
     debouncedOnSearch(value);
