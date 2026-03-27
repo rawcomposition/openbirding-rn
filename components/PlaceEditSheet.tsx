@@ -162,7 +162,7 @@ export default function PlaceEditSheet({
 
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent} dimmed>
-      <ScrollView style={tw`px-4 py-6`} keyboardShouldPersistTaps="handled">
+      <ScrollView style={tw`px-4 py-6`} keyboardShouldPersistTaps="always">
         <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>
           <Input
@@ -181,7 +181,7 @@ export default function PlaceEditSheet({
             data={placeIconKeys}
             numColumns={7}
             scrollEnabled={false}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
             columnWrapperStyle={tw`justify-between`}
             keyExtractor={(item) => item}
             renderItem={({ item: key }) => (
