@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import debounce from "lodash/debounce";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Linking, Platform, Text, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -41,6 +41,18 @@ function EmptyState() {
   ) : (
     <View style={[cardStyle, tw`bg-white`]}>{content}</View>
   );
+}
+
+function DebouncedSearch({ onSearch, placeholder }: { onSearch: (query: string) => void; placeholder: string }) {
+  const [value, setValue] = useState("");
+  const debouncedOnSearch = useMemo(() => debounce(onSearch, 150), [onSearch]);
+
+  useEffect(() => {
+    debouncedOnSearch(value);
+    return () => debouncedOnSearch.cancel();
+  }, [value, debouncedOnSearch]);
+
+  return <SearchInput value={value} onChangeText={setValue} placeholder={placeholder} />;
 }
 
 function NoResults() {
@@ -130,15 +142,8 @@ export default function ViewLifeListPage() {
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-
-  const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
-
-  useEffect(() => {
-    debouncedSetQuery(searchQuery);
-    return () => debouncedSetQuery.cancel();
-  }, [searchQuery, debouncedSetQuery]);
+  const [filterQuery, setFilterQuery] = useState("");
+  const handleSearch = useCallback((query: string) => setFilterQuery(query), []);
 
   useEffect(() => {
     const title = lifelist?.length ? `Life List (${lifelist.length})` : "Life List";
@@ -151,15 +156,15 @@ export default function ViewLifeListPage() {
   }, [lifelist]);
 
   const filteredList = useMemo(() => {
-    if (!debouncedQuery.trim()) return sortedList;
+    if (!filterQuery.trim()) return sortedList;
 
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const query = normalize(debouncedQuery);
+    const query = normalize(filterQuery);
     return sortedList.filter((item) => {
       const speciesName = taxonomyMap.get(item.code) ?? "";
       return normalize(item.code).includes(query) || normalize(speciesName).includes(query);
     });
-  }, [sortedList, debouncedQuery, taxonomyMap]);
+  }, [sortedList, filterQuery, taxonomyMap]);
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
@@ -221,7 +226,7 @@ export default function ViewLifeListPage() {
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       <View style={tw`px-4 pt-4 pb-4`}>
-        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search..." />
+        <DebouncedSearch onSearch={handleSearch} placeholder="Search..." />
       </View>
 
       <View style={tw`flex-1 px-4 pb-4`}>
