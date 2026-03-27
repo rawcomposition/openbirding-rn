@@ -11,7 +11,7 @@ import { useState } from "react";
 import { Platform } from "react-native";
 import Toast from "react-native-toast-message";
 
-async function logDownload(packId: number) {
+async function logDownload(packId: number, packVersion: string) {
   try {
     const channel = Updates.channel || (__DEV__ ? "development" : "unknown");
     const response = await fetch(`${API_URL}/packs/${packId}/log-download`, {
@@ -21,6 +21,7 @@ async function logDownload(packId: number) {
         "App-Platform": Platform.OS,
         "App-Environment": channel,
         "Download-Method": "manual",
+        "Pack-Version": packVersion,
       },
     });
     if (!response.ok) {
@@ -75,7 +76,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
       refreshTaxonomy();
 
-      logDownload(packId);
+      logDownload(packId, pack.v);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         // User cancelled - clean up partial data
