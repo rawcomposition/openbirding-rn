@@ -209,7 +209,7 @@ export default function PacksList() {
             renderItem={renderPack}
             keyExtractor={keyExtractor}
             showsVerticalScrollIndicator
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
           />
         </View>
       )}

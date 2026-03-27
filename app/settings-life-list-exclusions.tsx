@@ -188,7 +188,7 @@ export default function LifeListExclusionsPage() {
   ));
 
   return (
-    <ScrollView style={tw`flex-1 bg-gray-50`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="handled">
+    <ScrollView style={tw`flex-1 bg-gray-50`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="always">
       <View style={tw`px-4 pt-4 pb-4`}>
         <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search life list..." />
       </View>
