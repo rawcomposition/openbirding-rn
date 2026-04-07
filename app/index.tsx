@@ -89,7 +89,6 @@ export default function HomeScreen() {
 
   const handleSelectHotspotFromList = useCallback(
     (selectedHotspotId: string, lat: number, lng: number) => {
-      setIsHotspotListOpen(false);
       setCustomPinCoordinates(null);
       setPlaceId(null);
       setHotspotId(selectedHotspotId);
@@ -97,7 +96,7 @@ export default function HomeScreen() {
         mapRef.current?.centerOnCoordinates(lng, lat, 200);
       }, 500);
     },
-    [setIsHotspotListOpen, setCustomPinCoordinates, setPlaceId, setHotspotId]
+    [setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
 
   if (isLoadingLocation) return null;

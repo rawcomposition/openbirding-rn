@@ -9,10 +9,10 @@ import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FilterBottomSheet from "./FilterBottomSheet";
+import BaseBottomSheet from "./BaseBottomSheet";
 import HotspotItem from "./HotspotItem";
 import IconButton from "./IconButton";
 import IconButtonGroup from "./IconButtonGroup";
@@ -34,11 +34,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
-  const { showSavedOnly } = useFiltersStore();
+  const { showSavedOnly, setShowSavedOnly } = useFiltersStore();
   const activeFilterCount = [showSavedOnly].filter(Boolean).length;
+  const dismissRef = useRef<(() => Promise<void>) | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
@@ -47,6 +48,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     debouncedSetQuery(searchQuery);
     return () => debouncedSetQuery.cancel();
   }, [searchQuery, debouncedSetQuery]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsFilterPanelOpen(false);
+    }
+  }, [isOpen]);
 
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
@@ -102,7 +109,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
   const handleSelectHotspot = useCallback(
-    (hotspot: Hotspot & { distance?: number }) => {
+    async (hotspot: Hotspot & { distance?: number }) => {
+      await dismissRef.current?.();
       onSelectHotspot(hotspot.id, hotspot.lat, hotspot.lng);
     },
     [onSelectHotspot]
@@ -130,22 +138,18 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const keyExtractor = useCallback((item: Hotspot & { distance?: number }) => item.id, []);
 
-  return (
-    <Modal
-      visible={isOpen}
-      animationType="slide"
-      presentationStyle={Platform.OS === "android" ? "overFullScreen" : "fullScreen"}
-      onRequestClose={onClose}
-      transparent={Platform.OS === "android"} // Avoid backdrop flickering Mapbox issue on Android
-    >
-      <View style={[tw`flex-1`, { paddingTop: insets.top }]}>
-        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-3`}>
+  const headerContent = (dismiss: () => Promise<void>) => {
+    dismissRef.current = dismiss;
+
+    return (
+      <View style={tw`px-4 pr-5 pl-6`}>
+        <View style={tw`flex-row items-center justify-between`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
           </View>
           <IconButtonGroup>
             <View>
-              <IconButton icon="filter-outline" onPress={() => setIsFilterSheetOpen(true)} />
+              <IconButton icon="filter-outline" onPress={() => setIsFilterPanelOpen((open) => !open)} />
               {activeFilterCount > 0 && (
                 <View
                   style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}
@@ -154,28 +158,54 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
                 </View>
               )}
             </View>
-            <IconButton icon="close" onPress={onClose} />
+            <IconButton icon="close" onPress={dismiss} />
           </IconButtonGroup>
         </View>
 
-        <View style={tw`px-4 py-3`}>
+        {isFilterPanelOpen && (
+          <View style={tw`pt-3 pb-3`}>
+            <View style={tw`bg-gray-50 rounded-2xl px-4 py-3`}>
+              <View style={tw`flex-row items-center justify-between`}>
+                <Text style={tw`text-base text-gray-900`}>Show saved only</Text>
+                <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
+              </View>
+            </View>
+          </View>
+        )}
+
+        <View style={isFilterPanelOpen ? tw`pb-3` : tw`pt-3 pb-3`}>
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
         </View>
+      </View>
+    );
+  };
 
+  return (
+    <>
+      <BaseBottomSheet
+        isOpen={isOpen}
+        onClose={onClose}
+        detents={[0.92, 0.98]}
+        initialIndex={1}
+        headerContent={headerContent}
+        scrollable
+        dimmed
+      >
         <FlashList
           ref={listRef}
           data={displayedHotspots}
           renderItem={renderHotspotItem}
           keyExtractor={keyExtractor}
-          contentContainerStyle={displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: insets.bottom }}
+          style={tw`flex-1`}
+          contentContainerStyle={
+            displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: Math.max(insets.bottom, 16) }
+          }
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
           onScroll={onScroll}
           keyboardShouldPersistTaps="handled"
         />
-
-        <FilterBottomSheet isOpen={isFilterSheetOpen} onClose={() => setIsFilterSheetOpen(false)} />
-      </View>
-    </Modal>
+      </BaseBottomSheet>
+    </>
   );
 }
