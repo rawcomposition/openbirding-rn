@@ -134,12 +134,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     <Modal
       visible={isOpen}
       animationType="slide"
-      presentationStyle={Platform.OS === "android" ? "overFullScreen" : "pageSheet"}
+      presentationStyle={Platform.OS === "android" ? "overFullScreen" : "fullScreen"}
       onRequestClose={onClose}
       transparent={Platform.OS === "android"} // Avoid backdrop flickering Mapbox issue on Android
     >
-      <View style={[tw`flex-1`, Platform.OS === "android" && { paddingTop: insets.top }]}>
-        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-5`}>
+      <View style={[tw`flex-1`, { paddingTop: insets.top }]}>
+        <View style={tw`flex-row items-center justify-between px-4 pl-6 py-3 pt-3`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
           </View>
