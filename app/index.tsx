@@ -34,8 +34,6 @@ export default function HomeScreen() {
     setCustomPinCoordinates,
     isHotspotListOpen,
     setIsHotspotListOpen,
-    isSunDetailsOpen,
-    setIsSunDetailsOpen,
     isMapAttributionOpen,
     setIsMapAttributionOpen,
   } = useMapStore();

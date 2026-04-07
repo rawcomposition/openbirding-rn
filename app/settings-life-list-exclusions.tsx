@@ -22,7 +22,7 @@ function EmptyState() {
       <Ionicons name="eye-off-outline" size={48} color={tw.color("gray-400")} style={tw`mb-3`} />
       <Text style={tw`text-gray-500 text-base text-center`}>No exclusions yet</Text>
       <Text style={tw`text-gray-400 text-sm text-center mt-1`}>
-        Species you exclude won't show up as targets
+        Species you exclude won&apos;t show up as targets
       </Text>
     </View>
   );
@@ -165,7 +165,7 @@ export default function LifeListExclusionsPage() {
   const searchContent =
     !lifelist || lifelist.length === 0 ? (
       <View style={tw`p-6 items-center`}>
-        <Text style={tw`text-gray-500 text-base text-center`}>You haven't imported a life list yet</Text>
+        <Text style={tw`text-gray-500 text-base text-center`}>You haven&apos;t imported a life list yet</Text>
       </View>
     ) : searchResults.length === 0 ? (
       <View style={tw`p-6 items-center`}>

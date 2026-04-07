@@ -134,6 +134,7 @@ export default function ImportLifeListPage() {
 
   const handleDevImport = async () => {
     setIsLoading(true);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { devLifeList } = require("@/lifelist");
     if (!devLifeList) {
       Toast.show({ type: "error", text1: "No dev lifelist data. Add your CSV to lifelist.ts" });
