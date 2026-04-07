@@ -142,7 +142,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     dismissRef.current = dismiss;
 
     return (
-      <View style={tw`px-4 pr-5 pl-6`}>
+      <View style={tw`pr-5 pl-6`}>
         <View style={tw`flex-row items-center justify-between`}>
           <View style={tw`flex-1`}>
             <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
@@ -162,18 +162,15 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
           </IconButtonGroup>
         </View>
 
-        {isFilterPanelOpen && (
-          <View style={tw`pt-3 pb-3`}>
+        <View style={tw`gap-3 py-3`}>
+          {isFilterPanelOpen && (
             <View style={tw`bg-gray-50 rounded-2xl px-4 py-3`}>
               <View style={tw`flex-row items-center justify-between`}>
                 <Text style={tw`text-base text-gray-900`}>Show saved only</Text>
                 <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
               </View>
             </View>
-          </View>
-        )}
-
-        <View style={isFilterPanelOpen ? tw`pb-3` : tw`pt-3 pb-3`}>
+          )}
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
         </View>
       </View>
