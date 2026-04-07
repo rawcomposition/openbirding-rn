@@ -77,7 +77,11 @@ export const savedHotspotSymbolStyle = () => ({
 });
 
 export const savedPlaceSymbolStyle = () => ({
-  iconImage: "place-star",
+  iconImage: [
+    "concat",
+    "place-",
+    ["coalesce", ["get", "icon"], "hotspot"],
+  ],
   iconSize: ["interpolate", ["linear"], ["zoom"], 7, 0.35, 12, 0.45],
   iconAllowOverlap: true,
   iconIgnorePlacement: true,

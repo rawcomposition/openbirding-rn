@@ -78,6 +78,15 @@ async function createTables(): Promise<void> {
       FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
     );
   `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS pinned_targets (
+      hotspot_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      pinned_at TEXT NOT NULL,
+      PRIMARY KEY (hotspot_id, code)
+    );
+  `);
 }
 
 async function createIndexes(): Promise<void> {
@@ -446,6 +455,12 @@ export async function getSavedPlaceById(id: string): Promise<SavedPlace | null> 
   };
 }
 
+export async function savePlaceNotes(id: string, notes: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  await db.runAsync(`UPDATE saved_places SET notes = ? WHERE id = ?`, [notes || null, id]);
+}
+
 export async function deletePlace(id: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
@@ -550,7 +565,7 @@ export type HotspotTargetsResult = {
   version: string | null;
 };
 
-export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTargetsResult | null> {
+export async function getTargetsForHotspot(hotspotId: string, months?: number[]): Promise<HotspotTargetsResult | null> {
   if (!db) throw new Error("Database not initialized");
 
   const result = await db.getFirstAsync(
@@ -566,18 +581,25 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
     species: (string | number)[][];
   };
 
-  // Sum all non-null samples to get total checklists
-  const totalSamples = data.samples.reduce((sum: number, val) => sum + (val ?? 0), 0);
+  // Determine which month indices to aggregate (0-11)
+  const monthIndices = months && months.length > 0 ? months : data.samples.map((_, i) => i);
+
+  const totalSamples = monthIndices.reduce((sum, i) => sum + (data.samples[i] ?? 0), 0);
 
   if (totalSamples === 0) return { samples: 0, targets: [], version: row.version };
 
-  // Aggregate observations per species and calculate percentages
+  // Aggregate observations per species for selected months
   const speciesMap = new Map<string, number>();
   for (const speciesEntry of data.species) {
     const speciesCode = String(speciesEntry[0]);
-    // Sum all observation values (everything after the code at index 0)
-    const totalObs = speciesEntry.slice(1).reduce<number>((sum, val) => sum + (typeof val === "number" ? val : 0), 0);
-    speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
+    // Species entry layout: [code, janObs, febObs, ..., decObs] — index i+1 for month i
+    const totalObs = monthIndices.reduce((sum, i) => {
+      const val = speciesEntry[i + 1];
+      return sum + (typeof val === "number" ? val : 0);
+    }, 0);
+    if (totalObs > 0) {
+      speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
+    }
   }
 
   // Convert to array, calculate percentages, and sort by percentage descending
@@ -590,4 +612,26 @@ export async function getTargetsForHotspot(hotspotId: string): Promise<HotspotTa
     .sort((a, b) => b.percentage - a.percentage);
 
   return { samples: totalSamples, targets, version: row.version };
+}
+
+export async function getPinnedTargets(hotspotId: string): Promise<string[]> {
+  if (!db) throw new Error("Database not initialized");
+  const rows = await db.getAllAsync<{ code: string }>(
+    `SELECT code FROM pinned_targets WHERE hotspot_id = ? ORDER BY pinned_at`,
+    [hotspotId]
+  );
+  return rows.map((r) => r.code);
+}
+
+export async function pinTarget(hotspotId: string, speciesCode: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+  await db.runAsync(
+    `INSERT OR REPLACE INTO pinned_targets (hotspot_id, code, pinned_at) VALUES (?, ?, ?)`,
+    [hotspotId, speciesCode, new Date().toISOString()]
+  );
+}
+
+export async function unpinTarget(hotspotId: string, speciesCode: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+  await db.runAsync(`DELETE FROM pinned_targets WHERE hotspot_id = ? AND code = ?`, [hotspotId, speciesCode]);
 }

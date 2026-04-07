@@ -7,7 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import debounce from "lodash/debounce";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Linking, Platform, Text, View, ViewStyle } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -42,6 +43,18 @@ function EmptyState() {
   );
 }
 
+function DebouncedSearch({ onSearch, placeholder }: { onSearch: (query: string) => void; placeholder: string }) {
+  const [value, setValue] = useState("");
+  const debouncedOnSearch = useMemo(() => debounce(onSearch, 300), [onSearch]);
+
+  useEffect(() => {
+    debouncedOnSearch(value);
+    return () => debouncedOnSearch.cancel();
+  }, [value, debouncedOnSearch]);
+
+  return <SearchInput value={value} onChangeText={setValue} placeholder={placeholder} />;
+}
+
 function NoResults() {
   return (
     <View style={tw`p-6 items-center`}>
@@ -55,14 +68,16 @@ function LifeListItem({
   item,
   isLast,
   taxonomyMap,
-  onRemove,
   isExcluded,
+  onToggleExclusion,
+  onRemove,
 }: {
   item: LifeListEntry;
   isLast: boolean;
   taxonomyMap: Map<string, string>;
-  onRemove: () => void;
   isExcluded: boolean;
+  onToggleExclusion: () => void;
+  onRemove?: () => void;
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
@@ -102,8 +117,18 @@ function LifeListItem({
             />
           </Section>
           <Section>
-            <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
+            <Button
+              label={isExcluded ? "Remove Exclusion" : "Exclude from Targets"}
+              systemImage={isExcluded ? "arrow.uturn.backward" : "eye.slash"}
+              role={isExcluded ? undefined : "destructive"}
+              onPress={onToggleExclusion}
+            />
           </Section>
+          {onRemove && (
+            <Section>
+              <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
+            </Section>
+          )}
         </Menu>
       </Host>
     </View>
@@ -115,28 +140,31 @@ export default function ViewLifeListPage() {
   const lifelist = useSettingsStore((state) => state.lifelist);
   const setLifelist = useSettingsStore((state) => state.setLifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
+  const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filterQuery, setFilterQuery] = useState("");
+  const handleSearch = useCallback((query: string) => setFilterQuery(query), []);
 
   useEffect(() => {
     const title = lifelist?.length ? `Life List (${lifelist.length})` : "Life List";
     navigation.setOptions({ title });
   }, [navigation, lifelist?.length]);
 
-  const filteredList = useMemo(() => {
+  const sortedList = useMemo(() => {
     if (!lifelist) return [];
+    return [...lifelist].sort((a, b) => b.date.localeCompare(a.date));
+  }, [lifelist]);
 
-    const sorted = [...lifelist].sort((a, b) => b.date.localeCompare(a.date));
+  const filteredList = useMemo(() => {
+    if (!filterQuery.trim()) return sortedList;
 
-    if (!searchQuery.trim()) return sorted;
-
-    const stripPunctuation = (s: string) => s.replace(/[^\w\s]/g, "");
-    const query = stripPunctuation(searchQuery.toLowerCase().trim());
-    return sorted.filter((item) => {
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const query = normalize(filterQuery);
+    return sortedList.filter((item) => {
       const speciesName = taxonomyMap.get(item.code) ?? "";
-      return item.code.toLowerCase().includes(query) || stripPunctuation(speciesName.toLowerCase()).includes(query);
+      return normalize(item.code).includes(query) || normalize(speciesName).includes(query);
     });
-  }, [lifelist, searchQuery, taxonomyMap]);
+  }, [sortedList, filterQuery, taxonomyMap]);
 
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
@@ -153,6 +181,19 @@ export default function ViewLifeListPage() {
     );
   }
 
+  const handleToggleExclusion = (item: LifeListEntry) => {
+    const current = lifelistExclusions || [];
+    const isExcluded = current.includes(item.code);
+    const speciesName = taxonomyMap.get(item.code) ?? item.code;
+    if (isExcluded) {
+      setLifelistExclusions(current.filter((c) => c !== item.code));
+      Toast.show({ type: "success", text1: `Removed exclusion for ${speciesName}` });
+    } else {
+      setLifelistExclusions([...current, item.code]);
+      Toast.show({ type: "success", text1: `Excluded ${speciesName}` });
+    }
+  };
+
   const handleRemove = (item: LifeListEntry) => {
     if (!lifelist) return;
     const updated = lifelist.filter((entry) => !(entry.code === item.code && entry.checklistId === item.checklistId));
@@ -166,8 +207,9 @@ export default function ViewLifeListPage() {
       item={item}
       isLast={index === filteredList.length - 1}
       taxonomyMap={taxonomyMap}
-      onRemove={() => handleRemove(item)}
       isExcluded={lifelistExclusions?.includes(item.code) ?? false}
+      onToggleExclusion={() => handleToggleExclusion(item)}
+      onRemove={item.isManual ? () => handleRemove(item) : undefined}
     />
   );
 
@@ -184,7 +226,7 @@ export default function ViewLifeListPage() {
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       <View style={tw`px-4 pt-4 pb-4`}>
-        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search..." />
+        <DebouncedSearch onSearch={handleSearch} placeholder="Search..." />
       </View>
 
       <View style={tw`flex-1 px-4 pb-4`}>

@@ -100,9 +100,9 @@ export function useSunTimes(): UseSunTimesReturn {
 
       nextEvent = "sunrise";
       nextEventTime = tomorrowTimes.sunrise;
-      // Update sunrise to tomorrow's for display
+      // Use tomorrow's times for display
       sunrise = tomorrowTimes.sunrise;
-      sunset = todayTimes.sunset; // Keep today's sunset for reference
+      sunset = tomorrowTimes.sunset;
     }
 
     return {

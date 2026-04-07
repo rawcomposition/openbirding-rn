@@ -1,14 +1,41 @@
 import IconButton from "@/components/IconButton";
 import Input from "@/components/Input";
 import { deletePlace, getSavedPlaceById, savePlace } from "@/lib/database";
+import { placeIcons, type PlaceIconT } from "@/lib/placeIcons";
 import tw from "@/lib/tw";
 import { generateId } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
+
+const placeIconImages: Record<PlaceIconT, any> = {
+  hike: require("@/assets/markers/place-hike.png"),
+  mountain: require("@/assets/markers/place-mountain.png"),
+  tent: require("@/assets/markers/place-tent.png"),
+  house: require("@/assets/markers/place-house.png"),
+  airbnb: require("@/assets/markers/place-airbnb.png"),
+  bed: require("@/assets/markers/place-bed.png"),
+  bins: require("@/assets/markers/place-bins.png"),
+  camera: require("@/assets/markers/place-camera.png"),
+  airport: require("@/assets/markers/place-airport.png"),
+  boat: require("@/assets/markers/place-boat.png"),
+  car: require("@/assets/markers/place-car.png"),
+  bus: require("@/assets/markers/place-bus.png"),
+  utensils: require("@/assets/markers/place-utensils.png"),
+  mug: require("@/assets/markers/place-mug.png"),
+  trolley: require("@/assets/markers/place-trolley.png"),
+  bike: require("@/assets/markers/place-bike.png"),
+  dog: require("@/assets/markers/place-dog.png"),
+  fuel: require("@/assets/markers/place-fuel.png"),
+  parking: require("@/assets/markers/place-parking.png"),
+  building: require("@/assets/markers/place-building.png"),
+  hotspot: require("@/assets/markers/place-hotspot.png"),
+};
+
+const placeIconKeys = Object.keys(placeIcons) as PlaceIconT[];
 
 type PlaceEditSheetProps = {
   isOpen: boolean;
@@ -56,12 +83,12 @@ export default function PlaceEditSheet({
   });
 
   const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
+  const [icon, setIcon] = useState<PlaceIconT>("hotspot");
 
   useEffect(() => {
     if (data) {
       setTitle(data.name);
-      setNotes(data.notes || "");
+      setIcon((data.icon as PlaceIconT) || "hotspot");
     }
   }, [data]);
 
@@ -69,7 +96,7 @@ export default function PlaceEditSheet({
   useEffect(() => {
     if (isOpen && !placeId) {
       setTitle("");
-      setNotes("");
+      setIcon("hotspot");
     }
   }, [isOpen, placeId]);
 
@@ -110,10 +137,10 @@ export default function PlaceEditSheet({
     mutation.mutate({
       id: placeId || generateId(12),
       name: title.trim(),
-      notes: notes.trim(),
+      notes: data?.notes?.trim() || "",
       lat,
       lng,
-      icon: "star",
+      icon,
     });
   };
 
@@ -135,7 +162,7 @@ export default function PlaceEditSheet({
 
   return (
     <BaseBottomSheet isOpen={isOpen} onClose={handleSheetClose} detents={["auto"]} headerContent={headerContent} dimmed>
-      <View style={tw`px-4 py-6`}>
+      <ScrollView style={tw`px-4 py-6`} keyboardShouldPersistTaps="always">
         <View style={tw`mb-6`}>
           <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Title</Text>
           <Input
@@ -143,21 +170,33 @@ export default function PlaceEditSheet({
             placeholder="Enter place title"
             value={title}
             onChangeText={setTitle}
-            autoFocus
-            returnKeyType="next"
+            autoFocus={!isEditing}
+            returnKeyType="done"
           />
         </View>
 
         <View style={tw`mb-6`}>
-          <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Notes</Text>
-          <Input
-            placeholder="Add notes (optional)"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={5}
-            returnKeyType="done"
-            clearButtonMode="while-editing"
+          <Text style={tw`text-gray-700 font-medium mb-2 text-base`}>Icon</Text>
+          <FlatList
+            data={placeIconKeys}
+            numColumns={7}
+            scrollEnabled={false}
+            keyboardShouldPersistTaps="always"
+            columnWrapperStyle={tw`justify-between`}
+            keyExtractor={(item) => item}
+            renderItem={({ item: key }) => (
+              <TouchableOpacity
+                onPress={() => setIcon(key)}
+                style={[
+                  tw`p-1.5 rounded-lg`,
+                  icon === key && tw`bg-blue-100 border border-blue-400`,
+                  icon !== key && tw`border border-transparent`,
+                ]}
+                activeOpacity={0.7}
+              >
+                <Image source={placeIconImages[key]} style={tw`w-8 h-8`} />
+              </TouchableOpacity>
+            )}
           />
         </View>
 
@@ -172,7 +211,7 @@ export default function PlaceEditSheet({
             <Text style={tw`text-red-500 text-sm ml-1.5`}>Delete Pin</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </ScrollView>
     </BaseBottomSheet>
   );
 }

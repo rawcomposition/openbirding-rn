@@ -4,7 +4,7 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.6.2",
+    version: "1.7.0",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",

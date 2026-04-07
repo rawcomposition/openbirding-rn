@@ -1,6 +1,6 @@
 import avicommons from "@/avicommons";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
-import { getTargetsForHotspot } from "@/lib/database";
+import { getTargetsForHotspot, getPinnedTargets, pinTarget, unpinTarget } from "@/lib/database";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -9,12 +9,15 @@ import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
+import MonthStrip from "./MonthStrip";
+import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
 
@@ -27,6 +30,8 @@ type HotspotTargetsProps = {
 export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
+  const selectedMonths = useSettingsStore((s) => s.targetMonths);
+  const setSelectedMonths = useSettingsStore((s) => s.setTargetMonths);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
   const setLifelist = useSettingsStore((s) => s.setLifelist);
@@ -42,30 +47,68 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     setShowDataInfo(false);
   }, [hotspotId]);
 
+  const handleToggleMonth = (month: number) => {
+    if (selectedMonths.length === 0) {
+      setSelectedMonths([month]);
+    } else {
+      const next = selectedMonths.includes(month)
+        ? selectedMonths.filter((m) => m !== month)
+        : [...selectedMonths, month];
+      setSelectedMonths(next);
+    }
+  };
+
+  const handleSelectAllYear = () => {
+    setSelectedMonths([]);
+  };
+
+  const queryClient = useQueryClient();
+
   const { data, isLoading } = useQuery({
-    queryKey: ["hotspotTargets", hotspotId],
-    queryFn: () => getTargetsForHotspot(hotspotId),
+    queryKey: ["hotspotTargets", hotspotId, selectedMonths],
+    queryFn: () => getTargetsForHotspot(hotspotId, selectedMonths.length > 0 ? selectedMonths : undefined),
     enabled: !!hotspotId && !hasNoLifeList,
+    placeholderData: (prev) => prev,
   });
 
-  const filteredTargets = useMemo(() => {
+  const { data: pinnedTargets = [] } = useQuery({
+    queryKey: ["pinnedTargets", hotspotId],
+    queryFn: () => getPinnedTargets(hotspotId),
+    enabled: !!hotspotId,
+  });
+
+  const filteredTargets = (() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
     const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
-    return data.targets.filter((t) => {
+    const pinnedSet = new Set(pinnedTargets);
+    const filtered = data.targets.filter((t) => {
       if (t.percentage < 1) return false;
       if (showAllSpecies) return true;
       if (exclusionCodes?.has(t.speciesCode)) return true;
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
     });
-  }, [data, lifelist, lifelistExclusions, showAllSpecies]);
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedSet.has(a.speciesCode);
+      const bPinned = pinnedSet.has(b.speciesCode);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+  })();
 
   if (isLoading) return null;
 
-  const displayedTargets = showAll ? filteredTargets : filteredTargets.slice(0, INITIAL_LIMIT);
-  const hasMore = filteredTargets.length > INITIAL_LIMIT;
+  const pinnedSet = new Set(pinnedTargets);
+  const pinnedFilteredTargets = filteredTargets.filter((t) => pinnedSet.has(t.speciesCode));
+  const unpinnedFilteredTargets = filteredTargets.filter((t) => !pinnedSet.has(t.speciesCode));
+  const displayedTargets = showAll
+    ? filteredTargets
+    : [...pinnedFilteredTargets, ...unpinnedFilteredTargets.slice(0, INITIAL_LIMIT)];
+  const hasMore = unpinnedFilteredTargets.length > INITIAL_LIMIT;
 
-  const hasNoSpeciesData = !data || data.targets.length === 0;
+  const hasNoTargetData = !data;
+  const hasNoSpeciesData = hasNoTargetData || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
   const handleLifeListAction = (speciesCode: string) => {
@@ -83,8 +126,33 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         date: new Date().toISOString().split("T")[0],
         location: "N/A",
         checklistId: null,
+        isManual: true,
       };
       setLifelist([...(lifelist || []), newEntry]);
+      const speciesName = taxonomyMap.get(speciesCode) ?? speciesCode;
+      Toast.show({ type: "success", text1: `Added ${speciesName} to life list` });
+    }
+  };
+
+  const handlePinAction = async (speciesCode: string, isPinned: boolean) => {
+    const previousPinnedTargets = pinnedTargets;
+    const nextPinnedTargets = isPinned
+      ? previousPinnedTargets.filter((code) => code !== speciesCode)
+      : [...previousPinnedTargets, speciesCode];
+
+    queryClient.setQueryData<string[]>(["pinnedTargets", hotspotId], nextPinnedTargets);
+
+    try {
+      if (isPinned) {
+        await unpinTarget(hotspotId, speciesCode);
+      } else {
+        await pinTarget(hotspotId, speciesCode);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["pinnedTargets", hotspotId] });
+    } catch {
+      queryClient.setQueryData<string[]>(["pinnedTargets", hotspotId], previousPinnedTargets);
+      Alert.alert("Couldn't Update Pin", "Try again.");
     }
   };
 
@@ -113,10 +181,14 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
     }
 
     if (hasNoSpeciesData) {
+      const message =
+        selectedMonths.length > 0
+          ? "No checklist data for the selected months."
+          : "No species data available for this hotspot.";
       return (
         <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
           <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
-          <Text style={tw`text-sm text-gray-600 flex-1`}>No species data available for this hotspot.</Text>
+          <Text style={tw`text-sm text-gray-600 flex-1`}>{message}</Text>
         </View>
       );
     }
@@ -175,29 +247,53 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
           )}
       </View>
 
+      {!hasNoLifeList && !hasNoTargetData && (
+        <View style={tw`mt-3`}>
+          <MonthStrip selectedMonths={selectedMonths} onToggleMonth={handleToggleMonth} onSelectAllYear={handleSelectAllYear} />
+        </View>
+      )}
+
       {renderEmptyState()}
 
       {filteredTargets.length > 0 && !hasNoLifeList && (
         <>
           <View style={tw`mt-3 -mx-4`}>
-            {displayedTargets.map((t, idx) => (
+            {displayedTargets.map((t, idx) => {
+              const isPinned = pinnedTargets.includes(t.speciesCode);
+              const prevIsPinned = idx > 0 && pinnedTargets.includes(displayedTargets[idx - 1].speciesCode);
+              const showPinnedHeader = isPinned && idx === 0;
+              const showOtherHeader = pinnedFilteredTargets.length > 0 && !isPinned && (idx === 0 || prevIsPinned);
+              return (
               <View key={t.speciesCode}>
-                {idx > 0 && <View style={tw`h-px bg-gray-100`} />}
+                {showPinnedHeader && (
+                  <Text style={tw`px-5 pt-2 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Pinned</Text>
+                )}
+                {showOtherHeader && (
+                  <Text style={tw`px-5 pt-3 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Other Targets</Text>
+                )}
+                {idx > 0 && !showOtherHeader && <View style={tw`h-px bg-gray-100`} />}
 
                 <View style={tw`px-5 py-3`}>
                   <View style={tw`flex-row items-center`}>
-                    {avicommons[t.speciesCode as keyof typeof avicommons] ? (
-                      <Image
-                        source={{
-                          uri: `https://static.avicommons.org/${t.speciesCode}-${
-                            avicommons[t.speciesCode as keyof typeof avicommons][0]
-                          }-160.webp`,
-                        }}
-                        style={tw`w-20 h-15 rounded mr-3 bg-gray-200`}
-                      />
-                    ) : (
-                      <View style={tw`w-20 h-15 rounded mr-3 bg-gray-200`} />
-                    )}
+                    <View style={tw`w-20 h-15 mr-3`}>
+                      {avicommons[t.speciesCode as keyof typeof avicommons] ? (
+                        <Image
+                          source={{
+                            uri: `https://static.avicommons.org/${t.speciesCode}-${
+                              avicommons[t.speciesCode as keyof typeof avicommons][0]
+                            }-160.webp`,
+                          }}
+                          style={tw`w-20 h-15 rounded bg-gray-200`}
+                        />
+                      ) : (
+                        <View style={tw`w-20 h-15 rounded bg-gray-200`} />
+                      )}
+                      {isPinned && (
+                        <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
+                          <IconSymbol name="pin.fill" size={10} color="white" />
+                        </View>
+                      )}
+                    </View>
 
                     <View style={tw`flex-1`}>
                       <View style={tw`flex-row items-center justify-between`}>
@@ -234,6 +330,13 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                                     Linking.openURL(url);
                                   }}
                                 />
+                                <Button
+                                  label={isPinned ? "Unpin Target" : "Pin Target"}
+                                  systemImage={isPinned ? "pin.slash" : "pin"}
+                                  onPress={() => {
+                                    void handlePinAction(t.speciesCode, isPinned);
+                                  }}
+                                />
                               </Section>
                               <Section>
                                 {(() => {
@@ -266,7 +369,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                   </View>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
 
           {hasMore && (

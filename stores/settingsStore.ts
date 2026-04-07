@@ -7,6 +7,7 @@ export type LifeListEntry = {
   date: string;
   location: string;
   checklistId: string | null;
+  isManual?: boolean;
 };
 
 type SettingsState = {
@@ -16,6 +17,7 @@ type SettingsState = {
   lifelistExclusions: string[] | null;
   disableSunTimes: boolean;
   showAllSpecies: boolean;
+  targetMonths: number[];
 };
 
 type SettingsActions = {
@@ -24,6 +26,7 @@ type SettingsActions = {
   setLifelistExclusions: (exclusions: string[] | null) => void;
   setDisableSunTimes: (value: boolean) => void;
   setShowAllSpecies: (value: boolean) => void;
+  setTargetMonths: (months: number[]) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -73,11 +76,13 @@ export const useSettingsStore = create<SettingsStore>()(
       lifelistExclusions: null,
       disableSunTimes: false,
       showAllSpecies: false,
+      targetMonths: [],
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
       setDisableSunTimes: (value) => set({ disableSunTimes: value }),
       setShowAllSpecies: (value) => set({ showAllSpecies: value }),
+      setTargetMonths: (months) => set({ targetMonths: months }),
     }),
     {
       name: "settings",

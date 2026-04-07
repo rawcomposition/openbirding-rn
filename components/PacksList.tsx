@@ -140,11 +140,12 @@ export default function PacksList() {
     }
 
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const query = normalize(searchQuery);
       packs = packs.filter(
         (pack) =>
-          pack.name.toLowerCase().includes(query) ||
-          pack.tags?.some((tag) => tag.toLowerCase().includes(query))
+          normalize(pack.name).includes(query) ||
+          pack.tags?.some((tag) => normalize(tag).includes(query))
       );
     }
 
@@ -208,7 +209,7 @@ export default function PacksList() {
             renderItem={renderPack}
             keyExtractor={keyExtractor}
             showsVerticalScrollIndicator
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
           />
         </View>
       )}

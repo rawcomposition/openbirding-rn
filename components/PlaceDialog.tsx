@@ -1,13 +1,15 @@
 import { getSavedPlaceById } from "@/lib/database";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
+import { FontAwesome6 } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsMenuButton from "./DirectionsMenuButton";
 import PlaceEditSheet from "./PlaceEditSheet";
+import PlaceNotesSheet from "./PlaceNotesSheet";
 
 type Props = {
   isOpen: boolean;
@@ -21,6 +23,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   const queryClient = useQueryClient();
   const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["savedPlace", placeId],
@@ -89,10 +92,20 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
     <>
       <BaseBottomSheet isOpen={isOpen} onClose={onClose} headerContent={headerContent}>
         <View style={tw`px-4 pb-4 pt-2 min-h-[100px]`}>
-          {savedPlace?.notes && (
-            <View style={tw`bg-gray-50 p-3 rounded-lg mb-3`}>
-              <Text style={tw`text-gray-700`}>{savedPlace.notes}</Text>
-            </View>
+          {!!placeId && (
+            <TouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
+              {savedPlace?.notes ? (
+                <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
+                  <Text style={tw`text-gray-700 flex-1 text-sm`}>{savedPlace.notes}</Text>
+                  <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`ml-2 mt-0.5`} />
+                </View>
+              ) : (
+                <View style={tw`flex-row items-center py-1.5 px-2`}>
+                  <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`mr-2`} />
+                  <Text style={tw`text-gray-400 text-sm`}>Add notes...</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           )}
           {!!lat && !!lng && (
             <DirectionsMenuButton latitude={lat} longitude={lng} />
@@ -108,6 +121,14 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
           onSaved={handleSaved}
           onDeleted={handleDeleted}
           onClose={() => setIsEditOpen(false)}
+        />
+      )}
+      {isNotesOpen && placeId && (
+        <PlaceNotesSheet
+          isOpen
+          placeId={placeId}
+          initialNotes={savedPlace?.notes || ""}
+          onClose={() => setIsNotesOpen(false)}
         />
       )}
     </>
