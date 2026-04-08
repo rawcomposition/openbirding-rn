@@ -164,11 +164,9 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
         <View style={tw`gap-3 py-3`}>
           {isFilterPanelOpen && (
-            <View style={tw`bg-gray-50 rounded-2xl px-4 py-3`}>
-              <View style={tw`flex-row items-center justify-between`}>
-                <Text style={tw`text-base text-gray-900`}>Show saved only</Text>
-                <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
-              </View>
+            <View style={tw`flex-row items-center justify-between py-1`}>
+              <Text style={tw`text-base font-medium text-gray-900`}>Show saved only</Text>
+              <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
             </View>
           )}
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
