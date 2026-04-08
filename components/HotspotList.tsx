@@ -180,8 +180,8 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       <BaseBottomSheet
         isOpen={isOpen}
         onClose={onClose}
-        detents={[0.92, 0.98]}
-        initialIndex={1}
+        detents={[1]}
+        initialIndex={0}
         headerContent={headerContent}
         scrollable
         dimmed
