@@ -1,3 +1,4 @@
+import BirdPlanLogo from "@/components/icons/BirdPlanLogo";
 import tw from "@/lib/tw";
 import { getExternalMapProviders } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -33,14 +34,19 @@ type SettingsRowProps = {
   onPress: () => void;
   isLast?: boolean;
   icon?: SettingsIconProps | undefined;
+  iconElement?: React.ReactNode;
 };
 
-function SettingsRow({ label, value, onPress, isLast, icon }: SettingsRowProps) {
+function SettingsRow({ label, value, onPress, isLast, icon, iconElement }: SettingsRowProps) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
 
   return (
     <TouchableOpacity style={[tw`flex-row items-center px-4 py-3`, borderStyle]} onPress={onPress} activeOpacity={0.6}>
-      {icon && <SettingsIcon {...icon} />}
+      {iconElement ? (
+        <View style={tw`w-7 h-7 items-center justify-center mr-3`}>{iconElement}</View>
+      ) : icon ? (
+        <SettingsIcon {...icon} />
+      ) : null}
       <Text style={tw`text-gray-900 text-base flex-1`}>{label}</Text>
       {value && <Text style={tw`text-gray-500 text-base mr-1`}>{value}</Text>}
       <Ionicons name="chevron-forward" size={20} color={tw.color("gray-400")} />
@@ -177,6 +183,15 @@ export default function SettingsPage() {
           label="Import Life List"
           onPress={() => router.push("/settings-import-life-list" as Href)}
           icon={{ name: "cloud-upload", bgColor: "#5856D6" }}
+          isLast
+        />
+      </SettingsGroup>
+
+      <SettingsGroup header="Integrations">
+        <SettingsRow
+          label="BirdPlan.app Trips"
+          onPress={() => router.push("/settings-birdplan" as Href)}
+          iconElement={<BirdPlanLogo width={28} />}
           isLast
         />
       </SettingsGroup>

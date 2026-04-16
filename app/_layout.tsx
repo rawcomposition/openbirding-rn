@@ -129,6 +129,24 @@ export default function RootLayout() {
                   headerShadowVisible: false,
                 }}
               />
+              <Stack.Screen
+                name="settings-birdplan"
+                options={{
+                  title: "BirdPlan.app Trips",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="settings-birdplan-import"
+                options={{
+                  title: "Import Trip",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
             <Toast
