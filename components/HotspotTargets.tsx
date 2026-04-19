@@ -5,8 +5,6 @@ import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
-import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -14,7 +12,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
@@ -43,6 +42,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
   const debugHideTargetRowMenu = useMapStore((s) => s.debugHideTargetRowMenu);
+  const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
 
@@ -220,34 +220,41 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         </View>
         {data?.version &&
           parsePackVersion(data.version) && (
-            <Host style={tw`w-8 h-8`}>
-              <Menu
-                label={
-                  <RNHostView matchContents>
-                    <View style={tw`w-8 h-8 items-center justify-center`}>
-                      <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
-                    </View>
-                  </RNHostView>
-                }
-                modifiers={[
-                  contentShape(shapes.circle()),
-                  glassEffect({ glass: { variant: "regular", interactive: true }, shape: "circle" }),
-                ]}
-              >
-                <Section>
-                  <Button
-                    label={showAllSpecies ? "Show Targets Only" : "Show All Species"}
-                    systemImage={showAllSpecies ? "target" : "bird"}
-                    onPress={() => setShowAllSpecies(!showAllSpecies)}
-                  />
-                  <Button
-                    label="About This Data"
-                    systemImage="info.circle"
-                    onPress={() => setShowDataInfo(true)}
-                  />
-                </Section>
-              </Menu>
-            </Host>
+            <FloatingMenuTrigger
+              sections={[
+                {
+                  items: [
+                    {
+                      label: showAllSpecies ? "Show Targets Only" : "Show All Species",
+                      icon: (
+                        <Ionicons
+                          name={showAllSpecies ? "locate-outline" : "eye-outline"}
+                          size={18}
+                          color={tw.color("gray-700")}
+                        />
+                      ),
+                      onPress: () => setShowAllSpecies(!showAllSpecies),
+                    },
+                    {
+                      label: "About This Data",
+                      icon: <Ionicons name="information-circle-outline" size={18} color={tw.color("gray-700")} />,
+                      onPress: () => setShowDataInfo(true),
+                    },
+                  ],
+                },
+              ]}
+              touchableStyle={tw`w-8 h-8`}
+            >
+              {useGlassTargetMenuButton ? (
+                <GlassView style={tw`w-8 h-8 rounded-full items-center justify-center`} glassEffectStyle="regular" isInteractive>
+                  <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
+                </GlassView>
+              ) : (
+                <View style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}>
+                  <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
+                </View>
+              )}
+            </FloatingMenuTrigger>
           )}
       </View>
 

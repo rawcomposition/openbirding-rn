@@ -1,9 +1,10 @@
 import { getDirections, getExternalMapProviders } from "@/lib/utils";
 import tw from "@/lib/tw";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
 import { Alert, Linking, Text, View } from "react-native";
+import { PopoverPlacement } from "react-native-popover-view";
 import { ACTION_BUTTON_MIN_HEIGHT } from "./ActionButton";
+import { FloatingMenuSection } from "./FloatingMenu";
+import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import DirectionsIcon from "./icons/DirectionsIcon";
 
 type Props = {
@@ -13,9 +14,7 @@ type Props = {
 };
 
 export default function DirectionsMenuButton({ latitude, longitude, stacked = false }: Props) {
-  const directionsProvider = useSettingsStore((state) => state.directionsProvider);
   const providers = getExternalMapProviders();
-  const hasSavedProvider = !!directionsProvider && directionsProvider !== "";
 
   const openWithProvider = (providerId: string) => {
     const provider = providers.find((p) => p.id === providerId);
@@ -25,6 +24,15 @@ export default function DirectionsMenuButton({ latitude, longitude, stacked = fa
       Alert.alert("Error", `Could not open ${providerName}`);
     });
   };
+
+  const sections: FloatingMenuSection[] = [
+    {
+      items: providers.map((provider) => ({
+        label: provider.name,
+        onPress: () => openWithProvider(provider.id),
+      })),
+    },
+  ];
 
   const buttonContent = (
     <View
@@ -55,26 +63,13 @@ export default function DirectionsMenuButton({ latitude, longitude, stacked = fa
           : { height: ACTION_BUTTON_MIN_HEIGHT, overflow: "hidden" },
       ]}
     >
-      <Host style={stacked ? tw`w-full` : tw`flex-1`}>
-        <Menu
-          label={
-            <RNHostView matchContents={stacked}>
-              {buttonContent}
-            </RNHostView>
-          }
-          onPrimaryAction={hasSavedProvider ? () => openWithProvider(directionsProvider) : undefined}
-        >
-          <Section>
-            {providers.map((provider) => (
-              <Button
-                key={provider.id}
-                label={provider.name}
-                onPress={() => openWithProvider(provider.id)}
-              />
-            ))}
-          </Section>
-        </Menu>
-      </Host>
+      <FloatingMenuTrigger
+        sections={sections}
+        touchableStyle={stacked ? tw`w-full` : tw`flex-1`}
+        placementOverride={PopoverPlacement.BOTTOM}
+      >
+        {buttonContent}
+      </FloatingMenuTrigger>
     </View>
   );
 }

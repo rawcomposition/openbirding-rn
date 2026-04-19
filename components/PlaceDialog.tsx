@@ -3,11 +3,12 @@ import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsMenuButton from "./DirectionsMenuButton";
+import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "./FloatingMenuProvider";
 import PlaceEditSheet from "./PlaceEditSheet";
 import PlaceNotesSheet from "./PlaceNotesSheet";
 
@@ -19,11 +20,24 @@ type Props = {
   onClose: () => void;
 };
 
-export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: droppedLng, onClose }: Props) {
+export default function PlaceDialog(props: Props) {
+  return (
+    <FloatingMenuProvider>
+      <PlaceDialogContent {...props} />
+    </FloatingMenuProvider>
+  );
+}
+
+function PlaceDialogContent({ isOpen, placeId, lat: droppedLat, lng: droppedLng, onClose }: Props) {
   const queryClient = useQueryClient();
   const { setPlaceId, setHotspotId, setCustomPinCoordinates } = useMapStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const { closeMenu } = useFloatingMenu();
+
+  useEffect(() => {
+    closeMenu();
+  }, [closeMenu, isOpen, placeId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["savedPlace", placeId],
@@ -60,18 +74,20 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
   };
 
   const headerContent = (dismiss: () => Promise<void>) => (
-    <DialogHeader onClose={dismiss} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
-      {savedPlace?.name ? (
-        <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
-          {savedPlace.name}
-        </Text>
-      ) : (
-        <View style={tw`h-7`} />
-      )}
-      {!!savedPlace && (
-        <Text style={tw`text-gray-600 text-sm mt-1`}>{placeId ? "Saved Pin" : "Dropped Pin"}</Text>
-      )}
-    </DialogHeader>
+    <View onTouchStart={closeMenu}>
+      <DialogHeader onClose={dismiss} onSavePress={handleSavePress} isPlace isSaved={!!placeId}>
+        {savedPlace?.name ? (
+          <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
+            {savedPlace.name}
+          </Text>
+        ) : (
+          <View style={tw`h-7`} />
+        )}
+        {!!savedPlace && (
+          <Text style={tw`text-gray-600 text-sm mt-1`}>{placeId ? "Saved Pin" : "Dropped Pin"}</Text>
+        )}
+      </DialogHeader>
+    </View>
   );
 
   if (placeId && !savedPlace && !isLoading) {
@@ -110,6 +126,7 @@ export default function PlaceDialog({ isOpen, placeId, lat: droppedLat, lng: dro
           {!!lat && !!lng && (
             <DirectionsMenuButton latitude={lat} longitude={lng} />
           )}
+          <FloatingMenuHost />
         </View>
       </BaseBottomSheet>
       {isEditOpen && (

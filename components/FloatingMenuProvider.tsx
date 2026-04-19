@@ -11,7 +11,11 @@ type FloatingMenuState = {
 };
 
 type FloatingMenuContextValue = {
-  openMenu: (sections: FloatingMenuSection[], from: RefObject<View | null>) => void;
+  openMenu: (
+    sections: FloatingMenuSection[],
+    from: RefObject<View | null>,
+    options?: { placementOverride?: PopoverPlacement }
+  ) => void;
   closeMenu: () => void;
 };
 
@@ -32,6 +36,7 @@ type FloatingMenuTriggerProps = {
   sections: FloatingMenuSection[];
   children: ReactNode;
   touchableStyle?: StyleProp<ViewStyle>;
+  placementOverride?: PopoverPlacement;
 } & Pick<TouchableOpacityProps, "activeOpacity" | "disabled">;
 
 const MENU_EDGE_MARGIN = 12;
@@ -57,9 +62,14 @@ export function FloatingMenuProvider({ children, placementOverride }: FloatingMe
   }, []);
 
   const openMenu = useCallback(
-    (sections: FloatingMenuSection[], from: RefObject<View | null>) => {
-      if (placementOverride) {
-        setMenu({ sections, from, placement: placementOverride });
+    (
+      sections: FloatingMenuSection[],
+      from: RefObject<View | null>,
+      options?: { placementOverride?: PopoverPlacement }
+    ) => {
+      const effectivePlacementOverride = options?.placementOverride ?? placementOverride;
+      if (effectivePlacementOverride) {
+        setMenu({ sections, from, placement: effectivePlacementOverride });
         return;
       }
 
@@ -124,6 +134,7 @@ export function FloatingMenuTrigger({
   sections,
   children,
   touchableStyle,
+  placementOverride,
   activeOpacity = 0.7,
   disabled,
 }: FloatingMenuTriggerProps) {
@@ -135,7 +146,7 @@ export function FloatingMenuTrigger({
       style={touchableStyle}
       activeOpacity={activeOpacity}
       disabled={disabled}
-      onPress={() => openMenu(sections, anchorRef)}
+      onPress={() => openMenu(sections, anchorRef, { placementOverride })}
     >
       <View ref={anchorRef}>{children}</View>
     </TouchableOpacity>
