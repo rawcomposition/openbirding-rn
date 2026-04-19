@@ -316,16 +316,18 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
                           <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
                             {taxonomyMap.get(t.speciesCode) || "Unknown species"}
                           </Text>
-                          <TargetRowMenuButton
-                            sections={buildRowMenuSections(t.speciesCode, {
-                              pinnedTargets,
-                              lat,
-                              lng,
-                              handlePinAction,
-                              handleLifeListAction,
-                              getLifeListMenuProps,
-                            })}
-                          />
+                          {isBottomSheetExpanded && (
+                            <TargetRowMenuButton
+                              sections={buildRowMenuSections(t.speciesCode, {
+                                pinnedTargets,
+                                lat,
+                                lng,
+                                handlePinAction,
+                                handleLifeListAction,
+                                getLifeListMenuProps,
+                              })}
+                            />
+                          )}
                         </View>
 
                         <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
