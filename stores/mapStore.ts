@@ -23,6 +23,10 @@ type MapStore = {
   setIsSunDetailsOpen: (isOpen: boolean) => void;
   isMapAttributionOpen: boolean;
   setIsMapAttributionOpen: (isOpen: boolean) => void;
+  debugHideTargetRowMenu: boolean;
+  setDebugHideTargetRowMenu: (hide: boolean) => void;
+  debugHideHotspotActions: boolean;
+  setDebugHideHotspotActions: (hide: boolean) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -46,4 +50,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsSunDetailsOpen: (isOpen) => set({ isSunDetailsOpen: isOpen }),
   isMapAttributionOpen: false,
   setIsMapAttributionOpen: (isOpen) => set({ isMapAttributionOpen: isOpen }),
+  debugHideTargetRowMenu: false,
+  setDebugHideTargetRowMenu: (hide) => set({ debugHideTargetRowMenu: hide }),
+  debugHideHotspotActions: false,
+  setDebugHideHotspotActions: (hide) => set({ debugHideHotspotActions: hide }),
 }));

@@ -1,3 +1,4 @@
+import DebugMenu from "@/components/DebugMenu";
 import FloatingButton from "@/components/FloatingButton";
 import HotspotDialog from "@/components/HotspotDialog";
 import HotspotList from "@/components/HotspotList";
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDebugMenuOpen, setIsDebugMenuOpen] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const insets = useSafeAreaInsets();
 
@@ -158,6 +160,19 @@ export default function HomeScreen() {
             {hasUpdates && <View style={tw`absolute top-4 right-3.5 w-2.5 h-2.5 bg-blue-500 rounded-full`} />}
           </View>
         </View>
+        <View
+          style={[
+            tw`absolute right-4`,
+            {
+              top: insets.top > 16 ? insets.top + 4 : insets.top + 16,
+            },
+          ]}
+        >
+          <FloatingButton onPress={() => setIsDebugMenuOpen(true)} light={currentLayer === "satellite"}>
+            <Ionicons name="bug" size={24} color={tw.color("gray-700")} />
+          </FloatingButton>
+        </View>
+        <DebugMenu isOpen={isDebugMenuOpen} onClose={() => setIsDebugMenuOpen(false)} />
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
         <PlaceDialog
