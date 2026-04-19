@@ -4,7 +4,7 @@ import { getMarkerColor } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Linking,
@@ -18,7 +18,7 @@ import { PopoverPlacement } from "react-native-popover-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import ActionButtonRow from "./ActionButtonRow";
-import BaseBottomSheet from "./BaseBottomSheet";
+import BaseBottomSheet, { BaseBottomSheetHandle } from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsMenuButton from "./DirectionsMenuButton";
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "./FloatingMenuProvider";
@@ -49,6 +49,10 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const useStackedActionButtons = fontScale >= 1.25;
   const { closeMenu } = useFloatingMenu();
+  const sheetRef = useRef<BaseBottomSheetHandle>(null);
+  const expandSheet = useCallback(async () => {
+    await sheetRef.current?.expand();
+  }, []);
 
   useEffect(() => {
     closeMenu();
@@ -142,7 +146,7 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
 
   return (
     <>
-      <BaseBottomSheet isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
+      <BaseBottomSheet ref={sheetRef} isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
         <View style={tw`flex-1`}>
           <ScrollView
             style={tw`flex-1`}
@@ -187,6 +191,7 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
                     hotspotId={hotspot.id}
                     lat={hotspot.lat}
                     lng={hotspot.lng}
+                    onExpandSheet={expandSheet}
                   />
                 </View>
               ) : isLoadingHotspot ? null : (

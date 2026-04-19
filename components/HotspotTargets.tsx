@@ -28,9 +28,10 @@ type HotspotTargetsProps = {
   hotspotId: string;
   lat: number;
   lng: number;
+  onExpandSheet?: () => Promise<void>;
 };
 
-export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
+export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -245,7 +246,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                 },
               ]}
               touchableStyle={tw`w-8 h-8`}
-              placementOverride={isBottomSheetExpanded ? undefined : PopoverPlacement.BOTTOM}
+              onBeforeOpen={isBottomSheetExpanded ? undefined : onExpandSheet}
+              placementOverride={PopoverPlacement.BOTTOM}
             >
               {useGlassTargetMenuButton ? (
                 <GlassView style={tw`w-8 h-8 rounded-full items-center justify-center`} glassEffectStyle="regular" isInteractive>
