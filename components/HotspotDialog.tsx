@@ -14,14 +14,14 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
+import { PopoverPlacement } from "react-native-popover-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import ActionButtonRow from "./ActionButtonRow";
 import BaseBottomSheet from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsMenuButton from "./DirectionsMenuButton";
-import FloatingMenu, { FloatingMenuSection } from "./FloatingMenu";
+import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "./FloatingMenuProvider";
 import HotspotNotesSheet from "./HotspotNotesSheet";
 import HotspotTargets from "./HotspotTargets";
 import InfoIcon from "./icons/InfoIcon";
@@ -32,35 +32,28 @@ type HotspotDialogProps = {
   onClose: () => void;
 };
 
-type RowMenuState = {
-  sections: FloatingMenuSection[];
-  from: React.RefObject<View | null>;
-  placement: PopoverPlacement;
-};
+export default function HotspotDialog(props: HotspotDialogProps) {
+  const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
 
-const MENU_EDGE_MARGIN = 12;
-const MENU_ROW_ESTIMATED_HEIGHT = 48;
-const MENU_VERTICAL_PADDING = 8;
-const MENU_SECTION_SEPARATOR_HEIGHT = 9;
-
-function getEstimatedMenuHeight(sections: FloatingMenuSection[]) {
-  const itemCount = sections.reduce((total, section) => total + section.items.length, 0);
-  const separatorCount = Math.max(sections.length - 1, 0);
-  return MENU_VERTICAL_PADDING + itemCount * MENU_ROW_ESTIMATED_HEIGHT + separatorCount * MENU_SECTION_SEPARATOR_HEIGHT;
+  return (
+    <FloatingMenuProvider placementOverride={isBottomSheetExpanded ? undefined : PopoverPlacement.TOP}>
+      <HotspotDialogContent {...props} />
+    </FloatingMenuProvider>
+  );
 }
 
-export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
+function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const { fontScale, height: windowHeight } = useWindowDimensions();
+  const { fontScale } = useWindowDimensions();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [rowMenu, setRowMenu] = useState<RowMenuState | null>(null);
   const useStackedActionButtons = fontScale >= 1.25;
   const debugHideHotspotActions = useMapStore((s) => s.debugHideHotspotActions);
+  const { closeMenu } = useFloatingMenu();
 
   useEffect(() => {
-    setRowMenu(null);
-  }, [hotspotId, isOpen]);
+    closeMenu();
+  }, [closeMenu, hotspotId, isOpen]);
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -123,28 +116,8 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
 
   const notes = savedHotspot?.notes || "";
 
-  const handleOpenRowMenu = (sections: FloatingMenuSection[], from: React.RefObject<View | null>) => {
-    const fallbackPlacement = PopoverPlacement.TOP;
-    if (!from.current) {
-      setRowMenu({ sections, from, placement: fallbackPlacement });
-      return;
-    }
-
-    from.current.measureInWindow((_x, y, _width, height) => {
-      const estimatedMenuHeight = getEstimatedMenuHeight(sections);
-      const availableAbove = y - insets.top - MENU_EDGE_MARGIN;
-      const availableBelow = windowHeight - (y + height) - Math.max(insets.bottom, 16) - MENU_EDGE_MARGIN;
-      const placement =
-        availableBelow >= estimatedMenuHeight || availableBelow >= availableAbove
-          ? PopoverPlacement.BOTTOM
-          : PopoverPlacement.TOP;
-
-      setRowMenu({ sections, from, placement });
-    });
-  };
-
   const headerContent = (dismiss: () => Promise<void>) => (
-    <View onTouchStart={() => setRowMenu(null)}>
+    <View onTouchStart={closeMenu}>
       <DialogHeader
         onClose={dismiss}
         onSavePress={hotspot ? handleToggleSave : undefined}
@@ -175,7 +148,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
           <ScrollView
             style={tw`flex-1`}
             showsVerticalScrollIndicator={false}
-            onScrollBeginDrag={() => setRowMenu(null)}
+            onScrollBeginDrag={closeMenu}
           >
             <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
               {hotspot ? (
@@ -217,7 +190,6 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
                     hotspotId={hotspot.id}
                     lat={hotspot.lat}
                     lng={hotspot.lng}
-                    onOpenRowMenu={handleOpenRowMenu}
                   />
                 </View>
               ) : isLoadingHotspot ? null : (
@@ -227,14 +199,7 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
               )}
             </View>
           </ScrollView>
-          <FloatingMenu
-            isOpen={!!rowMenu}
-            onClose={() => setRowMenu(null)}
-            from={rowMenu?.from}
-            sections={rowMenu?.sections ?? []}
-            mode={PopoverMode.JS_MODAL}
-            placement={rowMenu?.placement}
-          />
+          <FloatingMenuHost />
         </View>
       </BaseBottomSheet>
       {isNotesOpen && hotspotId && (

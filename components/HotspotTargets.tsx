@@ -13,11 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
+import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import MonthStrip from "./MonthStrip";
 import { IconSymbol } from "./ui/IconSymbol";
 
@@ -27,10 +28,9 @@ type HotspotTargetsProps = {
   hotspotId: string;
   lat: number;
   lng: number;
-  onOpenRowMenu: (sections: FloatingMenuSection[], from: RefObject<View | null>) => void;
 };
 
-export default function HotspotTargets({ hotspotId, lat, lng, onOpenRowMenu }: HotspotTargetsProps) {
+export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -315,7 +315,6 @@ export default function HotspotTargets({ hotspotId, lat, lng, onOpenRowMenu }: H
                                 handleLifeListAction,
                                 getLifeListMenuProps,
                               })}
-                              onOpen={onOpenRowMenu}
                             />
                           )}
                         </View>
@@ -458,16 +457,14 @@ function buildRowMenuSections(code: string, ctx: RowMenuCtx): FloatingMenuSectio
 
 type TargetRowMenuButtonProps = {
   sections: FloatingMenuSection[];
-  onOpen: (sections: FloatingMenuSection[], from: RefObject<View | null>) => void;
 };
 
-function TargetRowMenuButton({ sections, onOpen }: TargetRowMenuButtonProps) {
-  const anchorRef = useRef<View>(null);
+function TargetRowMenuButton({ sections }: TargetRowMenuButtonProps) {
   return (
-    <TouchableOpacity style={tw`ml-1`} onPress={() => onOpen(sections, anchorRef)}>
-      <View ref={anchorRef} style={tw`px-1.5 py-2 mt-px`}>
+    <FloatingMenuTrigger sections={sections} touchableStyle={tw`ml-1`}>
+      <View style={tw`px-1.5 py-2 mt-px`}>
         <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
       </View>
-    </TouchableOpacity>
+    </FloatingMenuTrigger>
   );
 }
