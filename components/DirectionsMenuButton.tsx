@@ -1,10 +1,8 @@
 import { getDirections, getExternalMapProviders } from "@/lib/utils";
 import tw from "@/lib/tw";
-import { Alert, Linking, Text, View } from "react-native";
-import { PopoverPlacement } from "react-native-popover-view";
+import { useActionSheet } from "@expo/react-native-action-sheet";
+import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
 import { ACTION_BUTTON_MIN_HEIGHT } from "./ActionButton";
-import { FloatingMenuSection } from "./FloatingMenu";
-import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import DirectionsIcon from "./icons/DirectionsIcon";
 
 type Props = {
@@ -14,6 +12,7 @@ type Props = {
 };
 
 export default function DirectionsMenuButton({ latitude, longitude, stacked = false }: Props) {
+  const { showActionSheetWithOptions } = useActionSheet();
   const providers = getExternalMapProviders();
 
   const openWithProvider = (providerId: string) => {
@@ -25,51 +24,49 @@ export default function DirectionsMenuButton({ latitude, longitude, stacked = fa
     });
   };
 
-  const sections: FloatingMenuSection[] = [
-    {
-      items: providers.map((provider) => ({
-        label: provider.name,
-        onPress: () => openWithProvider(provider.id),
-      })),
-    },
-  ];
-
-  const buttonContent = (
-    <View
-      style={[
-        tw`w-full flex-row items-center justify-center px-3 bg-gray-50 rounded-full`,
-        stacked ? { minHeight: ACTION_BUTTON_MIN_HEIGHT, paddingVertical: 12 } : { height: ACTION_BUTTON_MIN_HEIGHT },
-      ]}
-    >
-      <DirectionsIcon color={tw.color("orange-600/90")} size={20} />
-      <Text
-        numberOfLines={stacked ? 2 : 1}
-        style={[tw`text-gray-700 text-base font-medium ml-3`, { flexShrink: 1, textAlign: "center" }]}
-      >
-        Get Directions
-      </Text>
-    </View>
-  );
+  const handlePress = () => {
+    const options = [...providers.map((p) => p.name), "Cancel"];
+    const cancelButtonIndex = options.length - 1;
+    showActionSheetWithOptions(
+      {
+        title: "Get Directions",
+        options,
+        cancelButtonIndex,
+      },
+      (selectedIndex) => {
+        if (selectedIndex == null || selectedIndex === cancelButtonIndex) return;
+        openWithProvider(providers[selectedIndex].id);
+      }
+    );
+  };
 
   return (
     <View
       style={[
         tw`w-full rounded-full`,
-        // In the horizontal row, keep the directions button from briefly rendering too large
-        // when switching to a newly loaded hotspot. In stacked large-text mode, let the label
-        // grow naturally so the icon and text stay centered.
         stacked
           ? { minHeight: ACTION_BUTTON_MIN_HEIGHT }
           : { height: ACTION_BUTTON_MIN_HEIGHT, overflow: "hidden" },
       ]}
     >
-      <FloatingMenuTrigger
-        sections={sections}
-        touchableStyle={stacked ? tw`w-full` : tw`flex-1`}
-        placementOverride={PopoverPlacement.BOTTOM}
-      >
-        {buttonContent}
-      </FloatingMenuTrigger>
+      <TouchableOpacity onPress={handlePress} style={stacked ? tw`w-full` : tw`flex-1`}>
+        <View
+          style={[
+            tw`w-full flex-row items-center justify-center px-3 bg-gray-50 rounded-full`,
+            stacked
+              ? { minHeight: ACTION_BUTTON_MIN_HEIGHT, paddingVertical: 12 }
+              : { height: ACTION_BUTTON_MIN_HEIGHT },
+          ]}
+        >
+          <DirectionsIcon color={tw.color("orange-600/90")} size={20} />
+          <Text
+            numberOfLines={stacked ? 2 : 1}
+            style={[tw`text-gray-700 text-base font-medium ml-3`, { flexShrink: 1, textAlign: "center" }]}
+          >
+            Get Directions
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
