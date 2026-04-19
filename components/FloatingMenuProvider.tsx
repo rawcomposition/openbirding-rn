@@ -6,14 +6,14 @@ import FloatingMenu, { FloatingMenuSection } from "./FloatingMenu";
 
 type FloatingMenuState = {
   sections: FloatingMenuSection[];
-  from: RefObject<View | null>;
+  from: RefObject<View>;
   placement: PopoverPlacement;
 };
 
 type FloatingMenuContextValue = {
   openMenu: (
     sections: FloatingMenuSection[],
-    from: RefObject<View | null>,
+    from: RefObject<View>,
     options?: { placementOverride?: PopoverPlacement }
   ) => void;
   closeMenu: () => void;
@@ -64,7 +64,7 @@ export function FloatingMenuProvider({ children, placementOverride }: FloatingMe
   const openMenu = useCallback(
     (
       sections: FloatingMenuSection[],
-      from: RefObject<View | null>,
+      from: RefObject<View>,
       options?: { placementOverride?: PopoverPlacement }
     ) => {
       const effectivePlacementOverride = options?.placementOverride ?? placementOverride;
@@ -138,7 +138,7 @@ export function FloatingMenuTrigger({
   activeOpacity = 0.7,
   disabled,
 }: FloatingMenuTriggerProps) {
-  const anchorRef = useRef<View>(null);
+  const anchorRef = useRef<View>(null!);
   const { openMenu } = useFloatingMenu();
 
   return (

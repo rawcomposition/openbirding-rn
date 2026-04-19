@@ -48,7 +48,6 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
   const { fontScale } = useWindowDimensions();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const useStackedActionButtons = fontScale >= 1.25;
-  const debugHideHotspotActions = useMapStore((s) => s.debugHideHotspotActions);
   const { closeMenu } = useFloatingMenu();
 
   useEffect(() => {
@@ -169,22 +168,20 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
                     </RNTouchableOpacity>
                   )}
 
-                  {!debugHideHotspotActions && (
-                    <ActionButtonRow stacked={useStackedActionButtons}>
-                      <ActionButton
-                        icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
-                        label="View on eBird"
-                        stacked={useStackedActionButtons}
-                        onPress={handleViewDetails}
-                      />
+                  <ActionButtonRow stacked={useStackedActionButtons}>
+                    <ActionButton
+                      icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
+                      label="View on eBird"
+                      stacked={useStackedActionButtons}
+                      onPress={handleViewDetails}
+                    />
 
-                      <DirectionsMenuButton
-                        latitude={hotspot.lat}
-                        longitude={hotspot.lng}
-                        stacked={useStackedActionButtons}
-                      />
-                    </ActionButtonRow>
-                  )}
+                    <DirectionsMenuButton
+                      latitude={hotspot.lat}
+                      longitude={hotspot.lng}
+                      stacked={useStackedActionButtons}
+                    />
+                  </ActionButtonRow>
 
                   <HotspotTargets
                     hotspotId={hotspot.id}

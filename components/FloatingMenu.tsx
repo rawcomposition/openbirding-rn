@@ -17,7 +17,7 @@ export type FloatingMenuSection = {
 type FloatingMenuProps = {
   isOpen: boolean;
   onClose: () => void;
-  from?: React.ComponentProps<typeof Popover>["from"] | React.RefObject<View | null>;
+  from?: React.RefObject<View>;
   mode?: React.ComponentProps<typeof Popover>["mode"];
   placement?: React.ComponentProps<typeof Popover>["placement"];
   sections: FloatingMenuSection[];
@@ -29,7 +29,7 @@ export default function FloatingMenu({ isOpen, onClose, from, mode, placement, s
 
   return (
     <Popover
-      from={from as React.ComponentProps<typeof Popover>["from"]}
+      from={from}
       mode={mode}
       placement={placement}
       isVisible

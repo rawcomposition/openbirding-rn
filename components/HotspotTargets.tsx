@@ -14,6 +14,7 @@ import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { PopoverPlacement } from "react-native-popover-view";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
@@ -41,7 +42,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
-  const debugHideTargetRowMenu = useMapStore((s) => s.debugHideTargetRowMenu);
+  const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
   const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
@@ -244,6 +245,7 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                 },
               ]}
               touchableStyle={tw`w-8 h-8`}
+              placementOverride={isBottomSheetExpanded ? undefined : PopoverPlacement.BOTTOM}
             >
               {useGlassTargetMenuButton ? (
                 <GlassView style={tw`w-8 h-8 rounded-full items-center justify-center`} glassEffectStyle="regular" isInteractive>
@@ -312,18 +314,16 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                           <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
                             {taxonomyMap.get(t.speciesCode) || "Unknown species"}
                           </Text>
-                          {!debugHideTargetRowMenu && (
-                            <TargetRowMenuButton
-                              sections={buildRowMenuSections(t.speciesCode, {
-                                pinnedTargets,
-                                lat,
-                                lng,
-                                handlePinAction,
-                                handleLifeListAction,
-                                getLifeListMenuProps,
-                              })}
-                            />
-                          )}
+                          <TargetRowMenuButton
+                            sections={buildRowMenuSections(t.speciesCode, {
+                              pinnedTargets,
+                              lat,
+                              lng,
+                              handlePinAction,
+                              handleLifeListAction,
+                              getLifeListMenuProps,
+                            })}
+                          />
                         </View>
 
                         <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
