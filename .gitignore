@@ -43,3 +43,6 @@ app-example
 .env
 
 lifelist.local.ts
+
+# Build artifacts
+*.tar.gz
