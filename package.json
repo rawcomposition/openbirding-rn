@@ -7,6 +7,7 @@
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "build:ios:preview:local-with-env": "dotenv -- eas build --platform ios --profile preview --local",
     "web": "expo start --web",
     "lint": "expo lint",
     "generate-markers": "tsx ./scripts/generate-markers.ts",
@@ -69,6 +70,7 @@
   "devDependencies": {
     "@types/react": "~19.2.10",
     "@types/suncalc": "^1.9.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~55.0.0",
     "tsx": "^4.21.0",
