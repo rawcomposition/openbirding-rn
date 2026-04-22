@@ -29,7 +29,7 @@ import InfoIcon from "./icons/InfoIcon";
 type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
-  onClose: () => void;
+  onClose: () => void | false;
 };
 
 export default function HotspotDialog(props: HotspotDialogProps) {
@@ -146,7 +146,14 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
 
   return (
     <>
-      <BaseBottomSheet ref={sheetRef} isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
+      <BaseBottomSheet
+        ref={sheetRef}
+        isOpen={isOpen}
+        onClose={onClose}
+        detents={[0.4, 0.97]}
+        headerContent={headerContent}
+        scrollable
+      >
         <View style={tw`flex-1`}>
           <ScrollView
             style={tw`flex-1`}

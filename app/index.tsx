@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
+  const isMapTouchActiveRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
@@ -87,6 +88,18 @@ export default function HomeScreen() {
     setIsHotspotListOpen(false);
   };
 
+  const handleMapTouchActiveChange = useCallback((isActive: boolean) => {
+    isMapTouchActiveRef.current = isActive;
+  }, []);
+
+  const handleHotspotDialogClose = useCallback(() => {
+    if (isMapTouchActiveRef.current) {
+      return false;
+    }
+
+    setHotspotId(null);
+  }, [setHotspotId]);
+
   const handleSelectHotspotFromList = useCallback(
     (selectedHotspotId: string, lat: number, lng: number) => {
       setCustomPinCoordinates(null);
@@ -122,6 +135,7 @@ export default function HomeScreen() {
           hasInstalledPacks={hasInstalledPacks}
           onLongPressCoordinates={handleMapLongPress}
           placeCoordinates={customPinCoordinates}
+          onTouchActiveChange={handleMapTouchActiveChange}
         />
         {!hasInstalledPacks && !isLoadingInstalledPacks ? (
           <View
@@ -159,7 +173,7 @@ export default function HomeScreen() {
           </View>
         </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
-        <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={() => setHotspotId(null)} />
+        <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={handleHotspotDialogClose} />
         <PlaceDialog
           isOpen={customPinCoordinates !== null || placeId !== null}
           placeId={placeId}

@@ -10,7 +10,7 @@ const EXPANDED_THRESHOLD = 0.9;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: () => void | false;
   title?: string;
   detents?: SheetDetent[];
   initialIndex?: number;
@@ -100,10 +100,12 @@ function BaseBottomSheet(
       header={header}
       headerStyle={tw`pt-5`}
       onWillDismiss={() => {
-        dismissingRef.current = true;
-        onClose();
+        const closeResult = onClose();
+        const shouldClose = closeResult !== false;
+        dismissingRef.current = shouldClose;
       }}
       onDidDismiss={() => {
+        onClose();
         setShouldRender(false);
         setIsBottomSheetExpanded(false);
       }}
