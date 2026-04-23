@@ -1,8 +1,9 @@
 import SearchInput from "@/components/SearchInput";
+import { FloatingMenuHost, FloatingMenuProvider, FloatingMenuTrigger, useFloatingMenu } from "@/components/FloatingMenuProvider";
+import { FloatingMenuSection } from "@/components/FloatingMenu";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Button, Host, Menu, RNHostView, Section } from "@expo/ui/swift-ui";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
@@ -58,54 +59,62 @@ function ExclusionItem({
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(code) ?? `Unknown (${code})`;
+  const sections: FloatingMenuSection[] = [
+    {
+      items: [
+        {
+          label: "View in Merlin",
+          icon: <Ionicons name="open-outline" size={18} color={tw.color("gray-700")} />,
+          onPress: () => {
+            Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
+              Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+            });
+          },
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          label: "Remove",
+          icon: <Ionicons name="remove-circle-outline" size={18} color={tw.color("red-600")} />,
+          destructive: true,
+          onPress: onRemove,
+        },
+      ],
+    },
+  ];
 
   return (
     <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-base font-medium`}>{speciesName}</Text>
       </View>
-      <Host style={tw`p-2 -mr-2`}>
-        <Menu
-          label={
-            <RNHostView matchContents>
-              <View style={tw`w-8 h-8 items-center justify-center`}>
-                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
-              </View>
-            </RNHostView>
-          }
-        >
-          <Section>
-            <Button
-              label="View in Merlin"
-              systemImage="arrow.up.forward.app"
-              onPress={() => {
-                Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
-                  Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-                });
-              }}
-            />
-          </Section>
-          <Section>
-            <Button
-              label="Remove"
-              systemImage="minus.circle"
-              role="destructive"
-              onPress={onRemove}
-            />
-          </Section>
-        </Menu>
-      </Host>
+      <FloatingMenuTrigger sections={sections} touchableStyle={tw`p-2 -mr-2`}>
+        <View style={tw`w-8 h-8 items-center justify-center`}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
+        </View>
+      </FloatingMenuTrigger>
     </View>
   );
 }
 
 export default function LifeListExclusionsPage() {
+  return (
+    <FloatingMenuProvider>
+      <LifeListExclusionsPageContent />
+    </FloatingMenuProvider>
+  );
+}
+
+function LifeListExclusionsPageContent() {
   const navigation = useNavigation();
   const lifelist = useSettingsStore((state) => state.lifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
   const [searchQuery, setSearchQuery] = useState("");
+  const { closeMenu } = useFloatingMenu();
 
   useEffect(() => {
     const title = lifelistExclusions?.length ? `Exclusions (${lifelistExclusions.length})` : "Exclusions";
@@ -188,40 +197,48 @@ export default function LifeListExclusionsPage() {
   ));
 
   return (
-    <ScrollView style={tw`flex-1 bg-gray-50`} contentContainerStyle={tw`pb-8`} keyboardShouldPersistTaps="always">
-      <View style={tw`px-4 pt-4 pb-4`}>
-        <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search life list..." />
-      </View>
+    <View style={tw`flex-1 bg-gray-50`}>
+      <ScrollView
+        style={tw`flex-1`}
+        contentContainerStyle={tw`pb-8`}
+        keyboardShouldPersistTaps="always"
+        onScrollBeginDrag={closeMenu}
+      >
+        <View style={tw`px-4 pt-4 pb-4`}>
+          <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search life list..." />
+        </View>
 
-      {isSearching && (
+        {isSearching && (
+          <View style={tw`px-4 pb-4`}>
+            <Text style={tw`text-gray-500 text-xs uppercase px-1 pb-2 font-medium tracking-wide`}>Search Results</Text>
+            {useGlass ? (
+              <GlassView style={cardStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.7)">
+                {searchContent}
+              </GlassView>
+            ) : (
+              <View style={[cardStyle, tw`bg-white`]}>{searchContent}</View>
+            )}
+          </View>
+        )}
+
         <View style={tw`px-4 pb-4`}>
-          <Text style={tw`text-gray-500 text-xs uppercase px-1 pb-2 font-medium tracking-wide`}>Search Results</Text>
-          {useGlass ? (
-            <GlassView style={cardStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.7)">
-              {searchContent}
-            </GlassView>
+          {!isSearching && excludedSpecies.length === 0 ? (
+            <EmptyState />
           ) : (
-            <View style={[cardStyle, tw`bg-white`]}>{searchContent}</View>
+            <>
+              {!isSearching &&
+                (useGlass ? (
+                  <GlassView style={cardStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.7)">
+                    {exclusionsContent}
+                  </GlassView>
+                ) : (
+                  <View style={[cardStyle, tw`bg-white`]}>{exclusionsContent}</View>
+                ))}
+            </>
           )}
         </View>
-      )}
-
-      <View style={tw`px-4 pb-4`}>
-        {!isSearching && excludedSpecies.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <>
-            {!isSearching &&
-              (useGlass ? (
-                <GlassView style={cardStyle} glassEffectStyle="regular" tintColor="rgba(255, 255, 255, 0.7)">
-                  {exclusionsContent}
-                </GlassView>
-              ) : (
-                <View style={[cardStyle, tw`bg-white`]}>{exclusionsContent}</View>
-              ))}
-          </>
-        )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+      <FloatingMenuHost />
+    </View>
   );
 }

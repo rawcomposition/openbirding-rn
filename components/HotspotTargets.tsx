@@ -3,9 +3,8 @@ import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot, getPinnedTargets, pinTarget, unpinTarget } from "@/lib/database";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Host, Button, Menu, Section, RNHostView } from "@expo/ui/swift-ui";
-import { contentShape, glassEffect, shapes } from "@expo/ui/swift-ui/modifiers";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -13,9 +12,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { PopoverPlacement } from "react-native-popover-view";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
+import { FloatingMenuSection } from "./FloatingMenu";
+import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import MonthStrip from "./MonthStrip";
 import { IconSymbol } from "./ui/IconSymbol";
 
@@ -25,9 +28,10 @@ type HotspotTargetsProps = {
   hotspotId: string;
   lat: number;
   lng: number;
+  onExpandSheet?: () => Promise<void>;
 };
 
-export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsProps) {
+export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: HotspotTargetsProps) {
   const [showAll, setShowAll] = useState(false);
   const [showDataInfo, setShowDataInfo] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -39,6 +43,8 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
   const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
+  const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
+  const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const router = useRouter();
 
@@ -216,34 +222,43 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         </View>
         {data?.version &&
           parsePackVersion(data.version) && (
-            <Host style={tw`w-8 h-8`}>
-              <Menu
-                label={
-                  <RNHostView matchContents>
-                    <View style={tw`w-8 h-8 items-center justify-center`}>
-                      <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
-                    </View>
-                  </RNHostView>
-                }
-                modifiers={[
-                  contentShape(shapes.circle()),
-                  glassEffect({ glass: { variant: "regular", interactive: true }, shape: "circle" }),
-                ]}
-              >
-                <Section>
-                  <Button
-                    label={showAllSpecies ? "Show Targets Only" : "Show All Species"}
-                    systemImage={showAllSpecies ? "target" : "bird"}
-                    onPress={() => setShowAllSpecies(!showAllSpecies)}
-                  />
-                  <Button
-                    label="About This Data"
-                    systemImage="info.circle"
-                    onPress={() => setShowDataInfo(true)}
-                  />
-                </Section>
-              </Menu>
-            </Host>
+            <FloatingMenuTrigger
+              sections={[
+                {
+                  items: [
+                    {
+                      label: showAllSpecies ? "Show Targets Only" : "Show All Species",
+                      icon: (
+                        <Ionicons
+                          name={showAllSpecies ? "locate-outline" : "eye-outline"}
+                          size={18}
+                          color={tw.color("gray-700")}
+                        />
+                      ),
+                      onPress: () => setShowAllSpecies(!showAllSpecies),
+                    },
+                    {
+                      label: "About This Data",
+                      icon: <Ionicons name="information-circle-outline" size={18} color={tw.color("gray-700")} />,
+                      onPress: () => setShowDataInfo(true),
+                    },
+                  ],
+                },
+              ]}
+              touchableStyle={tw`w-8 h-8`}
+              onBeforeOpen={isBottomSheetExpanded ? undefined : onExpandSheet}
+              placementOverride={PopoverPlacement.BOTTOM}
+            >
+              {useGlassTargetMenuButton ? (
+                <GlassView style={tw`w-8 h-8 rounded-full items-center justify-center`} glassEffectStyle="regular" isInteractive>
+                  <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
+                </GlassView>
+              ) : (
+                <View style={tw`w-8 h-8 rounded-full bg-gray-100 items-center justify-center`}>
+                  <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-700")} />
+                </View>
+              )}
+            </FloatingMenuTrigger>
           )}
       </View>
 
@@ -301,58 +316,18 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
                           <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
                             {taxonomyMap.get(t.speciesCode) || "Unknown species"}
                           </Text>
-                          <Host style={tw`ml-1`}>
-                            <Menu
-                              label={
-                                <RNHostView matchContents>
-                                  <View style={tw`px-1.5 py-2 mt-px`}>
-                                    <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
-                                  </View>
-                                </RNHostView>
-                              }
-                            >
-                              <Section>
-                                <Button
-                                  label="View in Merlin"
-                                  systemImage="arrow.up.forward.app"
-                                  onPress={() => {
-                                    Linking.openURL(`merlinbirdid://species/${t.speciesCode}`).catch(() => {
-                                      Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-                                    });
-                                  }}
-                                />
-                                <Button
-                                  label="View eBird Map"
-                                  systemImage="map"
-                                  onPress={() => {
-                                    const delta = 0.05;
-                                    const url = `https://ebird.org/map/${t.speciesCode}?gp=true&yr=all&env.minX=${(lng - delta).toFixed(3)}&env.minY=${(lat - delta).toFixed(3)}&env.maxX=${(lng + delta).toFixed(3)}&env.maxY=${(lat + delta).toFixed(3)}`;
-                                    Linking.openURL(url);
-                                  }}
-                                />
-                                <Button
-                                  label={isPinned ? "Unpin Target" : "Pin Target"}
-                                  systemImage={isPinned ? "pin.slash" : "pin"}
-                                  onPress={() => {
-                                    void handlePinAction(t.speciesCode, isPinned);
-                                  }}
-                                />
-                              </Section>
-                              <Section>
-                                {(() => {
-                                  const { label, icon, isDestructive } = getLifeListMenuProps(t.speciesCode);
-                                  return (
-                                    <Button
-                                      label={label}
-                                      systemImage={icon}
-                                      role={isDestructive ? "destructive" : undefined}
-                                      onPress={() => handleLifeListAction(t.speciesCode)}
-                                    />
-                                  );
-                                })()}
-                              </Section>
-                            </Menu>
-                          </Host>
+                          {isBottomSheetExpanded && (
+                            <TargetRowMenuButton
+                              sections={buildRowMenuSections(t.speciesCode, {
+                                pinnedTargets,
+                                lat,
+                                lng,
+                                handlePinAction,
+                                handleLifeListAction,
+                                getLifeListMenuProps,
+                              })}
+                            />
+                          )}
                         </View>
 
                         <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
@@ -427,5 +402,80 @@ export default function HotspotTargets({ hotspotId, lat, lng }: HotspotTargetsPr
         </BaseBottomSheet>
       )}
     </View>
+  );
+}
+
+type RowMenuCtx = {
+  pinnedTargets: string[];
+  lat: number;
+  lng: number;
+  handlePinAction: (code: string, isPinned: boolean) => Promise<void>;
+  handleLifeListAction: (code: string) => void;
+  getLifeListMenuProps: (code: string) => { label: string; icon: "plus.circle" | "minus.circle"; isDestructive: boolean };
+};
+
+function buildRowMenuSections(code: string, ctx: RowMenuCtx): FloatingMenuSection[] {
+  const isPinned = ctx.pinnedTargets.includes(code);
+  const lifeProps = ctx.getLifeListMenuProps(code);
+  return [
+    {
+      items: [
+        {
+          label: "View in Merlin",
+          icon: <Ionicons name="open-outline" size={18} color={tw.color("gray-700")} />,
+          onPress: () => {
+            Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
+              Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+            });
+          },
+        },
+        {
+          label: "View eBird Map",
+          icon: <Ionicons name="map-outline" size={18} color={tw.color("gray-700")} />,
+          onPress: () => {
+            const delta = 0.05;
+            const url = `https://ebird.org/map/${code}?gp=true&yr=all&env.minX=${(ctx.lng - delta).toFixed(3)}&env.minY=${(ctx.lat - delta).toFixed(3)}&env.maxX=${(ctx.lng + delta).toFixed(3)}&env.maxY=${(ctx.lat + delta).toFixed(3)}`;
+            Linking.openURL(url);
+          },
+        },
+        {
+          label: isPinned ? "Unpin Target" : "Pin Target",
+          icon: <IconSymbol name={isPinned ? "pin.fill" : "pin"} size={18} color={tw.color("gray-700") ?? "#374151"} />,
+          onPress: () => {
+            void ctx.handlePinAction(code, isPinned);
+          },
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          label: lifeProps.label,
+          icon: (
+            <Ionicons
+              name={lifeProps.icon === "plus.circle" ? "add-circle-outline" : "remove-circle-outline"}
+              size={18}
+              color={lifeProps.isDestructive ? tw.color("red-600") : tw.color("gray-700")}
+            />
+          ),
+          destructive: lifeProps.isDestructive,
+          onPress: () => ctx.handleLifeListAction(code),
+        },
+      ],
+    },
+  ];
+}
+
+type TargetRowMenuButtonProps = {
+  sections: FloatingMenuSection[];
+};
+
+function TargetRowMenuButton({ sections }: TargetRowMenuButtonProps) {
+  return (
+    <FloatingMenuTrigger sections={sections} touchableStyle={tw`ml-1`}>
+      <View style={tw`px-1.5 py-2 mt-px`}>
+        <Ionicons name="ellipsis-horizontal" size={16} color={tw.color("gray-400")} />
+      </View>
+    </FloatingMenuTrigger>
   );
 }

@@ -1,8 +1,9 @@
 import SearchInput from "@/components/SearchInput";
+import { FloatingMenuHost, FloatingMenuProvider, FloatingMenuTrigger, useFloatingMenu } from "@/components/FloatingMenuProvider";
+import { FloatingMenuSection } from "@/components/FloatingMenu";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import tw from "@/lib/tw";
 import { LifeListEntry, useSettingsStore } from "@/stores/settingsStore";
-import { Button, Host, Menu, RNHostView, Section } from "@expo/ui/swift-ui";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
@@ -81,6 +82,51 @@ function LifeListItem({
 }) {
   const borderStyle = isLast ? {} : tw`border-b border-gray-200/50`;
   const speciesName = taxonomyMap.get(item.code) ?? `Unknown (${item.code})`;
+  const sections: FloatingMenuSection[] = [
+    {
+      items: [
+        {
+          label: "View in Merlin",
+          icon: <Ionicons name="open-outline" size={18} color={tw.color("gray-700")} />,
+          onPress: () => {
+            Linking.openURL(`merlinbirdid://species/${item.code}`).catch(() => {
+              Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
+            });
+          },
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          label: isExcluded ? "Remove Exclusion" : "Exclude from Targets",
+          icon: (
+            <Ionicons
+              name={isExcluded ? "return-up-back-outline" : "eye-off-outline"}
+              size={18}
+              color={isExcluded ? tw.color("gray-700") : tw.color("red-600")}
+            />
+          ),
+          destructive: !isExcluded,
+          onPress: onToggleExclusion,
+        },
+      ],
+    },
+    ...(onRemove
+      ? [
+          {
+            items: [
+              {
+                label: "Remove",
+                icon: <Ionicons name="remove-circle-outline" size={18} color={tw.color("red-600")} />,
+                destructive: true,
+                onPress: onRemove,
+              },
+            ],
+          },
+        ]
+      : []),
+  ];
 
   return (
     <View style={[tw`px-4 py-3 flex-row items-center`, borderStyle]}>
@@ -95,47 +141,24 @@ function LifeListItem({
         </View>
         <Text style={tw`text-gray-500 text-sm mt-0.5`}>{formatDate(item.date)}</Text>
       </View>
-      <Host style={tw`p-2 -mr-2`}>
-        <Menu
-          label={
-            <RNHostView matchContents>
-              <View style={tw`w-8 h-8 items-center justify-center`}>
-                <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
-              </View>
-            </RNHostView>
-          }
-        >
-          <Section>
-            <Button
-              label="View in Merlin"
-              systemImage="arrow.up.forward.app"
-              onPress={() => {
-                Linking.openURL(`merlinbirdid://species/${item.code}`).catch(() => {
-                  Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
-                });
-              }}
-            />
-          </Section>
-          <Section>
-            <Button
-              label={isExcluded ? "Remove Exclusion" : "Exclude from Targets"}
-              systemImage={isExcluded ? "arrow.uturn.backward" : "eye.slash"}
-              role={isExcluded ? undefined : "destructive"}
-              onPress={onToggleExclusion}
-            />
-          </Section>
-          {onRemove && (
-            <Section>
-              <Button label="Remove" systemImage="minus.circle" role="destructive" onPress={onRemove} />
-            </Section>
-          )}
-        </Menu>
-      </Host>
+      <FloatingMenuTrigger sections={sections} touchableStyle={tw`p-2 -mr-2`}>
+        <View style={tw`w-8 h-8 items-center justify-center`}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={tw.color("gray-400")} />
+        </View>
+      </FloatingMenuTrigger>
     </View>
   );
 }
 
 export default function ViewLifeListPage() {
+  return (
+    <FloatingMenuProvider>
+      <ViewLifeListPageContent />
+    </FloatingMenuProvider>
+  );
+}
+
+function ViewLifeListPageContent() {
   const navigation = useNavigation();
   const lifelist = useSettingsStore((state) => state.lifelist);
   const setLifelist = useSettingsStore((state) => state.setLifelist);
@@ -143,6 +166,7 @@ export default function ViewLifeListPage() {
   const setLifelistExclusions = useSettingsStore((state) => state.setLifelistExclusions);
   const { taxonomyMap } = useTaxonomyMap();
   const [filterQuery, setFilterQuery] = useState("");
+  const { closeMenu } = useFloatingMenu();
   const handleSearch = useCallback((query: string) => setFilterQuery(query), []);
 
   useEffect(() => {
@@ -220,6 +244,7 @@ export default function ViewLifeListPage() {
       keyExtractor={(item) => `${item.code}-${item.checklistId}`}
       ListEmptyComponent={<NoResults />}
       contentContainerStyle={filteredList.length === 0 ? tw`flex-1` : undefined}
+      onScrollBeginDrag={closeMenu}
     />
   );
 
@@ -238,6 +263,7 @@ export default function ViewLifeListPage() {
           <View style={[cardStyle, tw`bg-white flex-1`]}>{listContent}</View>
         )}
       </View>
+      <FloatingMenuHost />
     </View>
   );
 }
