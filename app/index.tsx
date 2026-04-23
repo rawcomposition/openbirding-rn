@@ -100,6 +100,15 @@ export default function HomeScreen() {
     setHotspotId(null);
   }, [setHotspotId]);
 
+  const handlePlaceDialogClose = useCallback(() => {
+    if (isMapTouchActiveRef.current) {
+      return false;
+    }
+
+    setCustomPinCoordinates(null);
+    setPlaceId(null);
+  }, [setCustomPinCoordinates, setPlaceId]);
+
   const handleSelectHotspotFromList = useCallback(
     (selectedHotspotId: string, lat: number, lng: number) => {
       setCustomPinCoordinates(null);
@@ -179,10 +188,7 @@ export default function HomeScreen() {
           placeId={placeId}
           lat={customPinCoordinates?.latitude ?? null}
           lng={customPinCoordinates?.longitude ?? null}
-          onClose={() => {
-            setCustomPinCoordinates(null);
-            setPlaceId(null);
-          }}
+          onClose={handlePlaceDialogClose}
         />
         <HotspotList
           isOpen={isHotspotListOpen}

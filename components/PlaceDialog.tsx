@@ -17,7 +17,7 @@ type Props = {
   placeId?: string | null;
   lat?: number | null;
   lng?: number | null;
-  onClose: () => void;
+  onClose: () => void | false;
 };
 
 export default function PlaceDialog(props: Props) {
