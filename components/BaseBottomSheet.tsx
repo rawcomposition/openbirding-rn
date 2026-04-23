@@ -1,7 +1,7 @@
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { TrueSheet, type SheetDetent } from "@lodev09/react-native-true-sheet";
-import React, { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import React, { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import IconButton from "./IconButton";
@@ -10,7 +10,7 @@ const EXPANDED_THRESHOLD = 0.9;
 
 type BaseBottomSheetProps = {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: () => void | false;
   title?: string;
   detents?: SheetDetent[];
   initialIndex?: number;
@@ -21,18 +21,25 @@ type BaseBottomSheetProps = {
   dimmed?: boolean;
 };
 
-export default function BaseBottomSheet({
-  isOpen,
-  onClose,
-  title,
-  detents = ["auto"],
-  initialIndex = 0,
-  children,
-  showHeader = true,
-  headerContent,
-  scrollable = false,
-  dimmed = false,
-}: BaseBottomSheetProps) {
+export type BaseBottomSheetHandle = {
+  expand: () => Promise<void>;
+};
+
+function BaseBottomSheet(
+  {
+    isOpen,
+    onClose,
+    title,
+    detents = ["auto"],
+    initialIndex = 0,
+    children,
+    showHeader = true,
+    headerContent,
+    scrollable = false,
+    dimmed = false,
+  }: BaseBottomSheetProps,
+  ref: React.Ref<BaseBottomSheetHandle>
+) {
   const sheetRef = useRef<TrueSheet>(null);
   const dismissingRef = useRef(false);
   const insets = useSafeAreaInsets();
@@ -53,6 +60,17 @@ export default function BaseBottomSheet({
   const dismiss = useCallback(async () => {
     await sheetRef.current?.dismiss();
   }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      expand: async () => {
+        const lastIndex = Math.max(detents.length - 1, 0);
+        await sheetRef.current?.resize(lastIndex);
+      },
+    }),
+    [detents.length]
+  );
 
   const header = showHeader ? (
     headerContent ? (
@@ -82,10 +100,12 @@ export default function BaseBottomSheet({
       header={header}
       headerStyle={tw`pt-5`}
       onWillDismiss={() => {
-        dismissingRef.current = true;
-        onClose();
+        const closeResult = onClose();
+        const shouldClose = closeResult !== false;
+        dismissingRef.current = shouldClose;
       }}
       onDidDismiss={() => {
+        onClose();
         setShouldRender(false);
         setIsBottomSheetExpanded(false);
       }}
@@ -108,3 +128,5 @@ export default function BaseBottomSheet({
     </TrueSheet>
   );
 }
+
+export default forwardRef(BaseBottomSheet);

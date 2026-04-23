@@ -18,7 +18,7 @@ import Constants from "expo-constants";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import debounce from "lodash/debounce";
 import throttle from "lodash/throttle";
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -73,6 +73,12 @@ const markerImages = {
 
 type Bounds = { west: number; south: number; east: number; north: number };
 
+const mapboxAccessToken = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
+
+if (typeof mapboxAccessToken === "string" && mapboxAccessToken.length > 0) {
+  Mapbox.setAccessToken(mapboxAccessToken);
+}
+
 type MapboxMapProps = {
   style?: ViewStyle;
   onPress?: (event: any) => void;
@@ -86,6 +92,7 @@ type MapboxMapProps = {
   hasInstalledPacks?: boolean;
   onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
   placeCoordinates?: { latitude: number; longitude: number } | null;
+  onTouchActiveChange?: (isActive: boolean) => void;
 };
 
 export type MapboxMapRef = {
@@ -119,6 +126,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       hasInstalledPacks,
       onLongPressCoordinates,
       placeCoordinates,
+      onTouchActiveChange,
     },
     ref
   ) => {
@@ -138,6 +146,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
+    const isTouchActiveRef = useRef(false);
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
@@ -147,11 +156,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         ? "mapbox://styles/mapbox/satellite-v9"
         : "mapbox://styles/mapbox/outdoors-v12";
     }, [currentLayer]);
-
-    useEffect(() => {
-      const token = Constants.expoConfig?.extra?.MAPBOX_ACCESS_TOKEN;
-      if (token) Mapbox.setAccessToken(token);
-    }, []);
 
     const { data: hotspots = [] } = useQuery({
       queryKey: ["hotspots", bounds],
@@ -231,6 +235,15 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       debouncedSaveLocation();
       throttledSetMapCenter();
     }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, throttledSetMapCenter]);
+
+    const setTouchActive = useCallback(
+      (isActive: boolean) => {
+        if (isTouchActiveRef.current === isActive) return;
+        isTouchActiveRef.current = isActive;
+        onTouchActiveChange?.(isActive);
+      },
+      [onTouchActiveChange]
+    );
 
     const centerMapOnUser = useCallback(() => {
       if (!isMapReady) return;
@@ -321,7 +334,12 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     );
 
     return (
-      <View style={[tw`flex-1`, style]}>
+      <View
+        style={[tw`flex-1`, style]}
+        onTouchStart={() => setTouchActive(true)}
+        onTouchEnd={() => setTouchActive(false)}
+        onTouchCancel={() => setTouchActive(false)}
+      >
         <Mapbox.MapView
           surfaceView={Platform.OS === "android"}
           ref={mapRef}

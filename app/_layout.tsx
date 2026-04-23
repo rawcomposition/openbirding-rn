@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { useManagedSplashScreen } from "@/hooks/useManagedSplashScreen";
 import { initializeDatabase } from "@/lib/database";
@@ -73,6 +74,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <ActionSheetProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
             <Stack>
@@ -183,6 +185,7 @@ export default function RootLayout() {
             <StatusBar style="auto" />
           </ThemeProvider>
         </QueryClientProvider>
+        </ActionSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

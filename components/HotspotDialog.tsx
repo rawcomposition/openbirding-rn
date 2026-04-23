@@ -1,9 +1,10 @@
 import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsaveHotspot } from "@/lib/database";
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Linking,
@@ -13,12 +14,14 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { PopoverPlacement } from "react-native-popover-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ActionButton from "./ActionButton";
 import ActionButtonRow from "./ActionButtonRow";
-import BaseBottomSheet from "./BaseBottomSheet";
+import BaseBottomSheet, { BaseBottomSheetHandle } from "./BaseBottomSheet";
 import DialogHeader from "./DialogHeader";
 import DirectionsMenuButton from "./DirectionsMenuButton";
+import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "./FloatingMenuProvider";
 import HotspotNotesSheet from "./HotspotNotesSheet";
 import HotspotTargets from "./HotspotTargets";
 import InfoIcon from "./icons/InfoIcon";
@@ -26,15 +29,34 @@ import InfoIcon from "./icons/InfoIcon";
 type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
-  onClose: () => void;
+  onClose: () => void | false;
 };
 
-export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
+export default function HotspotDialog(props: HotspotDialogProps) {
+  const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
+
+  return (
+    <FloatingMenuProvider placementOverride={isBottomSheetExpanded ? undefined : PopoverPlacement.TOP}>
+      <HotspotDialogContent {...props} />
+    </FloatingMenuProvider>
+  );
+}
+
+function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const useStackedActionButtons = fontScale >= 1.25;
+  const { closeMenu } = useFloatingMenu();
+  const sheetRef = useRef<BaseBottomSheetHandle>(null);
+  const expandSheet = useCallback(async () => {
+    await sheetRef.current?.expand();
+  }, []);
+
+  useEffect(() => {
+    closeMenu();
+  }, [closeMenu, hotspotId, isOpen]);
 
   const { data: hotspot, isLoading: isLoadingHotspot } = useQuery({
     queryKey: ["hotspot", hotspotId],
@@ -98,75 +120,96 @@ export default function HotspotDialog({ isOpen, hotspotId, onClose }: HotspotDia
   const notes = savedHotspot?.notes || "";
 
   const headerContent = (dismiss: () => Promise<void>) => (
-    <DialogHeader
-      onClose={dismiss}
-      onSavePress={hotspot ? handleToggleSave : undefined}
-      saveDisabled={saveMutation.isPending || unsaveMutation.isPending}
-      isSaved={isSaved}
-    >
-      {hotspot && (
-        <>
-          <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
-            {hotspot.name}
-          </Text>
-          <View style={tw`flex-row items-center mt-1`}>
-            <View
-              style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.species || 0) }]}
-            />
-            <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
-          </View>
-        </>
-      )}
-    </DialogHeader>
+    <View onTouchStart={closeMenu}>
+      <DialogHeader
+        onClose={dismiss}
+        onSavePress={hotspot ? handleToggleSave : undefined}
+        saveDisabled={saveMutation.isPending || unsaveMutation.isPending}
+        isSaved={isSaved}
+      >
+        {hotspot && (
+          <>
+            <Text selectable style={tw`text-gray-900 text-xl font-bold`}>
+              {hotspot.name}
+            </Text>
+            <View style={tw`flex-row items-center mt-1`}>
+              <View
+                style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.species || 0) }]}
+              />
+              <Text style={tw`text-gray-600 text-sm`}>{hotspot.species} species</Text>
+            </View>
+          </>
+        )}
+      </DialogHeader>
+    </View>
   );
 
   return (
     <>
-      <BaseBottomSheet isOpen={isOpen} onClose={onClose} detents={[0.4, 0.97]} headerContent={headerContent} scrollable>
-        <ScrollView style={tw`flex-1`} showsVerticalScrollIndicator={false}>
-          <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
-            {hotspot ? (
-              <View style={tw`pt-2`}>
-                {isSaved && (
-                  <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
-                    {notes ? (
-                      <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
-                        <Text style={tw`text-gray-700 flex-1 text-sm`}>{notes}</Text>
-                        <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`ml-2 mt-0.5`} />
-                      </View>
-                    ) : (
-                      <View style={tw`flex-row items-center py-1.5 px-2`}>
-                        <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`mr-2`} />
-                        <Text style={tw`text-gray-400 text-sm`}>Add notes...</Text>
-                      </View>
-                    )}
-                  </RNTouchableOpacity>
-                )}
+      <BaseBottomSheet
+        ref={sheetRef}
+        isOpen={isOpen}
+        onClose={onClose}
+        detents={[0.4, 0.97]}
+        headerContent={headerContent}
+        scrollable
+      >
+        <View style={tw`flex-1`}>
+          <ScrollView
+            style={tw`flex-1`}
+            showsVerticalScrollIndicator={false}
+            onScrollBeginDrag={closeMenu}
+          >
+            <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
+              {hotspot ? (
+                <View style={tw`pt-2`}>
+                  {isSaved && (
+                    <RNTouchableOpacity activeOpacity={0.6} onPress={() => setIsNotesOpen(true)} style={tw`mb-3`}>
+                      {notes ? (
+                        <View style={tw`bg-gray-50 p-3 rounded-lg flex-row items-start`}>
+                          <Text style={tw`text-gray-700 flex-1 text-sm`}>{notes}</Text>
+                          <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`ml-2 mt-0.5`} />
+                        </View>
+                      ) : (
+                        <View style={tw`flex-row items-center py-1.5 px-2`}>
+                          <FontAwesome6 name="pencil" size={12} color={tw.color("gray-400")} style={tw`mr-2`} />
+                          <Text style={tw`text-gray-400 text-sm`}>Add notes...</Text>
+                        </View>
+                      )}
+                    </RNTouchableOpacity>
+                  )}
 
-                <ActionButtonRow stacked={useStackedActionButtons}>
-                  <ActionButton
-                    icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
-                    label="View on eBird"
-                    stacked={useStackedActionButtons}
-                    onPress={handleViewDetails}
+                  <ActionButtonRow stacked={useStackedActionButtons}>
+                    <ActionButton
+                      icon={<InfoIcon color={tw.color("[#36824b]")} size={20} />}
+                      label="View on eBird"
+                      stacked={useStackedActionButtons}
+                      onPress={handleViewDetails}
+                    />
+
+                    <DirectionsMenuButton
+                      latitude={hotspot.lat}
+                      longitude={hotspot.lng}
+                      stacked={useStackedActionButtons}
+                    />
+                  </ActionButtonRow>
+
+                  <HotspotTargets
+                    hotspotId={hotspot.id}
+                    lat={hotspot.lat}
+                    lng={hotspot.lng}
+                    onExpandSheet={expandSheet}
                   />
-
-                  <DirectionsMenuButton
-                    latitude={hotspot.lat}
-                    longitude={hotspot.lng}
-                    stacked={useStackedActionButtons}
-                  />
-                </ActionButtonRow>
-
-                <HotspotTargets hotspotId={hotspot.id} lat={hotspot.lat} lng={hotspot.lng} />
-              </View>
-            ) : isLoadingHotspot ? null : (
-              <View style={tw`py-8 items-center`}>
-                <Text style={tw`text-gray-600 text-base`}>Hotspot not found</Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+                </View>
+              ) : isLoadingHotspot ? null : (
+                <View style={tw`py-8 items-center`}>
+                  <Text style={tw`text-gray-600 text-base`}>Hotspot not found</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+          <FloatingMenuHost />
+        </View>
       </BaseBottomSheet>
       {isNotesOpen && hotspotId && (
         <HotspotNotesSheet isOpen hotspotId={hotspotId} initialNotes={notes} onClose={() => setIsNotesOpen(false)} />
