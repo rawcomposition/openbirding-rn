@@ -7,13 +7,14 @@ import {
   savedHotspotSymbolStyle,
   savedPlaceSymbolStyle,
 } from "@/lib/layers";
-import { logPersonalizedHotspotFilterDebug } from "@/lib/personalizedHotspotFilter";
+import { logPersonalizedHotspotFilterDebug, personalizedHotspotCache } from "@/lib/personalizedHotspotFilter";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { useMapStore } from "@/stores/mapStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
@@ -102,8 +103,9 @@ export type MapboxMapRef = {
   centerOnCoordinates: (lng: number, lat: number, offsetY?: number) => void;
 };
 
-const THROTTLE_DELAY = 300;
-const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 150; // Load hotspots faster when jumping to a hotspot from list modal
+const THROTTLE_DELAY = 750;
+const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
+const SETTLED_BOUNDS_DELAY = 300;
 const MIN_ZOOM = 8;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
@@ -160,7 +162,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const showAttribution = useMapStore((state) => state.isMapAttributionOpen);
     const setShowAttribution = useMapStore((state) => state.setIsMapAttributionOpen);
     const { status: permissionStatus } = useLocationPermissionStore();
-    const { showSavedOnly } = useFiltersStore();
+    const { showSavedOnly, personalizedFilterEnabled } = useFiltersStore();
+    const lifelist = useSettingsStore((state) => state.lifelist);
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -173,6 +176,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
+    const hasLifeList = (lifelist?.length ?? 0) > 0;
+    const isPersonalizedMapFiltering = personalizedFilterEnabled && hasLifeList;
 
     const mapStyle = useMemo(() => {
       return currentLayer === "satellite"
@@ -216,10 +221,17 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
 
     const throttledSetBounds = useMemo(
       () =>
-        debounce((nextBounds: Bounds | null) => {
+        throttle((nextBounds: Bounds | null) => {
           setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
         }, throttleDelay),
       [throttleDelay]
+    );
+    const debouncedSetSettledBounds = useMemo(
+      () =>
+        debounce((nextBounds: Bounds | null) => {
+          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+        }, SETTLED_BOUNDS_DELAY),
+      []
     );
     const debouncedSaveLocation = useMemo(
       () =>
@@ -259,19 +271,36 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       const nextBounds = await readBoundsIfZoomed();
       if (immediate) {
         throttledSetBounds.cancel();
+        debouncedSetSettledBounds.cancel();
         setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+      } else if (isPersonalizedMapFiltering) {
+        debouncedSetSettledBounds(nextBounds);
       } else {
         throttledSetBounds(nextBounds);
       }
       debouncedSaveLocation();
       throttledSetMapCenter();
-    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, throttledSetMapCenter]);
+    }, [
+      debouncedSaveLocation,
+      debouncedSetSettledBounds,
+      isPersonalizedMapFiltering,
+      readBoundsIfZoomed,
+      throttledSetBounds,
+      throttledSetMapCenter,
+    ]);
 
     useEffect(() => {
       return () => {
         throttledSetBounds.cancel();
+        debouncedSetSettledBounds.cancel();
       };
-    }, [throttledSetBounds]);
+    }, [debouncedSetSettledBounds, throttledSetBounds]);
+
+    useEffect(() => {
+      throttledSetBounds.cancel();
+      debouncedSetSettledBounds.cancel();
+      void syncViewport(true);
+    }, [debouncedSetSettledBounds, isPersonalizedMapFiltering, syncViewport, throttledSetBounds]);
 
     const setTouchActive = useCallback(
       (isActive: boolean) => {
@@ -331,7 +360,17 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       blockWhileDisabled: true,
     });
     const personalizedHotspotIds = useMemo(() => new Set(personalizedFilter.filteredIds), [personalizedFilter.filteredIds]);
-    const isPersonalizedLoading = personalizedFilter.isActive && ((bounds !== null && isFetchingHotspots) || personalizedFilter.isLoading);
+    const unresolvedCandidateCount = personalizedFilter.isActive
+      ? mapCandidateHotspots.reduce((count, hotspot) => count + (personalizedHotspotCache.has(hotspot.id) ? 0 : 1), 0)
+      : 0;
+    const isInitialPersonalizedFetch =
+      personalizedFilter.isActive &&
+      bounds !== null &&
+      isFetchingHotspots &&
+      lastResolvedHotspotsRef.current.length === 0;
+    const isPersonalizedLoading =
+      personalizedFilter.isActive &&
+      (isInitialPersonalizedFetch || unresolvedCandidateCount > 0 || personalizedFilter.isLoading);
     const displayedHotspots = useMemo(() => {
       if (showSavedOnly || personalizedFilter.isActive) {
         const resolvedHotspots = mapCandidateHotspots.filter((hotspot) =>
@@ -371,6 +410,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         isFetchingHotspots,
         hotspotCount: hotspots.length,
         candidateCount: mapCandidateHotspots.length,
+        unresolvedCandidateCount,
         displayedCount: displayedHotspots.length,
         isPersonalizedLoading,
       });
@@ -385,6 +425,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         isFetchingHotspots,
         hotspotCount: hotspots.length,
         candidateCount: mapCandidateHotspots.length,
+        unresolvedCandidateCount,
         displayedCount: displayedHotspots.length,
         isPersonalizedLoading,
       });
@@ -396,6 +437,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       isPersonalizedLoading,
       mapCandidateHotspots.length,
       personalizedFilter.isActive,
+      unresolvedCandidateCount,
     ]);
 
     const handleFeaturePress = useCallback(
