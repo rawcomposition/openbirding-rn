@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { BirdPlanTripData, SavedPlace, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
+import { aggregateHotspotTargets, getMonthIndices, getTotalSamplesForMonths, parseHotspotTargetData } from "./hotspotTargets";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let isInstallingPack = false;
@@ -637,6 +638,34 @@ export type HotspotTargetsResult = {
   version: string | null;
 };
 
+const TARGET_QUERY_BATCH_SIZE = 400;
+
+export async function getTargetDataForHotspots(hotspotIds: string[]): Promise<Map<string, string>> {
+  if (!db) throw new Error("Database not initialized");
+
+  const uniqueHotspotIds = [...new Set(hotspotIds)];
+  const targetData = new Map<string, string>();
+
+  for (let index = 0; index < uniqueHotspotIds.length; index += TARGET_QUERY_BATCH_SIZE) {
+    const batch = uniqueHotspotIds.slice(index, index + TARGET_QUERY_BATCH_SIZE);
+    if (batch.length === 0) {
+      continue;
+    }
+
+    const placeholders = batch.map(() => "?").join(", ");
+    const rows = await db.getAllAsync<{ id: string; data: string }>(
+      `SELECT id, data FROM targets WHERE id IN (${placeholders})`,
+      batch
+    );
+
+    for (const row of rows) {
+      targetData.set(row.id, row.data);
+    }
+  }
+
+  return targetData;
+}
+
 export async function getTargetsForHotspot(hotspotId: string, months?: number[]): Promise<HotspotTargetsResult | null> {
   if (!db) throw new Error("Database not initialized");
 
@@ -648,40 +677,12 @@ export async function getTargetsForHotspot(hotspotId: string, months?: number[])
   if (!result) return null;
 
   const row = result as { data: string; version: string | null };
-  const data = JSON.parse(row.data) as {
-    samples: (number | null)[];
-    species: (string | number)[][];
-  };
-
-  // Determine which month indices to aggregate (0-11)
-  const monthIndices = months && months.length > 0 ? months : data.samples.map((_, i) => i);
-
-  const totalSamples = monthIndices.reduce((sum, i) => sum + (data.samples[i] ?? 0), 0);
+  const data = parseHotspotTargetData(row.data);
+  const monthIndices = getMonthIndices(data, months);
+  const totalSamples = getTotalSamplesForMonths(data, monthIndices);
 
   if (totalSamples === 0) return { samples: 0, targets: [], version: row.version };
-
-  // Aggregate observations per species for selected months
-  const speciesMap = new Map<string, number>();
-  for (const speciesEntry of data.species) {
-    const speciesCode = String(speciesEntry[0]);
-    // Species entry layout: [code, janObs, febObs, ..., decObs] — index i+1 for month i
-    const totalObs = monthIndices.reduce((sum, i) => {
-      const val = speciesEntry[i + 1];
-      return sum + (typeof val === "number" ? val : 0);
-    }, 0);
-    if (totalObs > 0) {
-      speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObs);
-    }
-  }
-
-  // Convert to array, calculate percentages, and sort by percentage descending
-  const targets: HotspotTarget[] = Array.from(speciesMap.entries())
-    .map(([speciesCode, observations]) => ({
-      speciesCode,
-      observations,
-      percentage: (observations / totalSamples) * 100,
-    }))
-    .sort((a, b) => b.percentage - a.percentage);
+  const targets = aggregateHotspotTargets(data, monthIndices, totalSamples);
 
   return { samples: totalSamples, targets, version: row.version };
 }

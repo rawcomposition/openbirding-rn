@@ -1,3 +1,4 @@
+import { usePersonalizedHotspotFilter } from "@/hooks/usePersonalizedHotspotFilter";
 import { useLocation } from "@/hooks/useLocation";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
@@ -6,6 +7,7 @@ import { Hotspot } from "@/lib/types";
 import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
@@ -16,6 +18,7 @@ import BaseBottomSheet from "./BaseBottomSheet";
 import HotspotItem from "./HotspotItem";
 import IconButton from "./IconButton";
 import IconButtonGroup from "./IconButtonGroup";
+import PersonalizedHotspotFilterControls from "./PersonalizedHotspotFilterControls";
 import SearchInput from "./SearchInput";
 
 type HotspotListProps = {
@@ -35,7 +38,10 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
   const { showSavedOnly, setShowSavedOnly } = useFiltersStore();
-  const activeFilterCount = [showSavedOnly].filter(Boolean).length;
+  const personalizedFilterEnabled = useFiltersStore((state) => state.personalizedFilterEnabled);
+  const lifelist = useSettingsStore((state) => state.lifelist);
+  const hasLifeList = (lifelist?.length ?? 0) > 0;
+  const activeFilterCount = [showSavedOnly, personalizedFilterEnabled && hasLifeList].filter(Boolean).length;
   const dismissRef = useRef<(() => Promise<void>) | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,7 +63,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const hasLocationAccess = permissionStatus === "granted" && location !== null;
 
-  const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
+  const {
+    data: searchResults = [],
+    dataUpdatedAt: searchUpdatedAt,
+    isFetching: isFetchingSearchResults,
+  } = useQuery({
     queryKey: ["hotspotSearch", debouncedQuery, showSavedOnly],
     queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT, showSavedOnly),
     enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
@@ -65,7 +75,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     placeholderData: (prev) => prev,
   });
 
-  const { data: allHotspots = [] } = useQuery({
+  const { data: allHotspots = [], isFetching: isFetchingAllHotspots } = useQuery({
     queryKey:
       hasLocationAccess && location
         ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
@@ -106,6 +116,21 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     }
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
+  const isBaseResultsFetching = debouncedQuery.length >= 2 ? isFetchingSearchResults : isFetchingAllHotspots;
+  const personalizedFilter = usePersonalizedHotspotFilter(displayedHotspots.map((hotspot) => hotspot.id), {
+    enabled: !isBaseResultsFetching,
+    blockWhileDisabled: true,
+  });
+  const isPersonalizedLoading = personalizedFilter.isActive && (isBaseResultsFetching || personalizedFilter.isLoading);
+  const displayedHotspotsSet = useMemo(() => new Set(personalizedFilter.filteredIds), [personalizedFilter.filteredIds]);
+  const filteredDisplayedHotspots = useMemo(() => {
+    if (!personalizedFilter.isActive) {
+      return displayedHotspots;
+    }
+
+    return displayedHotspots.filter((hotspot) => displayedHotspotsSet.has(hotspot.id));
+  }, [displayedHotspots, displayedHotspotsSet, personalizedFilter.isActive]);
+
   const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
   const handleSelectHotspot = useCallback(
@@ -123,7 +148,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const listEmptyComponent = (
     <View style={tw`flex-1 items-center justify-center py-12`}>
-      {isLoadingLocation && permissionStatus === "granted" ? (
+      {isPersonalizedLoading ? (
+        <>
+          <ActivityIndicator size="large" color={tw.color("blue-500")} />
+          <Text style={tw`text-gray-600 text-base mt-3`}>Filtering hotspots...</Text>
+        </>
+      ) : isLoadingLocation && permissionStatus === "granted" ? (
         <>
           <ActivityIndicator size="large" color={tw.color("blue-500")} />
           <Text style={tw`text-gray-600 text-base mt-3`}>Getting current location...</Text>
@@ -164,9 +194,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
         <View style={tw`gap-3 py-3`}>
           {isFilterPanelOpen && (
-            <View style={tw`flex-row items-center justify-between py-1`}>
-              <Text style={tw`text-base font-medium text-gray-900`}>Show saved only</Text>
-              <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
+            <View style={tw`gap-4 py-1`}>
+              <View style={tw`flex-row items-center justify-between`}>
+                <Text style={tw`text-base font-medium text-gray-900`}>Show saved only</Text>
+                <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
+              </View>
+              <PersonalizedHotspotFilterControls hasLifeList={hasLifeList} />
             </View>
           )}
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
@@ -188,12 +221,14 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       >
         <FlashList
           ref={listRef}
-          data={displayedHotspots}
+          data={isPersonalizedLoading ? [] : filteredDisplayedHotspots}
           renderItem={renderHotspotItem}
           keyExtractor={keyExtractor}
           style={tw`flex-1`}
           contentContainerStyle={
-            displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: Math.max(insets.bottom, 16) }
+            (isPersonalizedLoading ? 0 : filteredDisplayedHotspots.length) === 0
+              ? tw`flex-1`
+              : { paddingBottom: Math.max(insets.bottom, 16) }
           }
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
