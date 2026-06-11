@@ -19,7 +19,7 @@ module.exports = ({ config }) => ({
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/logo-android.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#FCF8F6",
       },
       edgeToEdgeEnabled: true,
       permissions: ["INTERNET", "ACCESS_FINE_LOCATION"],
@@ -35,10 +35,10 @@ module.exports = ({ config }) => ({
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/logo.png",
+          image: "./assets/images/splash-icon.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: "#1b2336",
+          backgroundColor: "#FCF8F6",
         },
       ],
       [
