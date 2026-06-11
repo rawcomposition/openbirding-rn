@@ -89,3 +89,64 @@ export type Hotspot = {
   species: number;
   country: string | null;
 };
+
+export type TripType = "birdplan";
+
+export type Trip = {
+  id: string;
+  type: TripType;
+  name: string;
+  start_month: number | null;
+  end_month: number | null;
+  min_lat: number | null;
+  max_lat: number | null;
+  min_lng: number | null;
+  max_lng: number | null;
+  imported_at: string;
+  updated_at: string;
+  update_token: string | null;
+  hotspot_count: number;
+  marker_count: number;
+};
+
+export type BirdPlanTripFav = {
+  name: string;
+  code: string;
+  range: string;
+  percent: number;
+};
+
+export type BirdPlanTripHotspot = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  species: number;
+  notes: string | null;
+  favs?: BirdPlanTripFav[];
+};
+
+export type BirdPlanTripMarker = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  icon: string;
+  notes: string | null;
+};
+
+export type BirdPlanTripData = {
+  id: string;
+  name: string;
+  startMonth: number;
+  endMonth: number;
+  bounds: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  };
+  hotspots: BirdPlanTripHotspot[];
+  markers: BirdPlanTripMarker[];
+  updateToken?: string;
+};

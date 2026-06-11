@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { SavedPlace, StaticPackHotspot, StaticPackTarget } from "./types";
+import { BirdPlanTripData, SavedPlace, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let isInstallingPack = false;
@@ -8,8 +8,8 @@ export async function initializeDatabase(): Promise<void> {
   try {
     db = await SQLite.openDatabaseAsync("openbirding.db");
     await createTables();
-    await createIndexes();
     await runMigrations();
+    await createIndexes();
     console.log("Database initialized successfully");
   } catch (error) {
     console.error("Failed to initialize database:", error);
@@ -49,12 +49,15 @@ async function createTables(): Promise<void> {
     );
   `);
 
+  // Foreign keys are intentionally not enforced (PRAGMA foreign_keys is OFF).
+  // This allows saved_hotspots to reference hotspot IDs that may not yet exist
+  // in the hotspots table (e.g. trip imports), and survive pack uninstalls.
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS saved_hotspots (
       hotspot_id TEXT PRIMARY KEY NOT NULL,
       saved_at TEXT NOT NULL,
       notes TEXT,
-      FOREIGN KEY (hotspot_id) REFERENCES hotspots (id) ON DELETE CASCADE
+      trip_id TEXT
     );
   `);
 
@@ -66,7 +69,8 @@ async function createTables(): Promise<void> {
       icon TEXT NOT NULL,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
-      saved_at TEXT NOT NULL
+      saved_at TEXT NOT NULL,
+      trip_id TEXT
     );
   `);
 
@@ -84,7 +88,25 @@ async function createTables(): Promise<void> {
       hotspot_id TEXT NOT NULL,
       code TEXT NOT NULL,
       pinned_at TEXT NOT NULL,
+      trip_id TEXT,
       PRIMARY KEY (hotspot_id, code)
+    );
+  `);
+
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS trips (
+      id TEXT PRIMARY KEY NOT NULL,
+      type TEXT NOT NULL DEFAULT 'birdplan',
+      name TEXT NOT NULL,
+      start_month INTEGER,
+      end_month INTEGER,
+      min_lat REAL,
+      max_lat REAL,
+      min_lng REAL,
+      max_lng REAL,
+      imported_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      update_token TEXT
     );
   `);
 }
@@ -116,6 +138,21 @@ async function createIndexes(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_targets_pack_id
     ON targets (pack_id);
   `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_saved_hotspots_trip_id
+    ON saved_hotspots (trip_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_saved_places_trip_id
+    ON saved_places (trip_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_pinned_targets_trip_id
+    ON pinned_targets (trip_id);
+  `);
 }
 
 async function runMigrations(): Promise<void> {
@@ -130,6 +167,34 @@ async function runMigrations(): Promise<void> {
   if (!packsColumns.includes("updated_at")) {
     await db.execAsync(`ALTER TABLE packs ADD COLUMN updated_at TEXT`);
   }
+
+  const savedHotspotsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(saved_hotspots)");
+  const savedHotspotsColumns = savedHotspotsTableInfo.map((col) => col.name);
+  if (!savedHotspotsColumns.includes("trip_id")) {
+    await db.execAsync(`ALTER TABLE saved_hotspots ADD COLUMN trip_id TEXT`);
+  }
+
+  const savedPlacesTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(saved_places)");
+  const savedPlacesColumns = savedPlacesTableInfo.map((col) => col.name);
+  if (!savedPlacesColumns.includes("trip_id")) {
+    await db.execAsync(`ALTER TABLE saved_places ADD COLUMN trip_id TEXT`);
+  }
+
+  const pinnedTargetsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(pinned_targets)");
+  const pinnedTargetsColumns = pinnedTargetsTableInfo.map((col) => col.name);
+  if (!pinnedTargetsColumns.includes("trip_id")) {
+    await db.execAsync(`ALTER TABLE pinned_targets ADD COLUMN trip_id TEXT`);
+  }
+
+  const tripsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(trips)");
+  const tripsColumns = tripsTableInfo.map((col) => col.name);
+  if (tripsColumns.length > 0 && !tripsColumns.includes("update_token")) {
+    await db.execAsync(`ALTER TABLE trips ADD COLUMN update_token TEXT`);
+  }
+  if (tripsColumns.length > 0 && !tripsColumns.includes("type")) {
+    await db.execAsync(`ALTER TABLE trips ADD COLUMN type TEXT NOT NULL DEFAULT 'birdplan'`);
+  }
+
 }
 
 export function getDatabase(): SQLite.SQLiteDatabase {
@@ -233,12 +298,15 @@ export async function getPackById(id: number): Promise<{
 export async function saveHotspot(hotspotId: string, notes?: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
+  const existing = await db.getFirstAsync<{ trip_id: string | null }>(
+    `SELECT trip_id FROM saved_hotspots WHERE hotspot_id = ?`,
+    [hotspotId]
+  );
   const savedAt = new Date().toISOString();
-  await db.runAsync(`INSERT OR REPLACE INTO saved_hotspots (hotspot_id, saved_at, notes) VALUES (?, ?, ?)`, [
-    hotspotId,
-    savedAt,
-    notes || null,
-  ]);
+  await db.runAsync(
+    `INSERT OR REPLACE INTO saved_hotspots (hotspot_id, saved_at, notes, trip_id) VALUES (?, ?, ?, ?)`,
+    [hotspotId, savedAt, notes || null, existing?.trip_id ?? null]
+  );
 }
 
 export async function unsaveHotspot(hotspotId: string): Promise<void> {
@@ -406,10 +474,14 @@ export async function cleanupPartialInstall(packId: number): Promise<void> {
 export async function savePlace({ id, name, notes, icon, lat, lng }: Omit<SavedPlace, "saved_at">): Promise<string> {
   if (!db) throw new Error("Database not initialized");
 
+  const existing = await db.getFirstAsync<{ trip_id: string | null }>(
+    `SELECT trip_id FROM saved_places WHERE id = ?`,
+    [id]
+  );
   const savedAt = new Date().toISOString();
   await db.runAsync(
-    `INSERT OR REPLACE INTO saved_places (id, name, notes, icon, lat, lng, saved_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, notes, icon, lat, lng, savedAt]
+    `INSERT OR REPLACE INTO saved_places (id, name, notes, icon, lat, lng, saved_at, trip_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, notes, icon, lat, lng, savedAt, existing?.trip_id ?? null]
   );
 
   return id;
@@ -625,13 +697,131 @@ export async function getPinnedTargets(hotspotId: string): Promise<string[]> {
 
 export async function pinTarget(hotspotId: string, speciesCode: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
+  const existing = await db.getFirstAsync<{ trip_id: string | null }>(
+    `SELECT trip_id FROM pinned_targets WHERE hotspot_id = ? AND code = ?`,
+    [hotspotId, speciesCode]
+  );
   await db.runAsync(
-    `INSERT OR REPLACE INTO pinned_targets (hotspot_id, code, pinned_at) VALUES (?, ?, ?)`,
-    [hotspotId, speciesCode, new Date().toISOString()]
+    `INSERT OR REPLACE INTO pinned_targets (hotspot_id, code, pinned_at, trip_id) VALUES (?, ?, ?, ?)`,
+    [hotspotId, speciesCode, new Date().toISOString(), existing?.trip_id ?? null]
   );
 }
 
 export async function unpinTarget(hotspotId: string, speciesCode: string): Promise<void> {
   if (!db) throw new Error("Database not initialized");
   await db.runAsync(`DELETE FROM pinned_targets WHERE hotspot_id = ? AND code = ?`, [hotspotId, speciesCode]);
+}
+
+export async function getTrips(): Promise<Trip[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  const rows = await db.getAllAsync<Trip>(
+    `SELECT
+       t.id, t.type, t.name, t.start_month, t.end_month,
+       t.min_lat, t.max_lat, t.min_lng, t.max_lng,
+       t.imported_at, t.updated_at, t.update_token,
+       (SELECT COUNT(*) FROM saved_hotspots WHERE trip_id = t.id) AS hotspot_count,
+       (SELECT COUNT(*) FROM saved_places WHERE trip_id = t.id) AS marker_count
+     FROM trips t
+     ORDER BY t.imported_at DESC`
+  );
+
+  return rows;
+}
+
+export async function getTripById(tripId: string): Promise<Trip | null> {
+  if (!db) throw new Error("Database not initialized");
+
+  const row = await db.getFirstAsync<Trip>(
+    `SELECT
+       t.id, t.type, t.name, t.start_month, t.end_month,
+       t.min_lat, t.max_lat, t.min_lng, t.max_lng,
+       t.imported_at, t.updated_at, t.update_token,
+       (SELECT COUNT(*) FROM saved_hotspots WHERE trip_id = t.id) AS hotspot_count,
+       (SELECT COUNT(*) FROM saved_places WHERE trip_id = t.id) AS marker_count
+     FROM trips t
+     WHERE t.id = ?`,
+    [tripId]
+  );
+
+  return row ?? null;
+}
+
+export async function importTrip(data: BirdPlanTripData): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const database = db;
+  const now = new Date().toISOString();
+  const existing = await database.getFirstAsync<{ imported_at: string; update_token: string | null }>(
+    `SELECT imported_at, update_token FROM trips WHERE id = ?`,
+    [data.id]
+  );
+  const importedAt = existing?.imported_at ?? now;
+  // On initial import we receive a fresh updateToken. Refresh responses omit it — keep the one we already have.
+  const updateToken = data.updateToken ?? existing?.update_token ?? null;
+
+  await database.withTransactionAsync(async () => {
+    // Remove any existing trip content so we start fresh.
+    await deleteTripContent(database, data.id);
+
+    await database.runAsync(
+      `INSERT OR REPLACE INTO trips
+        (id, type, name, start_month, end_month, min_lat, max_lat, min_lng, max_lng, imported_at, updated_at, update_token)
+        VALUES (?, 'birdplan', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.id,
+        data.name,
+        data.startMonth ?? null,
+        data.endMonth ?? null,
+        data.bounds?.minY ?? null,
+        data.bounds?.maxY ?? null,
+        data.bounds?.minX ?? null,
+        data.bounds?.maxX ?? null,
+        importedAt,
+        now,
+        updateToken,
+      ]
+    );
+
+    for (const hotspot of data.hotspots) {
+      await database.runAsync(
+        `INSERT OR REPLACE INTO saved_hotspots (hotspot_id, saved_at, notes, trip_id) VALUES (?, ?, ?, ?)`,
+        [hotspot.id, now, hotspot.notes?.trim() || null, data.id]
+      );
+
+      if (hotspot.favs?.length) {
+        for (const fav of hotspot.favs) {
+          await database.runAsync(
+            `INSERT OR REPLACE INTO pinned_targets (hotspot_id, code, pinned_at, trip_id) VALUES (?, ?, ?, ?)`,
+            [hotspot.id, fav.code, now, data.id]
+          );
+        }
+      }
+    }
+
+    for (const marker of data.markers) {
+      const placeId = `${data.id}_${marker.id}`;
+      await database.runAsync(
+        `INSERT OR REPLACE INTO saved_places (id, name, notes, icon, lat, lng, saved_at, trip_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [placeId, marker.name, marker.notes?.trim() || null, marker.icon, marker.lat, marker.lng, now, data.id]
+      );
+    }
+  });
+}
+
+async function deleteTripContent(database: SQLite.SQLiteDatabase, tripId: string): Promise<void> {
+  await database.runAsync(`DELETE FROM saved_places WHERE trip_id = ?`, [tripId]);
+  await database.runAsync(`DELETE FROM pinned_targets WHERE trip_id = ?`, [tripId]);
+  await database.runAsync(`DELETE FROM saved_hotspots WHERE trip_id = ?`, [tripId]);
+}
+
+export async function deleteTrip(tripId: string): Promise<void> {
+  if (!db) throw new Error("Database not initialized");
+
+  const database = db;
+  await database.withTransactionAsync(async () => {
+    await deleteTripContent(database, tripId);
+    await database.runAsync(`DELETE FROM trips WHERE id = ?`, [tripId]);
+  });
 }

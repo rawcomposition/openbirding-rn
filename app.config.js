@@ -4,7 +4,7 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.7.2",
+    version: "1.8.0",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
@@ -64,6 +64,7 @@ module.exports = ({ config }) => ({
       router: {},
       eas: { projectId: "2944a151-98b6-4d2a-9104-65facf9def35" },
       MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN,
+      BIRDPLAN_DOMAIN: process.env.BIRDPLAN_DOMAIN,
     },
     updates: {
       url: "https://u.expo.dev/2944a151-98b6-4d2a-9104-65facf9def35",
