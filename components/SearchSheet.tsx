@@ -3,6 +3,7 @@ import { getSavedPlaces, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
 import { Hotspot, SavedPlace } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
 import { useQuery } from "@tanstack/react-query";
 import { FlashList } from "@shopify/flash-list";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +39,12 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const dismissRef = useRef<(() => Promise<void>) | null>(null);
   const { location } = useLocation(isOpen);
+  const mapCenter = useMapStore((state) => state.mapCenter);
+
+  // Sort origin falls back to map center so duplicate-named saved places (e.g.
+  // two "Airport"s) still order nearest-first without GPS. The displayed
+  // distance label stays gated on real location only — see `withDistance`.
+  const originPoint = location ?? mapCenter ?? null;
 
   useEffect(() => {
     if (!isOpen) {
@@ -82,13 +89,16 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     const matched = trimmed.length >= MIN_QUERY
       ? savedPlaces.filter((place) => place.name.toLowerCase().includes(trimmed))
       : [];
-    const decorated = matched.map(withDistance);
+    const decorated = matched.map((place) => ({
+      place: withDistance(place),
+      sortDistance: originPoint ? calculateDistance(originPoint.lat, originPoint.lng, place.lat, place.lng) : null,
+    }));
     decorated.sort((a, b) => {
-      if (a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
-      return a.name.localeCompare(b.name);
+      if (a.sortDistance !== null && b.sortDistance !== null) return a.sortDistance - b.sortDistance;
+      return a.place.name.localeCompare(b.place.name);
     });
-    return decorated;
-  }, [savedPlaces, query, withDistance]);
+    return decorated.map((d) => d.place);
+  }, [savedPlaces, query, withDistance, originPoint]);
 
   // Hotspots come back alphabetical from SQL; surface prefix matches first so
   // the most likely target sits at the top.
