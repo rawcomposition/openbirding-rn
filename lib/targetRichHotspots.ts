@@ -144,7 +144,8 @@ class TargetRichHotspotCache {
     basis: TargetRichHotspotBasis,
     signal?: AbortSignal
   ): Promise<void> {
-    const missingHotspotIds = [...new Set(hotspotIds)].filter((hotspotId) => !this.cache.has(hotspotId));
+    const requestedHotspotIds = new Set(hotspotIds);
+    const missingHotspotIds = [...requestedHotspotIds].filter((hotspotId) => !this.cache.has(hotspotId));
     if (missingHotspotIds.length === 0) {
       return;
     }
@@ -179,6 +180,12 @@ class TargetRichHotspotCache {
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
+
+      // Trim only AFTER the run completes, and never evict entries belonging to
+      // the viewport we just evaluated. This keeps a single over-capacity viewport
+      // fully resolved (it would otherwise evict its own earliest results mid-run
+      // and never converge), while still bounding memory across distinct viewports.
+      this.trim(requestedHotspotIds);
     } finally {
       this.activeSignals.delete(controller);
     }
@@ -190,13 +197,23 @@ class TargetRichHotspotCache {
     }
 
     this.cache.set(hotspotId, value);
+  }
 
-    while (this.cache.size > CACHE_CAPACITY) {
-      const oldestHotspotId = this.cache.keys().next().value;
-      if (!oldestHotspotId) {
+  private trim(protectedHotspotIds: ReadonlySet<string>) {
+    if (this.cache.size <= CACHE_CAPACITY) {
+      return;
+    }
+
+    let removable = this.cache.size - CACHE_CAPACITY;
+    for (const hotspotId of [...this.cache.keys()]) {
+      if (removable <= 0) {
         break;
       }
-      this.cache.delete(oldestHotspotId);
+      if (protectedHotspotIds.has(hotspotId)) {
+        continue;
+      }
+      this.cache.delete(hotspotId);
+      removable -= 1;
     }
   }
 }
@@ -213,4 +230,30 @@ export function syncTargetRichHotspotCacheBasis(nextBasisKey: string | null) {
   activeBasisKey = nextBasisKey;
   targetRichHotspotCache.cancelActiveRun();
   targetRichHotspotCache.clear();
+}
+
+// Bumped whenever the underlying target data changes (e.g. a pack install /
+// update / uninstall). Cached per-hotspot results are keyed only by hotspot id,
+// so they must be discarded when the data behind those ids is rewritten.
+let cacheGeneration = 0;
+const cacheResetListeners = new Set<() => void>();
+
+export function getTargetRichHotspotCacheGeneration(): number {
+  return cacheGeneration;
+}
+
+export function subscribeToTargetRichHotspotCacheReset(listener: () => void): () => void {
+  cacheResetListeners.add(listener);
+  return () => {
+    cacheResetListeners.delete(listener);
+  };
+}
+
+export function resetTargetRichHotspotCache() {
+  cacheGeneration += 1;
+  targetRichHotspotCache.cancelActiveRun();
+  targetRichHotspotCache.clear();
+  for (const listener of cacheResetListeners) {
+    listener();
+  }
 }

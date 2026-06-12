@@ -1,11 +1,13 @@
 import {
   createTargetRichHotspotBasis,
+  getTargetRichHotspotCacheGeneration,
+  subscribeToTargetRichHotspotCacheReset,
   targetRichHotspotCache,
   syncTargetRichHotspotCacheBasis,
 } from "@/lib/targetRichHotspots";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 type UseTargetRichHotspotsOptions = {
   enabled?: boolean;
@@ -57,6 +59,11 @@ export function useTargetRichHotspots(
         minTargetFrequency,
       }),
     [lifelist, lifelistExclusions, targetMonths, minTargets, minTargetFrequency]
+  );
+
+  const cacheGeneration = useSyncExternalStore(
+    subscribeToTargetRichHotspotCacheReset,
+    getTargetRichHotspotCacheGeneration
   );
 
   const hasLifeList = basis !== null;
@@ -115,7 +122,7 @@ export function useTargetRichHotspots(
     }));
 
     void targetRichHotspotCache
-      .evaluateMany(unresolvedHotspotIds, basisForRun, abortController.signal)
+      .evaluateMany(stableHotspotIds, basisForRun, abortController.signal)
       .then(() => {
         if (abortController.signal.aborted) {
           return;
@@ -157,7 +164,7 @@ export function useTargetRichHotspots(
     return () => {
       abortController.abort();
     };
-  }, [basis?.cacheKey, candidateKey, hasLifeList, isActive, isEnabled, stableHotspotIds]);
+  }, [basis?.cacheKey, cacheGeneration, candidateKey, hasLifeList, isActive, isEnabled, stableHotspotIds]);
 
   return useMemo<TargetRichHotspotState>(() => {
     if (!isActive) {
