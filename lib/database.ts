@@ -208,7 +208,7 @@ export async function getHotspotsWithinBounds(
   south: number,
   east: number,
   north: number
-): Promise<{ id: string; lat: number; lng: number; species: number }[]> {
+): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
   if (!db) throw new Error("Database not initialized");
 
   // When west > east, the bounding box crosses the international date line
@@ -216,16 +216,18 @@ export async function getHotspotsWithinBounds(
   const lngCondition = crossesDateLine ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
 
   const result = await db.getAllAsync(
-    `SELECT id, lat, lng, species FROM hotspots
+    `SELECT id, name, lat, lng, species, country FROM hotspots
      WHERE lat >= ? AND lat <= ? AND ${lngCondition}`,
     [south, north, west, east]
   );
 
   return result.map((row: any) => ({
     id: row.id,
+    name: row.name,
     lat: row.lat,
     lng: row.lng,
     species: row.species,
+    country: row.country ?? null,
   }));
 }
 

@@ -1,6 +1,7 @@
 import IconButton from "@/components/IconButton";
 import Input from "@/components/Input";
 import { deletePlace, getSavedPlaceById, savePlace } from "@/lib/database";
+import { placeIconImages } from "@/lib/placeIconImages";
 import { placeIcons, type PlaceIconT } from "@/lib/placeIcons";
 import tw from "@/lib/tw";
 import { generateId } from "@/lib/utils";
@@ -10,30 +11,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
-
-const placeIconImages: Record<PlaceIconT, any> = {
-  hike: require("@/assets/markers/place-hike.png"),
-  mountain: require("@/assets/markers/place-mountain.png"),
-  tent: require("@/assets/markers/place-tent.png"),
-  house: require("@/assets/markers/place-house.png"),
-  airbnb: require("@/assets/markers/place-airbnb.png"),
-  bed: require("@/assets/markers/place-bed.png"),
-  bins: require("@/assets/markers/place-bins.png"),
-  camera: require("@/assets/markers/place-camera.png"),
-  airport: require("@/assets/markers/place-airport.png"),
-  boat: require("@/assets/markers/place-boat.png"),
-  car: require("@/assets/markers/place-car.png"),
-  bus: require("@/assets/markers/place-bus.png"),
-  utensils: require("@/assets/markers/place-utensils.png"),
-  mug: require("@/assets/markers/place-mug.png"),
-  trolley: require("@/assets/markers/place-trolley.png"),
-  bike: require("@/assets/markers/place-bike.png"),
-  dog: require("@/assets/markers/place-dog.png"),
-  fuel: require("@/assets/markers/place-fuel.png"),
-  parking: require("@/assets/markers/place-parking.png"),
-  building: require("@/assets/markers/place-building.png"),
-  hotspot: require("@/assets/markers/place-hotspot.png"),
-};
 
 const placeIconKeys = Object.keys(placeIcons) as PlaceIconT[];
 

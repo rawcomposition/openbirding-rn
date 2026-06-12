@@ -157,6 +157,9 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const currentLayer = useMapStore((state) => state.currentLayer);
     const placeId = useMapStore((state) => state.placeId);
     const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const setStoreBounds = useMapStore((state) => state.setBounds);
+    const setInViewCount = useMapStore((state) => state.setInViewCount);
+    const setDisplayedCount = useMapStore((state) => state.setDisplayedCount);
     const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
     const setIsZoomedTooFarOut = useMapStore((state) => state.setIsZoomedTooFarOut);
     const showAttribution = useMapStore((state) => state.isMapAttributionOpen);
@@ -398,6 +401,22 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         lastResolvedHotspotsRef.current = displayedHotspots;
       }
     }, [displayedHotspots, isTargetRichLoading]);
+
+    // Mirror the viewport + result counts into the store so the hotspot list can
+    // snapshot the same bounds and the toggle pill can show how many are in view.
+    useEffect(() => {
+      setStoreBounds(bounds);
+    }, [bounds, setStoreBounds]);
+
+    useEffect(() => {
+      if (bounds === null) {
+        setInViewCount(null);
+        setDisplayedCount(null);
+        return;
+      }
+      setInViewCount(mapCandidateHotspots.length);
+      setDisplayedCount(displayedHotspots.length);
+    }, [bounds, mapCandidateHotspots.length, displayedHotspots.length, setInViewCount, setDisplayedCount]);
 
     const handleFeaturePress = useCallback(
       (event: any) => {

@@ -1,17 +1,18 @@
+import { getPlaceIconImage } from "@/lib/placeIconImages";
 import tw from "@/lib/tw";
-import { Hotspot } from "@/lib/types";
-import { formatDistance, getMarkerColor } from "@/lib/utils";
+import { SavedPlace } from "@/lib/types";
+import { formatDistance } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 
-type HotspotItemProps = {
-  item: Hotspot & { distance?: number };
-  onSelect: (hotspot: Hotspot & { distance?: number }) => void;
+type PlaceItemProps = {
+  item: SavedPlace & { distance?: number };
+  onSelect: (place: SavedPlace & { distance?: number }) => void;
 };
 
-const HotspotItem = React.memo(
-  ({ item, onSelect }: HotspotItemProps) => {
+const PlaceItem = React.memo(
+  ({ item, onSelect }: PlaceItemProps) => {
     const handlePress = useCallback(() => {
       onSelect(item);
     }, [item, onSelect]);
@@ -23,17 +24,17 @@ const HotspotItem = React.memo(
         cancelable={false}
         style={({ pressed }) => [tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`, pressed && tw`opacity-70`]}
       >
+        <Image source={getPlaceIconImage(item.icon)} style={tw`w-6 h-6 mr-3`} resizeMode="contain" />
         <View style={tw`flex-1`}>
           <Text style={tw`text-gray-900 text-base font-medium`} numberOfLines={1}>
             {item.name}
           </Text>
-          <View style={tw`flex-row items-center mt-1`}>
-            <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(item.species || 0) }]} />
-            <Text style={tw`text-gray-600 text-sm`}>{item.species} species</Text>
-          </View>
+          <Text style={tw`text-gray-500 text-sm mt-1`} numberOfLines={1}>
+            {item.notes ? item.notes : "Place"}
+          </Text>
         </View>
         {item.distance !== undefined && (
-          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, item.country)}</Text>
+          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, null)}</Text>
         )}
         <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
       </Pressable>
@@ -41,18 +42,18 @@ const HotspotItem = React.memo(
   },
   (prevProps, nextProps) => {
     return (
+      prevProps.item.id === nextProps.item.id &&
       prevProps.item.lat === nextProps.item.lat &&
       prevProps.item.lng === nextProps.item.lng &&
-      prevProps.item.id === nextProps.item.id &&
       prevProps.item.name === nextProps.item.name &&
-      prevProps.item.species === nextProps.item.species &&
+      prevProps.item.icon === nextProps.item.icon &&
+      prevProps.item.notes === nextProps.item.notes &&
       prevProps.item.distance === nextProps.item.distance &&
-      prevProps.item.country === nextProps.item.country &&
       prevProps.onSelect === nextProps.onSelect
     );
   }
 );
 
-HotspotItem.displayName = "HotspotItem";
+PlaceItem.displayName = "PlaceItem";
 
-export default HotspotItem;
+export default PlaceItem;

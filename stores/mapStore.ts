@@ -1,3 +1,4 @@
+import { Bounds } from "@/lib/types";
 import { create } from "zustand";
 
 type MapLayerType = "default" | "satellite";
@@ -5,6 +6,12 @@ type MapLayerType = "default" | "satellite";
 type MapStore = {
   currentLayer: MapLayerType;
   setCurrentLayer: (layer: MapLayerType) => void;
+  bounds: Bounds | null;
+  setBounds: (bounds: Bounds | null) => void;
+  inViewCount: number | null;
+  setInViewCount: (count: number | null) => void;
+  displayedCount: number | null;
+  setDisplayedCount: (count: number | null) => void;
   hotspotId: string | null;
   setHotspotId: (id: string | null) => void;
   placeId: string | null;
@@ -28,6 +35,12 @@ type MapStore = {
 export const useMapStore = create<MapStore>((set) => ({
   currentLayer: "default",
   setCurrentLayer: (layer) => set({ currentLayer: layer }),
+  bounds: null,
+  setBounds: (bounds) => set({ bounds }),
+  inViewCount: null,
+  setInViewCount: (count) => set({ inViewCount: count }),
+  displayedCount: null,
+  setDisplayedCount: (count) => set({ displayedCount: count }),
   hotspotId: null,
   setHotspotId: (id) => set({ hotspotId: id }),
   placeId: null,

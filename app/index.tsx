@@ -2,7 +2,7 @@ import CountBadge from "@/components/CountBadge";
 import FloatingButton from "@/components/FloatingButton";
 import HotspotDialog from "@/components/HotspotDialog";
 import HotspotList from "@/components/HotspotList";
-import MapListIcon from "@/components/icons/MapListIcon";
+import MapListTogglePill from "@/components/MapListTogglePill";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
@@ -10,7 +10,6 @@ import PlaceDialog from "@/components/PlaceDialog";
 import SunIndicator from "@/components/SunIndicator";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { usePackUpdates } from "@/hooks/usePackUpdates";
-import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
@@ -42,7 +41,6 @@ export default function HomeScreen() {
   } = useMapStore();
   const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
   const { updateCount } = usePackUpdates();
-  const activeFilterCount = useActiveFilterCount();
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -124,6 +122,18 @@ export default function HomeScreen() {
     [setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
 
+  const handleSelectPlaceFromList = useCallback(
+    (selectedPlaceId: string, lat: number, lng: number) => {
+      setCustomPinCoordinates(null);
+      setHotspotId(null);
+      setPlaceId(selectedPlaceId);
+      setTimeout(() => {
+        mapRef.current?.centerOnCoordinates(lng, lat, 200);
+      }, 500);
+    },
+    [setCustomPinCoordinates, setHotspotId, setPlaceId]
+  );
+
   if (isLoadingLocation) return null;
 
   const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
@@ -175,18 +185,20 @@ export default function HomeScreen() {
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
           <View style={tw`relative`}>
-            <FloatingButton onPress={handleOpenHotspotList} light={currentLayer === "satellite"}>
-              <MapListIcon size={24} color={tw.color("gray-700")} />
-            </FloatingButton>
-            <CountBadge count={activeFilterCount} />
-          </View>
-          <View style={tw`relative`}>
             <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
               <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
             </FloatingButton>
             <CountBadge count={updateCount} />
           </View>
         </View>
+        {!isHotspotListOpen && (
+          <View
+            style={[tw`absolute left-0 right-0 items-center`, { bottom: insets.bottom + 24 }]}
+            pointerEvents="box-none"
+          >
+            <MapListTogglePill onPress={handleOpenHotspotList} />
+          </View>
+        )}
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={handleHotspotDialogClose} />
         <PlaceDialog
@@ -200,6 +212,7 @@ export default function HomeScreen() {
           isOpen={isHotspotListOpen}
           onClose={handleCloseHotspotList}
           onSelectHotspot={handleSelectHotspotFromList}
+          onSelectPlace={handleSelectPlaceFromList}
         />
       </View>
     </GestureHandlerRootView>

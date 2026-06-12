@@ -49,6 +49,13 @@ export type BoundingBox = {
   maxLng: number;
 };
 
+export type Bounds = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+};
+
 export type MapFeature = {
   geometry: {
     coordinates: [number, number];
