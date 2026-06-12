@@ -17,7 +17,7 @@ export default function ActionButtonRow({ children, stacked = false }: ActionBut
       {child}
     </View>
   ));
-  const containerStyle = [tw`w-full mt-2`, stacked ? tw`flex-col` : tw`flex-row`, { gap: GAP }] as const;
+  const containerStyle = [tw`w-full mt-2`, stacked ? tw`flex-col` : tw`flex-row`, { gap: GAP }];
 
   return useGlass ? (
     <GlassContainer style={containerStyle} spacing={GAP}>
