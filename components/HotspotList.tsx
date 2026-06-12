@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FilterSlidersIcon from "./icons/FilterSlidersIcon";
 import BaseBottomSheet from "./BaseBottomSheet";
 import FilterSheet from "./FilterSheet";
 import HotspotItem from "./HotspotItem";
@@ -236,7 +237,10 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
           </View>
           <IconButtonGroup>
             <View>
-              <IconButton icon="filter-outline" onPress={() => setIsFilterSheetOpen(true)} />
+              <IconButton
+                icon={<FilterSlidersIcon size={24} color={tw.color("gray-600")} />}
+                onPress={() => setIsFilterSheetOpen(true)}
+              />
               {activeFilterCount > 0 && (
                 <View
                   style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}

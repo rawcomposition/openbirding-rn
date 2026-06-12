@@ -1,3 +1,4 @@
+import FilterSlidersIcon from "@/components/icons/FilterSlidersIcon";
 import tw from "@/lib/tw";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
@@ -20,7 +21,7 @@ export default function MapViewControls({ onOpenFilters, onOpenList, filterCount
   const inner = (
     <View style={tw`flex-row items-center`}>
       <TouchableOpacity onPress={onOpenFilters} activeOpacity={0.7} style={tw`flex-row items-center pl-5 pr-4 py-3`}>
-        <Text style={tw`text-base font-semibold text-gray-800`}>Filters</Text>
+        <FilterSlidersIcon size={20} color={tw.color("gray-700")} />
         {filterCount > 0 && (
           <View style={tw`ml-2 px-2 py-0.5 rounded-full bg-blue-500`}>
             <Text style={tw`text-white text-xs font-bold`}>{filterCount}</Text>
