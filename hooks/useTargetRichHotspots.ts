@@ -1,6 +1,5 @@
 import {
   createTargetRichHotspotBasis,
-  logTargetRichHotspotDebug,
   targetRichHotspotCache,
   syncTargetRichHotspotCacheBasis,
 } from "@/lib/targetRichHotspots";
@@ -66,9 +65,6 @@ export function useTargetRichHotspots(
   const candidateKey = useMemo(() => hotspotIds.join("|"), [hotspotIds]);
   const stableHotspotIdsRef = useRef(hotspotIds);
   const basisRef = useRef(basis);
-  const asyncStateRef = useRef<AsyncTargetRichHotspotState>({ filteredIds: [], isLoading: false });
-  const lastDebugStatusRef = useRef<string | null>(null);
-  const logDebugStatusRef = useRef<(status: string, details?: Record<string, unknown>) => void>(() => {});
 
   if (stableHotspotIdsRef.current !== hotspotIds && stableHotspotIdsRef.current.join("|") !== candidateKey) {
     stableHotspotIdsRef.current = hotspotIds;
@@ -86,61 +82,11 @@ export function useTargetRichHotspots(
   }, [basis]);
 
   useEffect(() => {
-    asyncStateRef.current = asyncState;
-  }, [asyncState]);
-
-  logDebugStatusRef.current = (status: string, details?: Record<string, unknown>) => {
-    const statusKey = JSON.stringify({
-      status,
-      candidateCount: stableHotspotIds.length,
-      filteredCount: asyncStateRef.current.filteredIds.length,
-      isLoading: asyncStateRef.current.isLoading,
-      isEnabled,
-      isActive,
-      hasLifeList,
-      ...details,
-    });
-
-    if (lastDebugStatusRef.current === statusKey) {
-      return;
-    }
-
-    lastDebugStatusRef.current = statusKey;
-    logTargetRichHotspotDebug(status, {
-      candidateCount: stableHotspotIds.length,
-      filteredCount: asyncStateRef.current.filteredIds.length,
-      isLoading: asyncStateRef.current.isLoading,
-      isEnabled,
-      isActive,
-      hasLifeList,
-      ...details,
-    });
-  };
-
-  useEffect(() => {
     syncTargetRichHotspotCacheBasis(basis?.cacheKey ?? null);
   }, [basis?.cacheKey]);
 
   useEffect(() => {
-    if (!isActive) {
-      logDebugStatusRef.current("hook inactive");
-      return;
-    }
-
-    if (!isEnabled) {
-      logDebugStatusRef.current("waiting for prerequisites", {
-        blockWhileDisabled: options.blockWhileDisabled ?? false,
-      });
-      return;
-    }
-
-    if (stableHotspotIds.length === 0) {
-      logDebugStatusRef.current("no candidate hotspots");
-      return;
-    }
-
-    if (!basisRef.current) {
-      logDebugStatusRef.current("missing filter basis");
+    if (!isActive || !isEnabled || stableHotspotIds.length === 0 || !basisRef.current) {
       return;
     }
 
@@ -148,9 +94,6 @@ export function useTargetRichHotspots(
     const unresolvedHotspotIds = stableHotspotIds.filter((hotspotId) => !targetRichHotspotCache.has(hotspotId));
     if (unresolvedHotspotIds.length === 0) {
       const filteredIds = filterResolvedHotspotIds(stableHotspotIds);
-      logDebugStatusRef.current("all candidates resolved from cache", {
-        matchedCount: filteredIds.length,
-      });
       setAsyncState((currentState) => {
         if (!currentState.isLoading && areStringArraysEqual(currentState.filteredIds, filteredIds)) {
           return currentState;
@@ -165,10 +108,6 @@ export function useTargetRichHotspots(
     }
 
     const abortController = new AbortController();
-    logDebugStatusRef.current("evaluating unresolved hotspots", {
-      unresolvedCount: unresolvedHotspotIds.length,
-      cachedCount: stableHotspotIds.length - unresolvedHotspotIds.length,
-    });
 
     setAsyncState((currentState) => ({
       filteredIds: currentState.isLoading ? currentState.filteredIds : [],
@@ -184,7 +123,6 @@ export function useTargetRichHotspots(
 
         const stillUnresolved = stableHotspotIds.some((hotspotId) => !targetRichHotspotCache.has(hotspotId));
         if (stillUnresolved) {
-          logDebugStatusRef.current("evaluation completed but candidates still unresolved");
           setAsyncState((currentState) => ({
             filteredIds: currentState.filteredIds,
             isLoading: true,
@@ -193,10 +131,6 @@ export function useTargetRichHotspots(
         }
 
         const filteredIds = filterResolvedHotspotIds(stableHotspotIds);
-        logDebugStatusRef.current("evaluation resolved", {
-          matchedCount: filteredIds.length,
-          unresolvedCount: 0,
-        });
         setAsyncState((currentState) => {
           if (!currentState.isLoading && areStringArraysEqual(currentState.filteredIds, filteredIds)) {
             return currentState;
@@ -210,11 +144,9 @@ export function useTargetRichHotspots(
       })
       .catch((error) => {
         if (abortController.signal.aborted || error?.name === "AbortError") {
-          logDebugStatusRef.current("evaluation aborted");
           return;
         }
 
-        logDebugStatusRef.current("evaluation failed");
         console.error("Failed to evaluate target-rich hotspot filter", error);
         setAsyncState((currentState) => ({
           filteredIds: currentState.filteredIds,
@@ -225,14 +157,7 @@ export function useTargetRichHotspots(
     return () => {
       abortController.abort();
     };
-  }, [
-    candidateKey,
-    hasLifeList,
-    isActive,
-    isEnabled,
-    options.blockWhileDisabled,
-    stableHotspotIds,
-  ]);
+  }, [basis?.cacheKey, candidateKey, hasLifeList, isActive, isEnabled, stableHotspotIds]);
 
   return useMemo<TargetRichHotspotState>(() => {
     if (!isActive) {

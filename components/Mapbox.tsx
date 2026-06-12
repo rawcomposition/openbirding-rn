@@ -7,7 +7,7 @@ import {
   savedHotspotSymbolStyle,
   savedPlaceSymbolStyle,
 } from "@/lib/layers";
-import { logTargetRichHotspotDebug, targetRichHotspotCache } from "@/lib/targetRichHotspots";
+import { targetRichHotspotCache } from "@/lib/targetRichHotspots";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
@@ -171,7 +171,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
     const isTouchActiveRef = useRef(false);
-    const lastTargetRichMapDebugRef = useRef<string | null>(null);
     const lastResolvedHotspotsRef = useRef<{ id: string; lat: number; lng: number; species: number }[]>([]);
 
     const [isMapReady, setIsMapReady] = useState(false);
@@ -399,46 +398,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         lastResolvedHotspotsRef.current = displayedHotspots;
       }
     }, [displayedHotspots, isTargetRichLoading]);
-
-    useEffect(() => {
-      if (!targetRichFilter.isActive) {
-        return;
-      }
-
-      const debugState = JSON.stringify({
-        hasBounds: bounds !== null,
-        isFetchingHotspots,
-        hotspotCount: hotspots.length,
-        candidateCount: mapCandidateHotspots.length,
-        unresolvedCandidateCount,
-        displayedCount: displayedHotspots.length,
-        isTargetRichLoading,
-      });
-
-      if (lastTargetRichMapDebugRef.current === debugState) {
-        return;
-      }
-
-      lastTargetRichMapDebugRef.current = debugState;
-      logTargetRichHotspotDebug("map target-rich filter state", {
-        hasBounds: bounds !== null,
-        isFetchingHotspots,
-        hotspotCount: hotspots.length,
-        candidateCount: mapCandidateHotspots.length,
-        unresolvedCandidateCount,
-        displayedCount: displayedHotspots.length,
-        isTargetRichLoading,
-      });
-    }, [
-      displayedHotspots.length,
-      bounds,
-      hotspots.length,
-      isFetchingHotspots,
-      isTargetRichLoading,
-      mapCandidateHotspots.length,
-      targetRichFilter.isActive,
-      unresolvedCandidateCount,
-    ]);
 
     const handleFeaturePress = useCallback(
       (event: any) => {

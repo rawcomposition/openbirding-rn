@@ -4,9 +4,6 @@ import { getMonthIndices, getTotalSamplesForMonths, parseHotspotTargetData } fro
 
 const CACHE_CAPACITY = 5_000;
 const COMPUTE_BATCH_SIZE = 50;
-const DEBUG_TARGET_RICH_FILTER = __DEV__;
-
-let evaluationRunCounter = 0;
 
 export type TargetRichHotspotBasis = {
   cacheKey: string;
@@ -16,19 +13,6 @@ export type TargetRichHotspotBasis = {
   minTargets: number;
   minTargetFrequency: number;
 };
-
-export function logTargetRichHotspotDebug(message: string, details?: Record<string, unknown>) {
-  if (!DEBUG_TARGET_RICH_FILTER) {
-    return;
-  }
-
-  if (details) {
-    console.log(`[target-rich-hotspot] ${message}`, details);
-    return;
-  }
-
-  console.log(`[target-rich-hotspot] ${message}`);
-}
 
 export function normalizeMinTargets(value: number): number {
   if (!Number.isFinite(value)) return 1;
@@ -130,7 +114,6 @@ class TargetRichHotspotCache {
   private activeSignals = new Set<AbortController>();
 
   clear() {
-    logTargetRichHotspotDebug("cache clear", { previousSize: this.cache.size });
     this.cache.clear();
   }
 
@@ -150,10 +133,6 @@ class TargetRichHotspotCache {
   }
 
   cancelActiveRun() {
-    if (this.activeSignals.size > 0) {
-      logTargetRichHotspotDebug("cancel active runs", { activeRunCount: this.activeSignals.size });
-    }
-
     for (const controller of this.activeSignals) {
       controller.abort();
     }
@@ -170,7 +149,6 @@ class TargetRichHotspotCache {
       return;
     }
 
-    const runId = ++evaluationRunCounter;
     const controller = new AbortController();
     this.activeSignals.add(controller);
 
@@ -178,27 +156,9 @@ class TargetRichHotspotCache {
     const isAborted = () => combinedSignal.aborted || signal?.aborted;
 
     try {
-      logTargetRichHotspotDebug("evaluate start", {
-        runId,
-        requestedCount: hotspotIds.length,
-        missingCount: missingHotspotIds.length,
-        cachedCount: hotspotIds.length - missingHotspotIds.length,
-        cacheSize: this.cache.size,
-        monthCount: basis.selectedMonths.length === 0 ? 12 : basis.selectedMonths.length,
-        minTargets: basis.minTargets,
-        minTargetFrequency: basis.minTargetFrequency,
-      });
-
       throwIfAborted(signal);
       const targetData = await getTargetDataForHotspots(missingHotspotIds);
       throwIfAborted(signal);
-
-      logTargetRichHotspotDebug("target data fetched", {
-        runId,
-        requestedCount: missingHotspotIds.length,
-        foundCount: targetData.size,
-        missingDataCount: missingHotspotIds.length - targetData.size,
-      });
 
       for (let index = 0; index < missingHotspotIds.length; index += COMPUTE_BATCH_SIZE) {
         if (isAborted()) {
@@ -215,37 +175,10 @@ class TargetRichHotspotCache {
           this.set(hotspotId, rawData ? matchesTargetRichHotspot(rawData, basis) : false);
         }
 
-        const processedCount = Math.min(index + batch.length, missingHotspotIds.length);
-        if (
-          processedCount === missingHotspotIds.length ||
-          (missingHotspotIds.length > 250 && processedCount % 250 === 0)
-        ) {
-          logTargetRichHotspotDebug("evaluate progress", {
-            runId,
-            processedCount,
-            totalCount: missingHotspotIds.length,
-            cacheSize: this.cache.size,
-          });
-        }
-
         if (index + COMPUTE_BATCH_SIZE < missingHotspotIds.length) {
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
-      logTargetRichHotspotDebug("evaluate complete", {
-        runId,
-        computedCount: missingHotspotIds.length,
-        cacheSize: this.cache.size,
-      });
-    } catch (error) {
-      if ((error as Error | undefined)?.name === "AbortError") {
-        logTargetRichHotspotDebug("evaluate aborted", {
-          runId,
-          processedCandidateCount: missingHotspotIds.length,
-          cacheSize: this.cache.size,
-        });
-      }
-      throw error;
     } finally {
       this.activeSignals.delete(controller);
     }
@@ -277,10 +210,6 @@ export function syncTargetRichHotspotCacheBasis(nextBasisKey: string | null) {
     return;
   }
 
-  logTargetRichHotspotDebug("basis changed", {
-    hadBasis: activeBasisKey !== null,
-    hasBasis: nextBasisKey !== null,
-  });
   activeBasisKey = nextBasisKey;
   targetRichHotspotCache.cancelActiveRun();
   targetRichHotspotCache.clear();
