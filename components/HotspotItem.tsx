@@ -1,17 +1,19 @@
 import tw from "@/lib/tw";
 import { Hotspot } from "@/lib/types";
+import { getSavedHotspotIconImage } from "@/lib/hotspotIconImages";
 import { formatDistance, getMarkerColor } from "@/lib/utils";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 
 type HotspotItemProps = {
   item: Hotspot & { distance?: number };
   onSelect: (hotspot: Hotspot & { distance?: number }) => void;
+  isSaved?: boolean;
 };
 
 const HotspotItem = React.memo(
-  ({ item, onSelect }: HotspotItemProps) => {
+  ({ item, onSelect, isSaved = false }: HotspotItemProps) => {
     const handlePress = useCallback(() => {
       onSelect(item);
     }, [item, onSelect]);
@@ -28,7 +30,15 @@ const HotspotItem = React.memo(
             {item.name}
           </Text>
           <View style={tw`flex-row items-center mt-1`}>
-            <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(item.species || 0) }]} />
+            {isSaved ? (
+              <Image
+                source={getSavedHotspotIconImage(item.species || 0)}
+                style={tw`w-3.5 h-3.5 mr-2`}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(item.species || 0) }]} />
+            )}
             <Text style={tw`text-gray-600 text-sm`}>{item.species} species</Text>
           </View>
         </View>
@@ -48,6 +58,7 @@ const HotspotItem = React.memo(
       prevProps.item.species === nextProps.item.species &&
       prevProps.item.distance === nextProps.item.distance &&
       prevProps.item.country === nextProps.item.country &&
+      prevProps.isSaved === nextProps.isSaved &&
       prevProps.onSelect === nextProps.onSelect
     );
   }

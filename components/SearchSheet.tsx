@@ -1,5 +1,5 @@
 import { useLocation } from "@/hooks/useLocation";
-import { getSavedPlaces, searchHotspots } from "@/lib/database";
+import { getSavedHotspots, getSavedPlaces, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
 import { Hotspot, SavedPlace } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
@@ -65,6 +65,15 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
+
+  const { data: savedHotspots = [] } = useQuery({
+    queryKey: ["savedHotspots"],
+    queryFn: getSavedHotspots,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const savedHotspotsSet = useMemo(() => new Set(savedHotspots.map((s) => s.hotspot_id)), [savedHotspots]);
 
   const hotspotQueryEnabled = isOpen && debouncedQuery.length >= MIN_QUERY;
   const { data: hotspotResults = [] } = useQuery({
@@ -160,9 +169,9 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
       if (item.type === "place") {
         return <PlaceItem item={item.place} onSelect={handleSelectPlace} />;
       }
-      return <HotspotItem item={item.hotspot} onSelect={handleSelectHotspot} />;
+      return <HotspotItem item={item.hotspot} onSelect={handleSelectHotspot} isSaved={savedHotspotsSet.has(item.hotspot.id)} />;
     },
-    [handleSelectHotspot, handleSelectPlace]
+    [handleSelectHotspot, handleSelectPlace, savedHotspotsSet]
   );
 
   const keyExtractor = useCallback((item: SearchRow) => item.key, []);

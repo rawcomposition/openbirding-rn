@@ -185,11 +185,11 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
   const renderItem = useCallback(
     ({ item }: { item: ListRow }) =>
       item.kind === "hotspot" ? (
-        <HotspotItem item={item} onSelect={handleSelectHotspot} />
+        <HotspotItem item={item} onSelect={handleSelectHotspot} isSaved={savedHotspotsSet.has(item.id)} />
       ) : (
         <PlaceItem item={item} onSelect={handleSelectPlace} />
       ),
-    [handleSelectHotspot, handleSelectPlace]
+    [handleSelectHotspot, handleSelectPlace, savedHotspotsSet]
   );
 
   const keyExtractor = useCallback((item: ListRow) => `${item.kind}:${item.id}`, []);
