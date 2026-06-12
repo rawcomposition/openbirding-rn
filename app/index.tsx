@@ -8,6 +8,7 @@ import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
 import PlaceDialog from "@/components/PlaceDialog";
+import SearchSheet from "@/components/SearchSheet";
 import SunIndicator from "@/components/SunIndicator";
 import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
@@ -24,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const isMapTouchActiveRef = useRef(false);
   const insets = useSafeAreaInsets();
@@ -99,6 +101,14 @@ export default function HomeScreen() {
 
   const handleCloseHotspotList = () => {
     setIsHotspotListOpen(false);
+  };
+
+  const handleOpenSearch = () => {
+    setIsSearchOpen(true);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchOpen(false);
   };
 
   const handleMapTouchActiveChange = useCallback((isActive: boolean) => {
@@ -196,6 +206,9 @@ export default function HomeScreen() {
           <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
+          <FloatingButton onPress={handleOpenSearch} light={currentLayer === "satellite"}>
+            <Ionicons name="search" size={24} color={tw.color("gray-700")} />
+          </FloatingButton>
           <View style={tw`relative`}>
             <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
               <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
@@ -215,6 +228,12 @@ export default function HomeScreen() {
         </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
         <FilterSheet isOpen={isFilterSheetOpen} onClose={handleCloseFilters} />
+        <SearchSheet
+          isOpen={isSearchOpen}
+          onClose={handleCloseSearch}
+          onSelectHotspot={handleSelectHotspotFromList}
+          onSelectPlace={handleSelectPlaceFromList}
+        />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={handleHotspotDialogClose} />
         <PlaceDialog
           isOpen={customPinCoordinates !== null || placeId !== null}
