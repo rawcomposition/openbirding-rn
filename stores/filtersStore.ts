@@ -26,8 +26,8 @@ export const useFiltersStore = create<FiltersState & FiltersActions>()(
     (set) => ({
       showSavedOnly: false,
       personalizedFilterEnabled: false,
-      neededSpeciesMinCount: 1,
-      neededSpeciesMinPercent: 1,
+      neededSpeciesMinCount: 5,
+      neededSpeciesMinPercent: 50,
       setShowSavedOnly: (value) => set({ showSavedOnly: value }),
       setPersonalizedFilterEnabled: (value) => set({ personalizedFilterEnabled: value }),
       setNeededSpeciesMinCount: (value) => set({ neededSpeciesMinCount: normalizeNeededSpeciesMinCount(value) }),
@@ -37,8 +37,8 @@ export const useFiltersStore = create<FiltersState & FiltersActions>()(
         set({
           showSavedOnly: false,
           personalizedFilterEnabled: false,
-          neededSpeciesMinCount: 1,
-          neededSpeciesMinPercent: 1,
+          neededSpeciesMinCount: 5,
+          neededSpeciesMinPercent: 50,
         }),
     }),
     {

@@ -1,109 +1,88 @@
 import tw from "@/lib/tw";
 import { useFiltersStore } from "@/stores/filtersStore";
-import React, { useEffect, useState } from "react";
-import { Switch, Text, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Pressable, Switch, Text, View } from "react-native";
 
 type PersonalizedHotspotFilterControlsProps = {
   hasLifeList: boolean;
 };
 
-function FilterNumberField({
-  label,
-  value,
-  onChangeValue,
-  keyboardType,
-  onChangeText,
+const PERCENT_STEP = 10;
+const MIN_PERCENT = 10;
+
+function StepperButton({
+  icon,
+  onPress,
+  disabled,
 }: {
-  label: string;
-  value: string;
-  onChangeValue: () => void;
-  keyboardType: "decimal-pad" | "number-pad";
-  onChangeText: (text: string) => void;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <View style={tw`flex-1`}>
-      <Text style={tw`text-xs font-medium uppercase tracking-wide text-gray-500 mb-1.5`}>{label}</Text>
-      <TextInput
-        style={tw`bg-white border border-gray-200 rounded-2xl px-3 py-2.5 text-base text-gray-900`}
-        keyboardType={keyboardType}
-        value={value}
-        onChangeText={onChangeText}
-        onBlur={onChangeValue}
-        onEndEditing={onChangeValue}
-      />
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={6}
+      style={({ pressed }) => [
+        tw`w-9 h-9 rounded-full items-center justify-center border border-gray-300`,
+        disabled && tw`opacity-40`,
+        pressed && !disabled && tw`bg-gray-100`,
+      ]}
+    >
+      <Ionicons name={icon} size={20} color={tw.color("gray-700")} />
+    </Pressable>
   );
 }
 
 export default function PersonalizedHotspotFilterControls({
   hasLifeList,
 }: PersonalizedHotspotFilterControlsProps) {
-  const personalizedFilterEnabled = useFiltersStore((state) => state.personalizedFilterEnabled);
-  const setPersonalizedFilterEnabled = useFiltersStore((state) => state.setPersonalizedFilterEnabled);
-  const neededSpeciesMinCount = useFiltersStore((state) => state.neededSpeciesMinCount);
-  const setNeededSpeciesMinCount = useFiltersStore((state) => state.setNeededSpeciesMinCount);
-  const neededSpeciesMinPercent = useFiltersStore((state) => state.neededSpeciesMinPercent);
-  const setNeededSpeciesMinPercent = useFiltersStore((state) => state.setNeededSpeciesMinPercent);
+  const enabled = useFiltersStore((state) => state.personalizedFilterEnabled);
+  const setEnabled = useFiltersStore((state) => state.setPersonalizedFilterEnabled);
+  const minCount = useFiltersStore((state) => state.neededSpeciesMinCount);
+  const setMinCount = useFiltersStore((state) => state.setNeededSpeciesMinCount);
+  const minPercent = useFiltersStore((state) => state.neededSpeciesMinPercent);
+  const setMinPercent = useFiltersStore((state) => state.setNeededSpeciesMinPercent);
 
-  const [countText, setCountText] = useState(String(neededSpeciesMinCount));
-  const [percentText, setPercentText] = useState(String(neededSpeciesMinPercent));
-
-  useEffect(() => {
-    setCountText(String(neededSpeciesMinCount));
-  }, [neededSpeciesMinCount]);
-
-  useEffect(() => {
-    setPercentText(String(neededSpeciesMinPercent));
-  }, [neededSpeciesMinPercent]);
-
-  const commitCount = () => {
-    const parsedValue = Number.parseInt(countText.replace(/[^\d]/g, ""), 10);
-    const nextValue = Number.isFinite(parsedValue) ? parsedValue : neededSpeciesMinCount;
-    setNeededSpeciesMinCount(nextValue);
-    setCountText(String(nextValue));
-  };
-
-  const commitPercent = () => {
-    const parsedValue = Number.parseFloat(percentText.replace(/[^0-9.]/g, ""));
-    const nextValue = Number.isFinite(parsedValue) ? parsedValue : neededSpeciesMinPercent;
-    setNeededSpeciesMinPercent(nextValue);
-    setPercentText(String(nextValue));
+  // Snap to clean tens as the user steps, so values stay 0/10/20/… even if a
+  // legacy stored value (e.g. 12) was off the grid.
+  const stepPercent = (delta: number) => {
+    const base = Math.round(minPercent / PERCENT_STEP) * PERCENT_STEP;
+    setMinPercent(Math.min(100, Math.max(MIN_PERCENT, base + delta)));
   };
 
   return (
     <View style={tw`gap-3`}>
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1 pr-4`}>
-          <Text style={tw`text-base font-medium text-gray-900`}>Personalized hotspot filter</Text>
-          <Text style={tw`text-sm text-gray-500 mt-1`}>
-            Show only hotspots with at least X needed species above Y%.
-          </Text>
+          <Text style={tw`text-base font-medium text-gray-900`}>Target-Rich Hotspots</Text>
         </View>
-        <Switch
-          disabled={!hasLifeList}
-          value={hasLifeList && personalizedFilterEnabled}
-          onValueChange={setPersonalizedFilterEnabled}
-        />
+        <Switch disabled={!hasLifeList} value={hasLifeList && enabled} onValueChange={setEnabled} />
       </View>
 
       {!hasLifeList ? (
         <Text style={tw`text-sm text-gray-500`}>Import a life list to enable this filter.</Text>
-      ) : personalizedFilterEnabled ? (
-        <View style={tw`flex-row gap-3`}>
-          <FilterNumberField
-            label="Needed species"
-            value={countText}
-            keyboardType="number-pad"
-            onChangeText={(text) => setCountText(text.replace(/[^\d]/g, ""))}
-            onChangeValue={commitCount}
-          />
-          <FilterNumberField
-            label="Min frequency %"
-            value={percentText}
-            keyboardType="decimal-pad"
-            onChangeText={(text) => setPercentText(text.replace(/[^0-9.]/g, ""))}
-            onChangeValue={commitPercent}
-          />
+      ) : enabled ? (
+        <View style={tw`bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 gap-4`}>
+          <View style={tw`flex-row items-center justify-between`}>
+            <Text style={tw`text-base text-gray-900 flex-1 pr-4`}>Minimum targets</Text>
+            <View style={tw`flex-row items-center gap-3`}>
+              <StepperButton icon="remove" onPress={() => setMinCount(minCount - 1)} disabled={minCount <= 1} />
+              <Text style={tw`text-base font-semibold text-gray-900 w-12 text-center`}>{minCount}</Text>
+              <StepperButton icon="add" onPress={() => setMinCount(minCount + 1)} />
+            </View>
+          </View>
+
+          <View style={tw`flex-row items-center justify-between`}>
+            <Text style={tw`text-base text-gray-900 flex-1 pr-4`}>Minimum frequency</Text>
+            <View style={tw`flex-row items-center gap-3`}>
+              <StepperButton icon="remove" onPress={() => stepPercent(-PERCENT_STEP)} disabled={minPercent <= MIN_PERCENT} />
+              <Text style={tw`text-base font-semibold text-gray-900 w-12 text-center`}>{minPercent}%</Text>
+              <StepperButton icon="add" onPress={() => stepPercent(PERCENT_STEP)} disabled={minPercent >= 100} />
+            </View>
+          </View>
         </View>
       ) : null}
     </View>
