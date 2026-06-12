@@ -1,3 +1,4 @@
+import { useDelayedFlag } from "@/hooks/useDelayedFlag";
 import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
 import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
 import {
@@ -106,6 +107,8 @@ export type MapboxMapRef = {
 const THROTTLE_DELAY = 750;
 const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
 const SETTLED_BOUNDS_DELAY = 300;
+// Only surface the "Filtering hotspots..." badge if filtering outlasts this; incremental pans resolve faster and shouldn't flicker it.
+const TARGET_RICH_BADGE_DELAY = 350;
 const MIN_ZOOM = 8;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
@@ -373,6 +376,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const isTargetRichLoading =
       targetRichFilter.isActive &&
       (isInitialTargetRichFetch || unresolvedCandidateCount > 0 || targetRichFilter.isLoading);
+    // Delay the badge so brief filtering during incremental pans doesn't flash it; markers still use isTargetRichLoading directly.
+    const isTargetRichBadgeVisible = useDelayedFlag(isTargetRichLoading, TARGET_RICH_BADGE_DELAY);
     const displayedHotspots = useMemo(() => {
       if (showSavedOnly || targetRichFilter.isActive) {
         const resolvedHotspots = mapCandidateHotspots.filter((hotspot) =>
@@ -719,7 +724,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           </View>
         )}
 
-        {isTargetRichLoading && !isZoomedTooFarOut && (
+        {isTargetRichBadgeVisible && !isZoomedTooFarOut && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
               <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
