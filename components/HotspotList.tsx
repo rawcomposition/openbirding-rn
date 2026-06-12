@@ -1,3 +1,4 @@
+import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { usePersonalizedHotspotFilter } from "@/hooks/usePersonalizedHotspotFilter";
 import { useLocation } from "@/hooks/useLocation";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
@@ -38,10 +39,9 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
   const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
   const { showSavedOnly, setShowSavedOnly } = useFiltersStore();
-  const personalizedFilterEnabled = useFiltersStore((state) => state.personalizedFilterEnabled);
   const lifelist = useSettingsStore((state) => state.lifelist);
   const hasLifeList = (lifelist?.length ?? 0) > 0;
-  const activeFilterCount = [showSavedOnly, personalizedFilterEnabled && hasLifeList].filter(Boolean).length;
+  const activeFilterCount = useActiveFilterCount();
   const dismissRef = useRef<(() => Promise<void>) | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");

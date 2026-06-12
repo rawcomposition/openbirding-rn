@@ -54,7 +54,7 @@ export default function MenuList({ onNavigateToPacks, onNavigateToSettings, pack
   );
 
   return (
-    <View style={tw`border-t border-gray-200`}>
+    <View>
       {menuOptions.map((item) => (
         <React.Fragment key={item.id}>{renderMenuItem({ item })}</React.Fragment>
       ))}

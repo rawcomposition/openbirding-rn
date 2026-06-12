@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
-import FilterSection from "./FilterSection";
 import MapLayerSwitcher from "./MapLayerSwitcher";
 import MenuList from "./MenuList";
 
@@ -27,7 +26,6 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
       {(dismiss) => (
         <View>
           <MapLayerSwitcher currentLayer={currentLayer} onLayerChange={handleMapLayerChange} />
-          <FilterSection />
           <MenuList
             onNavigateToPacks={async () => {
               await dismiss();
