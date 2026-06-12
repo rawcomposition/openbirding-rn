@@ -1,6 +1,5 @@
 import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useLocation } from "@/hooks/useLocation";
-import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
 import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
 import tw from "@/lib/tw";
@@ -167,12 +166,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
 
   const isLocationLoading = isLoadingUserLocation && permissionStatus === "granted" && location === null;
 
-  const resetKey = useMemo(() => {
-    if (!snapshotBounds) return 0;
-    return Math.round((snapshotBounds.west + snapshotBounds.south + snapshotBounds.east + snapshotBounds.north) * 1000);
-  }, [snapshotBounds]);
-  const { listRef, onScroll } = useScrollRestore(isOpen, resetKey);
-
   const handleSelectHotspot = useCallback(
     async (hotspot: Hotspot & { distance?: number }) => {
       await dismissRef.current?.();
@@ -274,7 +267,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
         dimmed
       >
         <FlashList
-          ref={listRef}
           data={showEmptyState ? [] : rows}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
@@ -284,7 +276,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
           }
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
-          onScroll={onScroll}
           keyboardShouldPersistTaps="handled"
         />
       </BaseBottomSheet>
