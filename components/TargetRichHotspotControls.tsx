@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 
-type PersonalizedHotspotFilterControlsProps = {
+type TargetRichHotspotControlsProps = {
   hasLifeList: boolean;
 };
 
@@ -36,15 +36,15 @@ function StepperButton({
   );
 }
 
-export default function PersonalizedHotspotFilterControls({
+export default function TargetRichHotspotControls({
   hasLifeList,
-}: PersonalizedHotspotFilterControlsProps) {
-  const enabled = useFiltersStore((state) => state.personalizedFilterEnabled);
-  const setEnabled = useFiltersStore((state) => state.setPersonalizedFilterEnabled);
-  const minCount = useFiltersStore((state) => state.neededSpeciesMinCount);
-  const setMinCount = useFiltersStore((state) => state.setNeededSpeciesMinCount);
-  const minPercent = useFiltersStore((state) => state.neededSpeciesMinPercent);
-  const setMinPercent = useFiltersStore((state) => state.setNeededSpeciesMinPercent);
+}: TargetRichHotspotControlsProps) {
+  const enabled = useFiltersStore((state) => state.targetRichEnabled);
+  const setEnabled = useFiltersStore((state) => state.setTargetRichEnabled);
+  const minCount = useFiltersStore((state) => state.minTargets);
+  const setMinCount = useFiltersStore((state) => state.setMinTargets);
+  const minPercent = useFiltersStore((state) => state.minTargetFrequency);
+  const setMinPercent = useFiltersStore((state) => state.setMinTargetFrequency);
 
   // Snap to clean tens as the user steps, so values stay 0/10/20/… even if a
   // legacy stored value (e.g. 12) was off the grid.

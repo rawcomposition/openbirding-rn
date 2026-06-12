@@ -2,22 +2,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
-  normalizeNeededSpeciesMinCount,
-  normalizeNeededSpeciesMinPercent,
-} from "@/lib/personalizedHotspotFilter";
+  normalizeMinTargets,
+  normalizeMinTargetFrequency,
+} from "@/lib/targetRichHotspots";
 
 type FiltersState = {
   showSavedOnly: boolean;
-  personalizedFilterEnabled: boolean;
-  neededSpeciesMinCount: number;
-  neededSpeciesMinPercent: number;
+  targetRichEnabled: boolean;
+  minTargets: number;
+  minTargetFrequency: number;
 };
 
 type FiltersActions = {
   setShowSavedOnly: (value: boolean) => void;
-  setPersonalizedFilterEnabled: (value: boolean) => void;
-  setNeededSpeciesMinCount: (value: number) => void;
-  setNeededSpeciesMinPercent: (value: number) => void;
+  setTargetRichEnabled: (value: boolean) => void;
+  setMinTargets: (value: number) => void;
+  setMinTargetFrequency: (value: number) => void;
   resetFilters: () => void;
 };
 
@@ -25,20 +25,20 @@ export const useFiltersStore = create<FiltersState & FiltersActions>()(
   persist(
     (set) => ({
       showSavedOnly: false,
-      personalizedFilterEnabled: false,
-      neededSpeciesMinCount: 5,
-      neededSpeciesMinPercent: 50,
+      targetRichEnabled: false,
+      minTargets: 5,
+      minTargetFrequency: 50,
       setShowSavedOnly: (value) => set({ showSavedOnly: value }),
-      setPersonalizedFilterEnabled: (value) => set({ personalizedFilterEnabled: value }),
-      setNeededSpeciesMinCount: (value) => set({ neededSpeciesMinCount: normalizeNeededSpeciesMinCount(value) }),
-      setNeededSpeciesMinPercent: (value) =>
-        set({ neededSpeciesMinPercent: normalizeNeededSpeciesMinPercent(value) }),
+      setTargetRichEnabled: (value) => set({ targetRichEnabled: value }),
+      setMinTargets: (value) => set({ minTargets: normalizeMinTargets(value) }),
+      setMinTargetFrequency: (value) =>
+        set({ minTargetFrequency: normalizeMinTargetFrequency(value) }),
       resetFilters: () =>
         set({
           showSavedOnly: false,
-          personalizedFilterEnabled: false,
-          neededSpeciesMinCount: 5,
-          neededSpeciesMinPercent: 50,
+          targetRichEnabled: false,
+          minTargets: 5,
+          minTargetFrequency: 50,
         }),
     }),
     {

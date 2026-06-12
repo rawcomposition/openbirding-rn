@@ -1,4 +1,4 @@
-import { usePersonalizedHotspotFilter } from "@/hooks/usePersonalizedHotspotFilter";
+import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
 import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
 import {
   haloInnerStyle,
@@ -7,7 +7,7 @@ import {
   savedHotspotSymbolStyle,
   savedPlaceSymbolStyle,
 } from "@/lib/layers";
-import { logPersonalizedHotspotFilterDebug, personalizedHotspotCache } from "@/lib/personalizedHotspotFilter";
+import { logTargetRichHotspotDebug, targetRichHotspotCache } from "@/lib/targetRichHotspots";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
@@ -162,7 +162,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const showAttribution = useMapStore((state) => state.isMapAttributionOpen);
     const setShowAttribution = useMapStore((state) => state.setIsMapAttributionOpen);
     const { status: permissionStatus } = useLocationPermissionStore();
-    const { showSavedOnly, personalizedFilterEnabled } = useFiltersStore();
+    const { showSavedOnly, targetRichEnabled } = useFiltersStore();
     const lifelist = useSettingsStore((state) => state.lifelist);
 
     const mapRef = useRef<Mapbox.MapView>(null);
@@ -171,13 +171,13 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
     const isTouchActiveRef = useRef(false);
-    const lastPersonalizedMapDebugRef = useRef<string | null>(null);
+    const lastTargetRichMapDebugRef = useRef<string | null>(null);
     const lastResolvedHotspotsRef = useRef<{ id: string; lat: number; lng: number; species: number }[]>([]);
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
     const hasLifeList = (lifelist?.length ?? 0) > 0;
-    const isPersonalizedMapFiltering = personalizedFilterEnabled && hasLifeList;
+    const isTargetRichMapFiltering = targetRichEnabled && hasLifeList;
 
     const mapStyle = useMemo(() => {
       return currentLayer === "satellite"
@@ -273,7 +273,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         throttledSetBounds.cancel();
         debouncedSetSettledBounds.cancel();
         setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-      } else if (isPersonalizedMapFiltering) {
+      } else if (isTargetRichMapFiltering) {
         debouncedSetSettledBounds(nextBounds);
       } else {
         throttledSetBounds(nextBounds);
@@ -283,7 +283,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     }, [
       debouncedSaveLocation,
       debouncedSetSettledBounds,
-      isPersonalizedMapFiltering,
+      isTargetRichMapFiltering,
       readBoundsIfZoomed,
       throttledSetBounds,
       throttledSetMapCenter,
@@ -300,7 +300,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       throttledSetBounds.cancel();
       debouncedSetSettledBounds.cancel();
       void syncViewport(true);
-    }, [debouncedSetSettledBounds, isPersonalizedMapFiltering, syncViewport, throttledSetBounds]);
+    }, [debouncedSetSettledBounds, isTargetRichMapFiltering, syncViewport, throttledSetBounds]);
 
     const setTouchActive = useCallback(
       (isActive: boolean) => {
@@ -355,29 +355,29 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       () => hotspots.filter((hotspot) => !showSavedOnly || savedHotspotsSet.has(hotspot.id)),
       [hotspots, savedHotspotsSet, showSavedOnly]
     );
-    const personalizedFilter = usePersonalizedHotspotFilter(mapCandidateHotspots.map((hotspot) => hotspot.id), {
+    const targetRichFilter = useTargetRichHotspots(mapCandidateHotspots.map((hotspot) => hotspot.id), {
       enabled: bounds !== null && !isFetchingHotspots,
       blockWhileDisabled: true,
     });
-    const personalizedHotspotIds = useMemo(() => new Set(personalizedFilter.filteredIds), [personalizedFilter.filteredIds]);
-    const unresolvedCandidateCount = personalizedFilter.isActive
-      ? mapCandidateHotspots.reduce((count, hotspot) => count + (personalizedHotspotCache.has(hotspot.id) ? 0 : 1), 0)
+    const targetRichHotspotIds = useMemo(() => new Set(targetRichFilter.filteredIds), [targetRichFilter.filteredIds]);
+    const unresolvedCandidateCount = targetRichFilter.isActive
+      ? mapCandidateHotspots.reduce((count, hotspot) => count + (targetRichHotspotCache.has(hotspot.id) ? 0 : 1), 0)
       : 0;
-    const isInitialPersonalizedFetch =
-      personalizedFilter.isActive &&
+    const isInitialTargetRichFetch =
+      targetRichFilter.isActive &&
       bounds !== null &&
       isFetchingHotspots &&
       lastResolvedHotspotsRef.current.length === 0;
-    const isPersonalizedLoading =
-      personalizedFilter.isActive &&
-      (isInitialPersonalizedFetch || unresolvedCandidateCount > 0 || personalizedFilter.isLoading);
+    const isTargetRichLoading =
+      targetRichFilter.isActive &&
+      (isInitialTargetRichFetch || unresolvedCandidateCount > 0 || targetRichFilter.isLoading);
     const displayedHotspots = useMemo(() => {
-      if (showSavedOnly || personalizedFilter.isActive) {
+      if (showSavedOnly || targetRichFilter.isActive) {
         const resolvedHotspots = mapCandidateHotspots.filter((hotspot) =>
-          personalizedFilter.isActive ? personalizedHotspotIds.has(hotspot.id) : true
+          targetRichFilter.isActive ? targetRichHotspotIds.has(hotspot.id) : true
         );
 
-        if (isPersonalizedLoading) {
+        if (isTargetRichLoading) {
           return lastResolvedHotspotsRef.current;
         }
 
@@ -387,21 +387,21 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       return hotspots;
     }, [
       hotspots,
-      isPersonalizedLoading,
+      isTargetRichLoading,
       mapCandidateHotspots,
-      personalizedFilter.isActive,
-      personalizedHotspotIds,
+      targetRichFilter.isActive,
+      targetRichHotspotIds,
       showSavedOnly,
     ]);
 
     useEffect(() => {
-      if (!isPersonalizedLoading) {
+      if (!isTargetRichLoading) {
         lastResolvedHotspotsRef.current = displayedHotspots;
       }
-    }, [displayedHotspots, isPersonalizedLoading]);
+    }, [displayedHotspots, isTargetRichLoading]);
 
     useEffect(() => {
-      if (!personalizedFilter.isActive) {
+      if (!targetRichFilter.isActive) {
         return;
       }
 
@@ -412,31 +412,31 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         candidateCount: mapCandidateHotspots.length,
         unresolvedCandidateCount,
         displayedCount: displayedHotspots.length,
-        isPersonalizedLoading,
+        isTargetRichLoading,
       });
 
-      if (lastPersonalizedMapDebugRef.current === debugState) {
+      if (lastTargetRichMapDebugRef.current === debugState) {
         return;
       }
 
-      lastPersonalizedMapDebugRef.current = debugState;
-      logPersonalizedHotspotFilterDebug("map personalized filter state", {
+      lastTargetRichMapDebugRef.current = debugState;
+      logTargetRichHotspotDebug("map target-rich filter state", {
         hasBounds: bounds !== null,
         isFetchingHotspots,
         hotspotCount: hotspots.length,
         candidateCount: mapCandidateHotspots.length,
         unresolvedCandidateCount,
         displayedCount: displayedHotspots.length,
-        isPersonalizedLoading,
+        isTargetRichLoading,
       });
     }, [
       displayedHotspots.length,
       bounds,
       hotspots.length,
       isFetchingHotspots,
-      isPersonalizedLoading,
+      isTargetRichLoading,
       mapCandidateHotspots.length,
-      personalizedFilter.isActive,
+      targetRichFilter.isActive,
       unresolvedCandidateCount,
     ]);
 
@@ -741,7 +741,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           </View>
         )}
 
-        {isPersonalizedLoading && !isZoomedTooFarOut && (
+        {isTargetRichLoading && !isZoomedTooFarOut && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
               <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">

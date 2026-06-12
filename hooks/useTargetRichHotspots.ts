@@ -1,32 +1,32 @@
 import {
-  createPersonalizedHotspotFilterBasis,
-  logPersonalizedHotspotFilterDebug,
-  personalizedHotspotCache,
-  syncPersonalizedHotspotCacheBasis,
-} from "@/lib/personalizedHotspotFilter";
+  createTargetRichHotspotBasis,
+  logTargetRichHotspotDebug,
+  targetRichHotspotCache,
+  syncTargetRichHotspotCacheBasis,
+} from "@/lib/targetRichHotspots";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type UsePersonalizedHotspotFilterOptions = {
+type UseTargetRichHotspotsOptions = {
   enabled?: boolean;
   blockWhileDisabled?: boolean;
 };
 
-type PersonalizedHotspotFilterState = {
+type TargetRichHotspotState = {
   filteredIds: string[];
   isActive: boolean;
   isLoading: boolean;
   hasLifeList: boolean;
 };
 
-type AsyncPersonalizedHotspotFilterState = {
+type AsyncTargetRichHotspotState = {
   filteredIds: string[];
   isLoading: boolean;
 };
 
 function filterResolvedHotspotIds(hotspotIds: string[]): string[] {
-  return hotspotIds.filter((hotspotId) => personalizedHotspotCache.get(hotspotId) === true);
+  return hotspotIds.filter((hotspotId) => targetRichHotspotCache.get(hotspotId) === true);
 }
 
 function areStringArraysEqual(left: string[], right: string[]): boolean {
@@ -37,36 +37,36 @@ function areStringArraysEqual(left: string[], right: string[]): boolean {
   return left.every((value, index) => value === right[index]);
 }
 
-export function usePersonalizedHotspotFilter(
+export function useTargetRichHotspots(
   hotspotIds: string[],
-  options: UsePersonalizedHotspotFilterOptions = {}
-): PersonalizedHotspotFilterState {
-  const personalizedFilterEnabled = useFiltersStore((state) => state.personalizedFilterEnabled);
-  const neededSpeciesMinCount = useFiltersStore((state) => state.neededSpeciesMinCount);
-  const neededSpeciesMinPercent = useFiltersStore((state) => state.neededSpeciesMinPercent);
+  options: UseTargetRichHotspotsOptions = {}
+): TargetRichHotspotState {
+  const targetRichEnabled = useFiltersStore((state) => state.targetRichEnabled);
+  const minTargets = useFiltersStore((state) => state.minTargets);
+  const minTargetFrequency = useFiltersStore((state) => state.minTargetFrequency);
   const lifelist = useSettingsStore((state) => state.lifelist);
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const targetMonths = useSettingsStore((state) => state.targetMonths);
 
   const basis = useMemo(
     () =>
-      createPersonalizedHotspotFilterBasis({
+      createTargetRichHotspotBasis({
         lifelist,
         lifelistExclusions,
         targetMonths,
-        neededSpeciesMinCount,
-        neededSpeciesMinPercent,
+        minTargets,
+        minTargetFrequency,
       }),
-    [lifelist, lifelistExclusions, targetMonths, neededSpeciesMinCount, neededSpeciesMinPercent]
+    [lifelist, lifelistExclusions, targetMonths, minTargets, minTargetFrequency]
   );
 
   const hasLifeList = basis !== null;
-  const isActive = personalizedFilterEnabled && hasLifeList;
+  const isActive = targetRichEnabled && hasLifeList;
   const isEnabled = options.enabled ?? true;
   const candidateKey = useMemo(() => hotspotIds.join("|"), [hotspotIds]);
   const stableHotspotIdsRef = useRef(hotspotIds);
   const basisRef = useRef(basis);
-  const asyncStateRef = useRef<AsyncPersonalizedHotspotFilterState>({ filteredIds: [], isLoading: false });
+  const asyncStateRef = useRef<AsyncTargetRichHotspotState>({ filteredIds: [], isLoading: false });
   const lastDebugStatusRef = useRef<string | null>(null);
   const logDebugStatusRef = useRef<(status: string, details?: Record<string, unknown>) => void>(() => {});
 
@@ -76,7 +76,7 @@ export function usePersonalizedHotspotFilter(
 
   const stableHotspotIds = stableHotspotIdsRef.current;
 
-  const [asyncState, setAsyncState] = useState<AsyncPersonalizedHotspotFilterState>({
+  const [asyncState, setAsyncState] = useState<AsyncTargetRichHotspotState>({
     filteredIds: [],
     isLoading: false,
   });
@@ -106,7 +106,7 @@ export function usePersonalizedHotspotFilter(
     }
 
     lastDebugStatusRef.current = statusKey;
-    logPersonalizedHotspotFilterDebug(status, {
+    logTargetRichHotspotDebug(status, {
       candidateCount: stableHotspotIds.length,
       filteredCount: asyncStateRef.current.filteredIds.length,
       isLoading: asyncStateRef.current.isLoading,
@@ -118,7 +118,7 @@ export function usePersonalizedHotspotFilter(
   };
 
   useEffect(() => {
-    syncPersonalizedHotspotCacheBasis(basis?.cacheKey ?? null);
+    syncTargetRichHotspotCacheBasis(basis?.cacheKey ?? null);
   }, [basis?.cacheKey]);
 
   useEffect(() => {
@@ -145,7 +145,7 @@ export function usePersonalizedHotspotFilter(
     }
 
     const basisForRun = basisRef.current;
-    const unresolvedHotspotIds = stableHotspotIds.filter((hotspotId) => !personalizedHotspotCache.has(hotspotId));
+    const unresolvedHotspotIds = stableHotspotIds.filter((hotspotId) => !targetRichHotspotCache.has(hotspotId));
     if (unresolvedHotspotIds.length === 0) {
       const filteredIds = filterResolvedHotspotIds(stableHotspotIds);
       logDebugStatusRef.current("all candidates resolved from cache", {
@@ -175,14 +175,14 @@ export function usePersonalizedHotspotFilter(
       isLoading: true,
     }));
 
-    void personalizedHotspotCache
+    void targetRichHotspotCache
       .evaluateMany(unresolvedHotspotIds, basisForRun, abortController.signal)
       .then(() => {
         if (abortController.signal.aborted) {
           return;
         }
 
-        const stillUnresolved = stableHotspotIds.some((hotspotId) => !personalizedHotspotCache.has(hotspotId));
+        const stillUnresolved = stableHotspotIds.some((hotspotId) => !targetRichHotspotCache.has(hotspotId));
         if (stillUnresolved) {
           logDebugStatusRef.current("evaluation completed but candidates still unresolved");
           setAsyncState((currentState) => ({
@@ -215,7 +215,7 @@ export function usePersonalizedHotspotFilter(
         }
 
         logDebugStatusRef.current("evaluation failed");
-        console.error("Failed to evaluate personalized hotspot filter", error);
+        console.error("Failed to evaluate target-rich hotspot filter", error);
         setAsyncState((currentState) => ({
           filteredIds: currentState.filteredIds,
           isLoading: false,
@@ -234,7 +234,7 @@ export function usePersonalizedHotspotFilter(
     stableHotspotIds,
   ]);
 
-  return useMemo<PersonalizedHotspotFilterState>(() => {
+  return useMemo<TargetRichHotspotState>(() => {
     if (!isActive) {
       return {
         filteredIds: stableHotspotIds,

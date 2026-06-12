@@ -1,5 +1,5 @@
 import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
-import { usePersonalizedHotspotFilter } from "@/hooks/usePersonalizedHotspotFilter";
+import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
 import { useLocation } from "@/hooks/useLocation";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
@@ -19,7 +19,7 @@ import BaseBottomSheet from "./BaseBottomSheet";
 import HotspotItem from "./HotspotItem";
 import IconButton from "./IconButton";
 import IconButtonGroup from "./IconButtonGroup";
-import PersonalizedHotspotFilterControls from "./PersonalizedHotspotFilterControls";
+import TargetRichHotspotControls from "./TargetRichHotspotControls";
 import SearchInput from "./SearchInput";
 
 type HotspotListProps = {
@@ -117,19 +117,19 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
   }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
   const isBaseResultsFetching = debouncedQuery.length >= 2 ? isFetchingSearchResults : isFetchingAllHotspots;
-  const personalizedFilter = usePersonalizedHotspotFilter(displayedHotspots.map((hotspot) => hotspot.id), {
+  const targetRichFilter = useTargetRichHotspots(displayedHotspots.map((hotspot) => hotspot.id), {
     enabled: !isBaseResultsFetching,
     blockWhileDisabled: true,
   });
-  const isPersonalizedLoading = personalizedFilter.isActive && (isBaseResultsFetching || personalizedFilter.isLoading);
-  const displayedHotspotsSet = useMemo(() => new Set(personalizedFilter.filteredIds), [personalizedFilter.filteredIds]);
+  const isTargetRichLoading = targetRichFilter.isActive && (isBaseResultsFetching || targetRichFilter.isLoading);
+  const displayedHotspotsSet = useMemo(() => new Set(targetRichFilter.filteredIds), [targetRichFilter.filteredIds]);
   const filteredDisplayedHotspots = useMemo(() => {
-    if (!personalizedFilter.isActive) {
+    if (!targetRichFilter.isActive) {
       return displayedHotspots;
     }
 
     return displayedHotspots.filter((hotspot) => displayedHotspotsSet.has(hotspot.id));
-  }, [displayedHotspots, displayedHotspotsSet, personalizedFilter.isActive]);
+  }, [displayedHotspots, displayedHotspotsSet, targetRichFilter.isActive]);
 
   const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
 
@@ -148,7 +148,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
 
   const listEmptyComponent = (
     <View style={tw`flex-1 items-center justify-center py-12`}>
-      {isPersonalizedLoading ? (
+      {isTargetRichLoading ? (
         <>
           <ActivityIndicator size="large" color={tw.color("blue-500")} />
           <Text style={tw`text-gray-600 text-base mt-3`}>Filtering hotspots...</Text>
@@ -199,7 +199,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
                 <Text style={tw`text-base font-medium text-gray-900`}>Show saved only</Text>
                 <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
               </View>
-              <PersonalizedHotspotFilterControls hasLifeList={hasLifeList} />
+              <TargetRichHotspotControls hasLifeList={hasLifeList} />
             </View>
           )}
           <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
@@ -221,12 +221,12 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       >
         <FlashList
           ref={listRef}
-          data={isPersonalizedLoading ? [] : filteredDisplayedHotspots}
+          data={isTargetRichLoading ? [] : filteredDisplayedHotspots}
           renderItem={renderHotspotItem}
           keyExtractor={keyExtractor}
           style={tw`flex-1`}
           contentContainerStyle={
-            (isPersonalizedLoading ? 0 : filteredDisplayedHotspots.length) === 0
+            (isTargetRichLoading ? 0 : filteredDisplayedHotspots.length) === 0
               ? tw`flex-1`
               : { paddingBottom: Math.max(insets.bottom, 16) }
           }

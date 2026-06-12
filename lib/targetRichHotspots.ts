@@ -4,49 +4,49 @@ import { getMonthIndices, getTotalSamplesForMonths, parseHotspotTargetData } fro
 
 const CACHE_CAPACITY = 5_000;
 const COMPUTE_BATCH_SIZE = 50;
-const DEBUG_PERSONALIZED_FILTER = __DEV__;
+const DEBUG_TARGET_RICH_FILTER = __DEV__;
 
 let evaluationRunCounter = 0;
 
-export type PersonalizedHotspotFilterBasis = {
+export type TargetRichHotspotBasis = {
   cacheKey: string;
   lifeListCodes: ReadonlySet<string>;
   excludedCodes: ReadonlySet<string>;
   selectedMonths: number[];
-  neededSpeciesMinCount: number;
-  neededSpeciesMinPercent: number;
+  minTargets: number;
+  minTargetFrequency: number;
 };
 
-export function logPersonalizedHotspotFilterDebug(message: string, details?: Record<string, unknown>) {
-  if (!DEBUG_PERSONALIZED_FILTER) {
+export function logTargetRichHotspotDebug(message: string, details?: Record<string, unknown>) {
+  if (!DEBUG_TARGET_RICH_FILTER) {
     return;
   }
 
   if (details) {
-    console.log(`[personalized-hotspot-filter] ${message}`, details);
+    console.log(`[target-rich-hotspot] ${message}`, details);
     return;
   }
 
-  console.log(`[personalized-hotspot-filter] ${message}`);
+  console.log(`[target-rich-hotspot] ${message}`);
 }
 
-export function normalizeNeededSpeciesMinCount(value: number): number {
+export function normalizeMinTargets(value: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.max(1, Math.floor(value));
 }
 
-export function normalizeNeededSpeciesMinPercent(value: number): number {
+export function normalizeMinTargetFrequency(value: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.min(100, Math.max(0, value));
 }
 
-export function createPersonalizedHotspotFilterBasis(params: {
+export function createTargetRichHotspotBasis(params: {
   lifelist: LifeListEntry[] | null;
   lifelistExclusions: string[] | null;
   targetMonths: number[];
-  neededSpeciesMinCount: number;
-  neededSpeciesMinPercent: number;
-}): PersonalizedHotspotFilterBasis | null {
+  minTargets: number;
+  minTargetFrequency: number;
+}): TargetRichHotspotBasis | null {
   const lifeListCodes = [...new Set((params.lifelist ?? []).map((entry) => entry.code))].sort();
 
   if (lifeListCodes.length === 0) {
@@ -55,27 +55,27 @@ export function createPersonalizedHotspotFilterBasis(params: {
 
   const excludedCodes = [...new Set(params.lifelistExclusions ?? [])].sort();
   const selectedMonths = [...new Set(params.targetMonths)].sort((a, b) => a - b);
-  const neededSpeciesMinCount = normalizeNeededSpeciesMinCount(params.neededSpeciesMinCount);
-  const neededSpeciesMinPercent = normalizeNeededSpeciesMinPercent(params.neededSpeciesMinPercent);
+  const minTargets = normalizeMinTargets(params.minTargets);
+  const minTargetFrequency = normalizeMinTargetFrequency(params.minTargetFrequency);
 
   return {
     cacheKey: JSON.stringify({
       lifeListCodes,
       excludedCodes,
       selectedMonths,
-      neededSpeciesMinCount,
-      neededSpeciesMinPercent,
+      minTargets,
+      minTargetFrequency,
     }),
     lifeListCodes: new Set(lifeListCodes),
     excludedCodes: new Set(excludedCodes),
     selectedMonths,
-    neededSpeciesMinCount,
-    neededSpeciesMinPercent,
+    minTargets,
+    minTargetFrequency,
   };
 }
 
 function createAbortError(): Error {
-  const error = new Error("Personalized hotspot evaluation aborted");
+  const error = new Error("Target-rich hotspot evaluation aborted");
   error.name = "AbortError";
   return error;
 }
@@ -86,7 +86,7 @@ function throwIfAborted(signal?: AbortSignal) {
   }
 }
 
-function matchesPersonalizedHotspotFilter(rawData: string, basis: PersonalizedHotspotFilterBasis): boolean {
+function matchesTargetRichHotspot(rawData: string, basis: TargetRichHotspotBasis): boolean {
   const parsed = parseHotspotTargetData(rawData);
   const monthIndices = getMonthIndices(parsed, basis.selectedMonths);
   const totalSamples = getTotalSamplesForMonths(parsed, monthIndices);
@@ -114,9 +114,9 @@ function matchesPersonalizedHotspotFilter(rawData: string, basis: PersonalizedHo
     }
 
     const percentage = (observations / totalSamples) * 100;
-    if (percentage >= basis.neededSpeciesMinPercent) {
+    if (percentage >= basis.minTargetFrequency) {
       qualifyingSpeciesCount += 1;
-      if (qualifyingSpeciesCount >= basis.neededSpeciesMinCount) {
+      if (qualifyingSpeciesCount >= basis.minTargets) {
         return true;
       }
     }
@@ -125,12 +125,12 @@ function matchesPersonalizedHotspotFilter(rawData: string, basis: PersonalizedHo
   return false;
 }
 
-class PersonalizedHotspotCache {
+class TargetRichHotspotCache {
   private cache = new Map<string, boolean>();
   private activeSignals = new Set<AbortController>();
 
   clear() {
-    logPersonalizedHotspotFilterDebug("cache clear", { previousSize: this.cache.size });
+    logTargetRichHotspotDebug("cache clear", { previousSize: this.cache.size });
     this.cache.clear();
   }
 
@@ -151,7 +151,7 @@ class PersonalizedHotspotCache {
 
   cancelActiveRun() {
     if (this.activeSignals.size > 0) {
-      logPersonalizedHotspotFilterDebug("cancel active runs", { activeRunCount: this.activeSignals.size });
+      logTargetRichHotspotDebug("cancel active runs", { activeRunCount: this.activeSignals.size });
     }
 
     for (const controller of this.activeSignals) {
@@ -162,7 +162,7 @@ class PersonalizedHotspotCache {
 
   async evaluateMany(
     hotspotIds: string[],
-    basis: PersonalizedHotspotFilterBasis,
+    basis: TargetRichHotspotBasis,
     signal?: AbortSignal
   ): Promise<void> {
     const missingHotspotIds = [...new Set(hotspotIds)].filter((hotspotId) => !this.cache.has(hotspotId));
@@ -178,22 +178,22 @@ class PersonalizedHotspotCache {
     const isAborted = () => combinedSignal.aborted || signal?.aborted;
 
     try {
-      logPersonalizedHotspotFilterDebug("evaluate start", {
+      logTargetRichHotspotDebug("evaluate start", {
         runId,
         requestedCount: hotspotIds.length,
         missingCount: missingHotspotIds.length,
         cachedCount: hotspotIds.length - missingHotspotIds.length,
         cacheSize: this.cache.size,
         monthCount: basis.selectedMonths.length === 0 ? 12 : basis.selectedMonths.length,
-        neededSpeciesMinCount: basis.neededSpeciesMinCount,
-        neededSpeciesMinPercent: basis.neededSpeciesMinPercent,
+        minTargets: basis.minTargets,
+        minTargetFrequency: basis.minTargetFrequency,
       });
 
       throwIfAborted(signal);
       const targetData = await getTargetDataForHotspots(missingHotspotIds);
       throwIfAborted(signal);
 
-      logPersonalizedHotspotFilterDebug("target data fetched", {
+      logTargetRichHotspotDebug("target data fetched", {
         runId,
         requestedCount: missingHotspotIds.length,
         foundCount: targetData.size,
@@ -212,7 +212,7 @@ class PersonalizedHotspotCache {
           }
 
           const rawData = targetData.get(hotspotId);
-          this.set(hotspotId, rawData ? matchesPersonalizedHotspotFilter(rawData, basis) : false);
+          this.set(hotspotId, rawData ? matchesTargetRichHotspot(rawData, basis) : false);
         }
 
         const processedCount = Math.min(index + batch.length, missingHotspotIds.length);
@@ -220,7 +220,7 @@ class PersonalizedHotspotCache {
           processedCount === missingHotspotIds.length ||
           (missingHotspotIds.length > 250 && processedCount % 250 === 0)
         ) {
-          logPersonalizedHotspotFilterDebug("evaluate progress", {
+          logTargetRichHotspotDebug("evaluate progress", {
             runId,
             processedCount,
             totalCount: missingHotspotIds.length,
@@ -232,14 +232,14 @@ class PersonalizedHotspotCache {
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
-      logPersonalizedHotspotFilterDebug("evaluate complete", {
+      logTargetRichHotspotDebug("evaluate complete", {
         runId,
         computedCount: missingHotspotIds.length,
         cacheSize: this.cache.size,
       });
     } catch (error) {
       if ((error as Error | undefined)?.name === "AbortError") {
-        logPersonalizedHotspotFilterDebug("evaluate aborted", {
+        logTargetRichHotspotDebug("evaluate aborted", {
           runId,
           processedCandidateCount: missingHotspotIds.length,
           cacheSize: this.cache.size,
@@ -268,20 +268,20 @@ class PersonalizedHotspotCache {
   }
 }
 
-export const personalizedHotspotCache = new PersonalizedHotspotCache();
+export const targetRichHotspotCache = new TargetRichHotspotCache();
 
 let activeBasisKey: string | null = null;
 
-export function syncPersonalizedHotspotCacheBasis(nextBasisKey: string | null) {
+export function syncTargetRichHotspotCacheBasis(nextBasisKey: string | null) {
   if (activeBasisKey === nextBasisKey) {
     return;
   }
 
-  logPersonalizedHotspotFilterDebug("basis changed", {
+  logTargetRichHotspotDebug("basis changed", {
     hadBasis: activeBasisKey !== null,
     hasBasis: nextBasisKey !== null,
   });
   activeBasisKey = nextBasisKey;
-  personalizedHotspotCache.cancelActiveRun();
-  personalizedHotspotCache.clear();
+  targetRichHotspotCache.cancelActiveRun();
+  targetRichHotspotCache.clear();
 }
