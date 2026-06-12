@@ -96,7 +96,7 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
 
   const handleViewDetails = () => {
     if (!hotspot) return;
-    const url = `https://ebird.org/hotspot/${hotspot.id}`;
+    const url = `https://ebird.org/hotspot/${hotspot.id}/about`;
     Linking.openURL(url).catch(() => {
       Alert.alert("Error", "Could not open eBird hotspot page");
     });

@@ -24,14 +24,14 @@ const PlaceItem = React.memo(
         cancelable={false}
         style={({ pressed }) => [tw`flex-row items-center px-4 py-3 border-b border-gray-200/50`, pressed && tw`opacity-70`]}
       >
-        <Image source={getPlaceIconImage(item.icon)} style={tw`w-6 h-6 mr-3`} resizeMode="contain" />
         <View style={tw`flex-1`}>
           <Text style={tw`text-gray-900 text-base font-medium`} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={tw`text-gray-500 text-sm mt-1`} numberOfLines={1}>
-            {item.notes ? item.notes : "Place"}
-          </Text>
+          <View style={tw`flex-row items-center mt-1`}>
+            <Image source={getPlaceIconImage(item.icon)} style={tw`w-3.5 h-3.5 mr-2`} resizeMode="contain" />
+            <Text style={tw`text-gray-600 text-sm`}>{item.notes ? item.notes : "Saved Pin"}</Text>
+          </View>
         </View>
         {item.distance !== undefined && (
           <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, null)}</Text>

@@ -101,9 +101,17 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
   });
 
   const savedHotspotsSet = useMemo(() => new Set(savedHotspots.map((s) => s.hotspot_id)), [savedHotspots]);
+  // Fetch uses padded bounds (shared cache with the map), but clip the list back to the
+  // unpadded viewport so it shows only what's actually visible on the map — not the
+  // off-screen margin hotspots the padding loads ahead of a pan.
   const candidateHotspots = useMemo(
-    () => hotspots.filter((hotspot) => !showSavedOnly || savedHotspotsSet.has(hotspot.id)),
-    [hotspots, savedHotspotsSet, showSavedOnly]
+    () =>
+      hotspots.filter(
+        (hotspot) =>
+          (!showSavedOnly || savedHotspotsSet.has(hotspot.id)) &&
+          (!snapshotBounds || isWithinBounds(hotspot.lat, hotspot.lng, snapshotBounds))
+      ),
+    [hotspots, savedHotspotsSet, showSavedOnly, snapshotBounds]
   );
 
   const targetRichFilter = useTargetRichHotspots(candidateHotspots.map((hotspot) => hotspot.id), {
@@ -122,8 +130,7 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
   // target-rich filter is active, since they have no species data to qualify.
   const placesInView = useMemo(() => {
     if (!snapshotBounds) return [];
-    const padded = padBoundsBySize(snapshotBounds);
-    return savedPlaces.filter((place) => isWithinBounds(place.lat, place.lng, padded));
+    return savedPlaces.filter((place) => isWithinBounds(place.lat, place.lng, snapshotBounds));
   }, [savedPlaces, snapshotBounds]);
 
   const hasUserLocation = location !== null;
