@@ -1,5 +1,5 @@
 import { useLocation } from "@/hooks/useLocation";
-import { getAllHotspots, getSavedPlaces, searchHotspots } from "@/lib/database";
+import { getSavedPlaces, searchHotspots } from "@/lib/database";
 import tw from "@/lib/tw";
 import { Hotspot, SavedPlace } from "@/lib/types";
 import { calculateDistance } from "@/lib/utils";
@@ -20,12 +20,10 @@ type SearchSheetProps = {
   onSelectPlace: (placeId: string, lat: number, lng: number) => void;
 };
 
-// Hotspots are only searched once the query is meaningful — a 1-char `LIKE %x%`
+// Nothing is searched until the query is meaningful — a 1-char `LIKE %x%`
 // against the full table matches almost everything.
-const MIN_HOTSPOT_QUERY = 2;
+const MIN_QUERY = 2;
 const HOTSPOT_LIMIT = 30;
-// Saved hotspots are user-curated, so this cap is effectively never hit.
-const SAVED_HOTSPOT_LIMIT = 200;
 
 type PlaceWithDistance = SavedPlace & { distance?: number };
 type HotspotWithDistance = Hotspot & { distance?: number };
@@ -62,15 +60,7 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     gcTime: 10 * 60 * 1000,
   });
 
-  // Initial view (before searching) surfaces the user's saved hotspots.
-  const { data: savedHotspots = [] } = useQuery({
-    queryKey: ["savedHotspotsFull"],
-    queryFn: () => getAllHotspots(SAVED_HOTSPOT_LIMIT, true),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-
-  const hotspotQueryEnabled = isOpen && debouncedQuery.length >= MIN_HOTSPOT_QUERY;
+  const hotspotQueryEnabled = isOpen && debouncedQuery.length >= MIN_QUERY;
   const { data: hotspotResults = [] } = useQuery({
     queryKey: ["searchHotspots", debouncedQuery],
     queryFn: () => searchHotspots(debouncedQuery, HOTSPOT_LIMIT),
@@ -88,13 +78,13 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     [location]
   );
 
-  // Your places: filter by name client-side (small set, always available), then
-  // sort by distance when we have a location, otherwise alphabetically.
+  // Saved places whose name matches the query (empty below the search threshold),
+  // sorted by distance when we have a location, otherwise alphabetically.
   const matchingPlaces = useMemo<PlaceWithDistance[]>(() => {
     const trimmed = query.trim().toLowerCase();
-    const matched = trimmed
+    const matched = trimmed.length >= MIN_QUERY
       ? savedPlaces.filter((place) => place.name.toLowerCase().includes(trimmed))
-      : savedPlaces;
+      : [];
     const decorated = matched.map(withDistance);
     decorated.sort((a, b) => {
       if (a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
@@ -118,63 +108,23 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     return decorated;
   }, [hotspotResults, debouncedQuery, hotspotQueryEnabled, withDistance]);
 
-  // Before the query reaches search length, the hotspots section shows the
-  // user's saved hotspots (filtered live by whatever they've typed so far).
-  const matchingSavedHotspots = useMemo<HotspotWithDistance[]>(() => {
-    const trimmed = query.trim().toLowerCase();
-    const matched = trimmed
-      ? savedHotspots.filter((hotspot) => hotspot.name.toLowerCase().includes(trimmed))
-      : savedHotspots;
-    const decorated = matched.map(withDistance);
-    decorated.sort((a, b) => {
-      if (a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
-      return a.name.localeCompare(b.name);
-    });
-    return decorated;
-  }, [savedHotspots, query, withDistance]);
-
-  // The user's saved places and saved hotspots, interwoven into one list and
-  // sorted together by distance (or name) — rendered under "Saved locations".
-  const savedRows = useMemo<SearchRow[]>(() => {
-    const merged: { sortName: string; distance?: number; row: SearchRow }[] = [
-      ...matchingPlaces.map((place) => ({
-        sortName: place.name,
-        distance: place.distance,
-        row: { type: "place" as const, key: `place:${place.id}`, place },
-      })),
-      ...matchingSavedHotspots.map((hotspot) => ({
-        sortName: hotspot.name,
-        distance: hotspot.distance,
-        row: { type: "hotspot" as const, key: `hotspot:${hotspot.id}`, hotspot },
-      })),
-    ];
-    merged.sort((a, b) => {
-      if (a.distance !== undefined && b.distance !== undefined) return a.distance - b.distance;
-      return a.sortName.localeCompare(b.sortName);
-    });
-    return merged.map((entry) => entry.row);
-  }, [matchingPlaces, matchingSavedHotspots]);
-
-  const savedHotspotIds = useMemo(() => new Set(savedHotspots.map((hotspot) => hotspot.id)), [savedHotspots]);
-
   const rows = useMemo<SearchRow[]>(() => {
     const result: SearchRow[] = [];
-    if (savedRows.length > 0) {
+    // Saved custom locations always sit above hotspot matches.
+    if (matchingPlaces.length > 0) {
       result.push({ type: "section", key: "section:saved", title: "Saved locations" });
-      result.push(...savedRows);
+      for (const place of matchingPlaces) {
+        result.push({ type: "place", key: `place:${place.id}`, place });
+      }
     }
-    // Global search results, excluding saved hotspots already shown above.
-    if (hotspotQueryEnabled) {
-      const fresh = rankedHotspots.filter((hotspot) => !savedHotspotIds.has(hotspot.id));
-      if (fresh.length > 0) {
-        result.push({ type: "section", key: "section:hotspots", title: "Hotspots" });
-        for (const hotspot of fresh) {
-          result.push({ type: "hotspot", key: `hotspot:${hotspot.id}`, hotspot });
-        }
+    if (rankedHotspots.length > 0) {
+      result.push({ type: "section", key: "section:hotspots", title: "Hotspots" });
+      for (const hotspot of rankedHotspots) {
+        result.push({ type: "hotspot", key: `hotspot:${hotspot.id}`, hotspot });
       }
     }
     return result;
-  }, [savedRows, rankedHotspots, savedHotspotIds, hotspotQueryEnabled]);
+  }, [matchingPlaces, rankedHotspots]);
 
   const handleSelectHotspot = useCallback(
     async (hotspot: HotspotWithDistance) => {
@@ -212,8 +162,8 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
   const keyExtractor = useCallback((item: SearchRow) => item.key, []);
 
   // Distinguish empty-because-nothing-typed from empty-because-no-matches.
-  const isSearching = query.trim().length > 0;
-  const emptyMessage = isSearching ? "No matches" : "Search hotspots and your saved locations";
+  const isSearching = query.trim().length >= MIN_QUERY;
+  const emptyMessage = isSearching ? "No matches" : "Search for hotspots or saved locations";
 
   const headerContent = (dismiss: () => Promise<void>) => {
     dismissRef.current = dismiss;
