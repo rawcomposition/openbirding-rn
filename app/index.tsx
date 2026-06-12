@@ -1,13 +1,15 @@
 import CountBadge from "@/components/CountBadge";
+import FilterSheet from "@/components/FilterSheet";
 import FloatingButton from "@/components/FloatingButton";
 import HotspotDialog from "@/components/HotspotDialog";
 import HotspotList from "@/components/HotspotList";
-import MapListTogglePill from "@/components/MapListTogglePill";
+import MapViewControls from "@/components/MapViewControls";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
 import PlaceDialog from "@/components/PlaceDialog";
 import SunIndicator from "@/components/SunIndicator";
+import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { usePackUpdates } from "@/hooks/usePackUpdates";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
@@ -21,9 +23,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const isMapTouchActiveRef = useRef(false);
   const insets = useSafeAreaInsets();
+  const activeFilterCount = useActiveFilterCount();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
   const {
@@ -83,6 +87,14 @@ export default function HomeScreen() {
 
   const handleOpenHotspotList = () => {
     setIsHotspotListOpen(true);
+  };
+
+  const handleOpenFilters = () => {
+    setIsFilterSheetOpen(true);
+  };
+
+  const handleCloseFilters = () => {
+    setIsFilterSheetOpen(false);
   };
 
   const handleCloseHotspotList = () => {
@@ -191,15 +203,22 @@ export default function HomeScreen() {
             <CountBadge count={updateCount} />
           </View>
         </View>
-        {!isHotspotListOpen && (
-          <View
-            style={[tw`absolute left-0 right-0 items-center`, { bottom: insets.bottom + 24 }]}
-            pointerEvents="box-none"
-          >
-            <MapListTogglePill onPress={handleOpenHotspotList} />
-          </View>
-        )}
+        {/* Inset by the right action-button zone (w-14 at right-6 ≈ 80px) on both
+            sides so the centered pill stays screen-centered yet can never collide
+            with the locate/menu buttons, even on narrow phones. The list sheet
+            covers this when open, so no need to conditionally hide it. */}
+        <View
+          style={[tw`absolute left-20 right-20 items-center`, { bottom: insets.bottom + 24 }]}
+          pointerEvents="box-none"
+        >
+          <MapViewControls
+            onOpenFilters={handleOpenFilters}
+            onOpenList={handleOpenHotspotList}
+            filterCount={activeFilterCount}
+          />
+        </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
+        <FilterSheet isOpen={isFilterSheetOpen} onClose={handleCloseFilters} />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={handleHotspotDialogClose} />
         <PlaceDialog
           isOpen={customPinCoordinates !== null || placeId !== null}
