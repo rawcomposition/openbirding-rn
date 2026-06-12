@@ -203,12 +203,8 @@ export default function HomeScreen() {
             <CountBadge count={updateCount} />
           </View>
         </View>
-        {/* Inset by the right action-button zone (w-14 at right-6 ≈ 80px) on both
-            sides so the centered pill stays screen-centered yet can never collide
-            with the locate/menu buttons, even on narrow phones. The list sheet
-            covers this when open, so no need to conditionally hide it. */}
         <View
-          style={[tw`absolute left-20 right-20 items-center`, { bottom: insets.bottom + 24 }]}
+          style={[tw`absolute left-0 right-0 items-center`, { bottom: insets.bottom + 24 }]}
           pointerEvents="box-none"
         >
           <MapViewControls
