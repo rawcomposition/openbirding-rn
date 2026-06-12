@@ -58,6 +58,7 @@ module.exports = ({ config }) => ({
       "expo-web-browser",
       "expo-font",
       "expo-image",
+      "expo-localization",
     ],
     experiments: { typedRoutes: true, reactCompiler: true },
     extra: {

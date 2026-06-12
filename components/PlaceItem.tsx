@@ -2,6 +2,7 @@ import { getPlaceIconImage } from "@/lib/placeIconImages";
 import tw from "@/lib/tw";
 import { SavedPlace } from "@/lib/types";
 import { formatDistance } from "@/lib/utils";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { Image, Pressable, Text, View } from "react-native";
@@ -13,6 +14,7 @@ type PlaceItemProps = {
 
 const PlaceItem = React.memo(
   ({ item, onSelect }: PlaceItemProps) => {
+    const useMiles = useSettingsStore((state) => state.distanceUnits === "imperial");
     const handlePress = useCallback(() => {
       onSelect(item);
     }, [item, onSelect]);
@@ -34,7 +36,7 @@ const PlaceItem = React.memo(
           </View>
         </View>
         {item.distance !== undefined && (
-          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, null)}</Text>
+          <Text style={tw`text-gray-500 text-sm ml-2`}>{formatDistance(item.distance, useMiles)}</Text>
         )}
         <Ionicons name="chevron-forward" size={18} color={tw.color("gray-400")} style={tw`ml-2`} />
       </Pressable>

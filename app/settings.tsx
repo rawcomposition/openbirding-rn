@@ -112,6 +112,7 @@ export default function SettingsPage() {
   const lifelistExclusions = useSettingsStore((state) => state.lifelistExclusions);
   const disableSunTimes = useSettingsStore((state) => state.disableSunTimes);
   const setDisableSunTimes = useSettingsStore((state) => state.setDisableSunTimes);
+  const distanceUnits = useSettingsStore((state) => state.distanceUnits);
   const providers = getExternalMapProviders();
 
   const getProviderName = (providerId: string | null) => {
@@ -157,6 +158,12 @@ export default function SettingsPage() {
       </SettingsGroup>
 
       <SettingsGroup header="Map Display">
+        <SettingsRow
+          label="Distance Units"
+          value={distanceUnits === "imperial" ? "Miles" : "Kilometers"}
+          onPress={() => router.push("/settings-units" as Href)}
+          icon={{ family: "fontawesome5", name: "ruler", bgColor: "#5856D6" }}
+        />
         <SettingsToggleRow
           label="Show Sunrise/Sunset"
           value={!disableSunTimes}
@@ -177,12 +184,12 @@ export default function SettingsPage() {
           label="Life List Exclusions"
           value={lifelistExclusions?.length ? `${lifelistExclusions.length} species` : undefined}
           onPress={() => router.push("/settings-life-list-exclusions" as Href)}
-          icon={{ name: "eye-off", bgColor: "#FF9500" }}
+          icon={{ name: "eye-off", bgColor: "#FF3B30" }}
         />
         <SettingsRow
           label="Import Life List"
           onPress={() => router.push("/settings-import-life-list" as Href)}
-          icon={{ name: "cloud-upload", bgColor: "#5856D6" }}
+          icon={{ name: "cloud-upload", bgColor: "#30B0C7" }}
           isLast
         />
       </SettingsGroup>

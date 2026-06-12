@@ -155,10 +155,7 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * c;
 }
 
-export const MILES_COUNTRIES = ["US", "GB", "MM", "LR", "PR", "VI", "GU", "MP", "AS", "KY", "TC", "VG", "AI", "MS", "FK"];
-
-export function formatDistance(distanceKm: number, country: string | null): string {
-  const useMiles = country && MILES_COUNTRIES.includes(country);
+export function formatDistance(distanceKm: number, useMiles: boolean): string {
   if (useMiles) {
     const distanceMiles = distanceKm * 0.621371;
     const rounded = Math.round(distanceMiles);
