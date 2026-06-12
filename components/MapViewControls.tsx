@@ -19,7 +19,7 @@ export default function MapViewControls({ onOpenFilters, onOpenList, filterCount
 
   const inner = (
     <View style={tw`flex-row items-center`}>
-      <TouchableOpacity onPress={onOpenFilters} activeOpacity={0.7} style={tw`flex-row items-center px-5 py-3`}>
+      <TouchableOpacity onPress={onOpenFilters} activeOpacity={0.7} style={tw`flex-row items-center pl-5 pr-4 py-3`}>
         <Text style={tw`text-base font-semibold text-gray-800`}>Filters</Text>
         {filterCount > 0 && (
           <View style={tw`ml-2 px-2 py-0.5 rounded-full bg-blue-500`}>
@@ -28,7 +28,7 @@ export default function MapViewControls({ onOpenFilters, onOpenList, filterCount
         )}
       </TouchableOpacity>
       <View style={tw`w-px h-6 bg-gray-300`} />
-      <TouchableOpacity onPress={onOpenList} activeOpacity={0.7} style={tw`flex-row items-center px-5 py-3`}>
+      <TouchableOpacity onPress={onOpenList} activeOpacity={0.7} style={tw`flex-row items-center pl-4 pr-5 py-3`}>
         <Text style={tw`text-base font-semibold text-gray-800`}>List</Text>
       </TouchableOpacity>
     </View>
