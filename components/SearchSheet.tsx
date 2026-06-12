@@ -39,7 +39,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
   const dismissRef = useRef<(() => Promise<void>) | null>(null);
   const { location } = useLocation(isOpen);
 
-  // Reset the query each time the sheet closes so it opens fresh.
   useEffect(() => {
     if (!isOpen) {
       setQuery("");
@@ -78,8 +77,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     [location]
   );
 
-  // Saved places whose name matches the query (empty below the search threshold),
-  // sorted by distance when we have a location, otherwise alphabetically.
   const matchingPlaces = useMemo<PlaceWithDistance[]>(() => {
     const trimmed = query.trim().toLowerCase();
     const matched = trimmed.length >= MIN_QUERY
@@ -110,7 +107,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
 
   const rows = useMemo<SearchRow[]>(() => {
     const result: SearchRow[] = [];
-    // Saved custom locations always sit above hotspot matches.
     if (matchingPlaces.length > 0) {
       result.push({ type: "section", key: "section:saved", title: "Saved locations" });
       for (const place of matchingPlaces) {

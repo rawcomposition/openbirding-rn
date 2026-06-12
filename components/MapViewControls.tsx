@@ -10,11 +10,6 @@ type MapViewControlsProps = {
   filterCount: number;
 };
 
-/**
- * Bottom-center segmented control pairing the two actions that act on the
- * current view: open the filter sheet (with an active-filter badge) and open
- * the viewport-scoped list. Connected with a hairline divider.
- */
 export default function MapViewControls({ onOpenFilters, onOpenList, filterCount }: MapViewControlsProps) {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 

@@ -130,7 +130,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
   const originPoint = location ?? snapshot?.center ?? null;
 
   const rows = useMemo<ListRow[]>(() => {
-    // Places are excluded while the target-rich filter is active.
     const placesForList = targetRichFilter.isActive ? [] : placesInView;
     const base: ListRow[] = [
       ...filteredHotspots.map((hotspot) => ({ ...hotspot, kind: "hotspot" as const })),

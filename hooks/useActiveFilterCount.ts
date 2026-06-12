@@ -1,11 +1,7 @@
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 
-/**
- * Number of hotspot filters currently active. Drives the badge on both the
- * Nearby Hotspots map button and the filter toggle inside the hotspot list.
- * The target-rich filter only counts when a life list is actually imported.
- */
+// The target-rich filter only counts as active once a life list is imported.
 export function useActiveFilterCount() {
   const showSavedOnly = useFiltersStore((state) => state.showSavedOnly);
   const targetRichEnabled = useFiltersStore((state) => state.targetRichEnabled);

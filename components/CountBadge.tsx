@@ -2,11 +2,6 @@ import tw from "@/lib/tw";
 import React from "react";
 import { Text, View } from "react-native";
 
-/**
- * Small count badge overlaid on the top-right corner of a floating map button.
- * Renders nothing when count is zero. Used for active filters (Hotspots button)
- * and pending pack updates (Map Options button).
- */
 export default function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
 
