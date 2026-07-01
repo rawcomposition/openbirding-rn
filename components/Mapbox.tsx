@@ -1,3 +1,5 @@
+import { useDelayedFlag } from "@/hooks/useDelayedFlag";
+import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
 import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
 import {
   haloInnerStyle,
@@ -6,19 +8,21 @@ import {
   savedHotspotSymbolStyle,
   savedPlaceSymbolStyle,
 } from "@/lib/layers";
+import { targetRichHotspotCache } from "@/lib/targetRichHotspots";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
 import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { useMapStore } from "@/stores/mapStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import Mapbox from "@rnmapbox/maps";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import debounce from "lodash/debounce";
 import throttle from "lodash/throttle";
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Linking, Platform, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -102,9 +106,31 @@ export type MapboxMapRef = {
 
 const THROTTLE_DELAY = 750;
 const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
+const SETTLED_BOUNDS_DELAY = 300;
+// Only surface the "Filtering hotspots..." badge if filtering outlasts this; incremental pans resolve faster and shouldn't flicker it.
+const TARGET_RICH_BADGE_DELAY = 350;
 const MIN_ZOOM = 8;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
+const BOUNDS_EPSILON = 0.0001;
+
+function areBoundsEquivalent(left: Bounds | null, right: Bounds | null): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    Math.abs(left.west - right.west) < BOUNDS_EPSILON &&
+    Math.abs(left.south - right.south) < BOUNDS_EPSILON &&
+    Math.abs(left.east - right.east) < BOUNDS_EPSILON &&
+    Math.abs(left.north - right.north) < BOUNDS_EPSILON
+  );
+}
+
 const isValidUserCoord = (coord: [number, number] | null) => {
   if (!coord) return false;
   const [lng, lat] = coord;
@@ -134,12 +160,16 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const currentLayer = useMapStore((state) => state.currentLayer);
     const placeId = useMapStore((state) => state.placeId);
     const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const setStoreBounds = useMapStore((state) => state.setBounds);
+    const setInViewCount = useMapStore((state) => state.setInViewCount);
+    const setDisplayedCount = useMapStore((state) => state.setDisplayedCount);
     const isZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
     const setIsZoomedTooFarOut = useMapStore((state) => state.setIsZoomedTooFarOut);
     const showAttribution = useMapStore((state) => state.isMapAttributionOpen);
     const setShowAttribution = useMapStore((state) => state.setIsMapAttributionOpen);
     const { status: permissionStatus } = useLocationPermissionStore();
-    const { showSavedOnly } = useFiltersStore();
+    const { showSavedOnly, targetRichEnabled } = useFiltersStore();
+    const lifelist = useSettingsStore((state) => state.lifelist);
 
     const mapRef = useRef<Mapbox.MapView>(null);
     const cameraRef = useRef<Mapbox.Camera>(null);
@@ -147,9 +177,12 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const centeredToUserRef = useRef(false);
     const userCoordRef = useRef<[number, number] | null>(null);
     const isTouchActiveRef = useRef(false);
+    const lastResolvedHotspotsRef = useRef<{ id: string; lat: number; lng: number; species: number }[]>([]);
 
     const [isMapReady, setIsMapReady] = useState(false);
     const [bounds, setBounds] = useState<Bounds | null>(null);
+    const hasLifeList = (lifelist?.length ?? 0) > 0;
+    const isTargetRichMapFiltering = targetRichEnabled && hasLifeList;
 
     const mapStyle = useMemo(() => {
       return currentLayer === "satellite"
@@ -157,7 +190,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         : "mapbox://styles/mapbox/outdoors-v12";
     }, [currentLayer]);
 
-    const { data: hotspots = [] } = useQuery({
+    const { data: hotspots = [], isFetching: isFetchingHotspots } = useQuery({
       queryKey: ["hotspots", bounds],
       queryFn: async () => {
         if (!bounds) return [];
@@ -192,8 +225,18 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     }
 
     const throttledSetBounds = useMemo(
-      () => throttle((b: Bounds | null) => setBounds(b), throttleDelay),
+      () =>
+        throttle((nextBounds: Bounds | null) => {
+          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+        }, throttleDelay),
       [throttleDelay]
+    );
+    const debouncedSetSettledBounds = useMemo(
+      () =>
+        debounce((nextBounds: Bounds | null) => {
+          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+        }, SETTLED_BOUNDS_DELAY),
+      []
     );
     const debouncedSaveLocation = useMemo(
       () =>
@@ -228,13 +271,41 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       return null;
     }, [isZoomedTooFarOut, setIsZoomedTooFarOut]);
 
-    const syncViewport = useCallback(async () => {
+    const syncViewport = useCallback(async (immediate = false) => {
       if (!mapRef.current) return;
-      const b = await readBoundsIfZoomed();
-      throttledSetBounds(b);
+      const nextBounds = await readBoundsIfZoomed();
+      if (immediate) {
+        throttledSetBounds.cancel();
+        debouncedSetSettledBounds.cancel();
+        setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+      } else if (isTargetRichMapFiltering) {
+        debouncedSetSettledBounds(nextBounds);
+      } else {
+        throttledSetBounds(nextBounds);
+      }
       debouncedSaveLocation();
       throttledSetMapCenter();
-    }, [readBoundsIfZoomed, throttledSetBounds, debouncedSaveLocation, throttledSetMapCenter]);
+    }, [
+      debouncedSaveLocation,
+      debouncedSetSettledBounds,
+      isTargetRichMapFiltering,
+      readBoundsIfZoomed,
+      throttledSetBounds,
+      throttledSetMapCenter,
+    ]);
+
+    useEffect(() => {
+      return () => {
+        throttledSetBounds.cancel();
+        debouncedSetSettledBounds.cancel();
+      };
+    }, [debouncedSetSettledBounds, throttledSetBounds]);
+
+    useEffect(() => {
+      throttledSetBounds.cancel();
+      debouncedSetSettledBounds.cancel();
+      void syncViewport(true);
+    }, [debouncedSetSettledBounds, isTargetRichMapFiltering, syncViewport, throttledSetBounds]);
 
     const setTouchActive = useCallback(
       (isActive: boolean) => {
@@ -285,6 +356,72 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     );
 
     const savedHotspotsSet = useMemo(() => new Set(savedHotspots.map((s) => s.hotspot_id)), [savedHotspots]);
+    const mapCandidateHotspots = useMemo(
+      () => hotspots.filter((hotspot) => !showSavedOnly || savedHotspotsSet.has(hotspot.id)),
+      [hotspots, savedHotspotsSet, showSavedOnly]
+    );
+    const targetRichFilter = useTargetRichHotspots(mapCandidateHotspots.map((hotspot) => hotspot.id), {
+      enabled: bounds !== null && !isFetchingHotspots,
+      blockWhileDisabled: true,
+    });
+    const targetRichHotspotIds = useMemo(() => new Set(targetRichFilter.filteredIds), [targetRichFilter.filteredIds]);
+    const unresolvedCandidateCount = targetRichFilter.isActive
+      ? mapCandidateHotspots.reduce((count, hotspot) => count + (targetRichHotspotCache.has(hotspot.id) ? 0 : 1), 0)
+      : 0;
+    const isInitialTargetRichFetch =
+      targetRichFilter.isActive &&
+      bounds !== null &&
+      isFetchingHotspots &&
+      lastResolvedHotspotsRef.current.length === 0;
+    const isTargetRichLoading =
+      targetRichFilter.isActive &&
+      (isInitialTargetRichFetch || unresolvedCandidateCount > 0 || targetRichFilter.isLoading);
+    // Delay the badge so brief filtering during incremental pans doesn't flash it; markers still use isTargetRichLoading directly.
+    const isTargetRichBadgeVisible = useDelayedFlag(isTargetRichLoading, TARGET_RICH_BADGE_DELAY);
+    const displayedHotspots = useMemo(() => {
+      if (showSavedOnly || targetRichFilter.isActive) {
+        const resolvedHotspots = mapCandidateHotspots.filter((hotspot) =>
+          targetRichFilter.isActive ? targetRichHotspotIds.has(hotspot.id) : true
+        );
+
+        if (isTargetRichLoading) {
+          return lastResolvedHotspotsRef.current;
+        }
+
+        return resolvedHotspots;
+      }
+
+      return hotspots;
+    }, [
+      hotspots,
+      isTargetRichLoading,
+      mapCandidateHotspots,
+      targetRichFilter.isActive,
+      targetRichHotspotIds,
+      showSavedOnly,
+    ]);
+
+    useEffect(() => {
+      if (!isTargetRichLoading) {
+        lastResolvedHotspotsRef.current = displayedHotspots;
+      }
+    }, [displayedHotspots, isTargetRichLoading]);
+
+    // Mirror the viewport + result counts into the store so the hotspot list can
+    // snapshot the same bounds and the toggle pill can show how many are in view.
+    useEffect(() => {
+      setStoreBounds(bounds);
+    }, [bounds, setStoreBounds]);
+
+    useEffect(() => {
+      if (bounds === null) {
+        setInViewCount(null);
+        setDisplayedCount(null);
+        return;
+      }
+      setInViewCount(mapCandidateHotspots.length);
+      setDisplayedCount(displayedHotspots.length);
+    }, [bounds, mapCandidateHotspots.length, displayedHotspots.length, setInViewCount, setDisplayedCount]);
 
     const handleFeaturePress = useCallback(
       (event: any) => {
@@ -346,10 +483,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           style={tw`flex-1`}
           styleURL={mapStyle}
           onDidFinishLoadingMap={() => setIsMapReady(true)}
-          onDidFinishLoadingStyle={syncViewport}
-          onCameraChanged={syncViewport}
-          onMapIdle={() => {
+          onDidFinishLoadingStyle={() => {
+            syncViewport(true);
+          }}
+          onCameraChanged={() => {
             syncViewport();
+          }}
+          onMapIdle={() => {
+            syncViewport(true);
             centerMapOnUserInitial();
           }}
           onPress={handleFeaturePress}
@@ -393,14 +534,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             </>
           )}
 
-          {isMapReady && (hotspots.length > 0 || savedPlaces.length > 0) && (
+          {isMapReady && (displayedHotspots.length > 0 || savedPlaces.length > 0) && (
             <Mapbox.ShapeSource
               id="features-source"
               onPress={handleFeaturePress}
               shape={{
                 type: "FeatureCollection",
                 features: [
-                  ...hotspots.map((h: any) => {
+                  ...displayedHotspots.map((h: any) => {
                     const isSaved = savedHotspotsSet.has(h.id);
                     return {
                       type: "Feature" as const,
@@ -427,15 +568,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 ],
               }}
             >
-              {/* Hotspot - hidden when showSavedOnly filter is active */}
+              {/* Hotspot */}
               <Mapbox.SymbolLayer
                 id="hotspot"
-                filter={[
-                  "all",
-                  ["==", ["get", "featureType"], "hotspot"],
-                  ["==", ["get", "isSaved"], false],
-                  ["literal", !showSavedOnly],
-                ]}
+                filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
                 style={hotspotSymbolStyle() as any}
               />
 
@@ -446,7 +582,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Selected hotspot - hidden when showSavedOnly filter is active */}
+              {/* Selected hotspot */}
               <Mapbox.CircleLayer
                 id="hotspot-halo"
                 filter={[
@@ -454,7 +590,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
-                  ["literal", !showSavedOnly],
                 ]}
                 style={haloInnerStyle() as any}
               />
@@ -465,7 +600,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
-                  ["literal", !showSavedOnly],
                 ]}
                 style={haloOuterStyle() as any}
               />
@@ -476,7 +610,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                   ["==", ["get", "featureType"], "hotspot"],
                   ["==", ["get", "isSaved"], false],
                   ["==", ["get", "isSelected"], true],
-                  ["literal", !showSavedOnly],
                 ]}
                 style={hotspotSymbolStyle() as any}
               />
@@ -586,6 +719,22 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
             ) : (
               <View style={tw`rounded-full overflow-hidden bg-white/90 shadow-md px-4 py-2`}>
                 <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {isTargetRichBadgeVisible && !isZoomedTooFarOut && (
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+            {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+                <View style={tw`flex-row items-center px-4 py-2`}>
+                  <Text style={tw`text-sm font-medium text-gray-700`}>Filtering hotspots...</Text>
+                </View>
+              </GlassView>
+            ) : (
+              <View style={tw`rounded-full overflow-hidden bg-white/90 shadow-md px-4 py-2`}>
+                <Text style={tw`text-sm font-medium text-gray-700`}>Filtering hotspots...</Text>
               </View>
             )}
           </View>

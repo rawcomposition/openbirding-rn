@@ -1,12 +1,16 @@
+import CountBadge from "@/components/CountBadge";
+import FilterSheet from "@/components/FilterSheet";
 import FloatingButton from "@/components/FloatingButton";
 import HotspotDialog from "@/components/HotspotDialog";
 import HotspotList from "@/components/HotspotList";
-import MapListIcon from "@/components/icons/MapListIcon";
+import MapViewControls from "@/components/MapViewControls";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
 import PlaceDialog from "@/components/PlaceDialog";
+import SearchSheet from "@/components/SearchSheet";
 import SunIndicator from "@/components/SunIndicator";
+import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { usePackUpdates } from "@/hooks/usePackUpdates";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
@@ -20,9 +24,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const mapRef = useRef<MapboxMapRef>(null);
   const isMapTouchActiveRef = useRef(false);
   const insets = useSafeAreaInsets();
+  const activeFilterCount = useActiveFilterCount();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
   const {
@@ -39,7 +46,7 @@ export default function HomeScreen() {
     setIsMapAttributionOpen,
   } = useMapStore();
   const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
-  const { hasUpdates } = usePackUpdates();
+  const { updateCount } = usePackUpdates();
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -84,8 +91,24 @@ export default function HomeScreen() {
     setIsHotspotListOpen(true);
   };
 
+  const handleOpenFilters = () => {
+    setIsFilterSheetOpen(true);
+  };
+
+  const handleCloseFilters = () => {
+    setIsFilterSheetOpen(false);
+  };
+
   const handleCloseHotspotList = () => {
     setIsHotspotListOpen(false);
+  };
+
+  const handleOpenSearch = () => {
+    setIsSearchOpen(true);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchOpen(false);
   };
 
   const handleMapTouchActiveChange = useCallback((isActive: boolean) => {
@@ -119,6 +142,18 @@ export default function HomeScreen() {
       }, 500);
     },
     [setCustomPinCoordinates, setPlaceId, setHotspotId]
+  );
+
+  const handleSelectPlaceFromList = useCallback(
+    (selectedPlaceId: string, lat: number, lng: number) => {
+      setCustomPinCoordinates(null);
+      setHotspotId(null);
+      setPlaceId(selectedPlaceId);
+      setTimeout(() => {
+        mapRef.current?.centerOnCoordinates(lng, lat, 200);
+      }, 500);
+    },
+    [setCustomPinCoordinates, setHotspotId, setPlaceId]
   );
 
   if (isLoadingLocation) return null;
@@ -171,17 +206,34 @@ export default function HomeScreen() {
           <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
-          <FloatingButton onPress={handleOpenHotspotList} light={currentLayer === "satellite"}>
-            <MapListIcon size={24} color={tw.color("gray-700")} />
+          <FloatingButton onPress={handleOpenSearch} light={currentLayer === "satellite"}>
+            <Ionicons name="search" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
           <View style={tw`relative`}>
             <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
               <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
             </FloatingButton>
-            {hasUpdates && <View style={tw`absolute top-4 right-3.5 w-2.5 h-2.5 bg-blue-500 rounded-full`} />}
+            <CountBadge count={updateCount} />
           </View>
         </View>
+        <View
+          style={[tw`absolute left-0 right-0 items-center`, { bottom: insets.bottom + 24 }]}
+          pointerEvents="box-none"
+        >
+          <MapViewControls
+            onOpenFilters={handleOpenFilters}
+            onOpenList={handleOpenHotspotList}
+            filterCount={activeFilterCount}
+          />
+        </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />
+        <FilterSheet isOpen={isFilterSheetOpen} onClose={handleCloseFilters} />
+        <SearchSheet
+          isOpen={isSearchOpen}
+          onClose={handleCloseSearch}
+          onSelectHotspot={handleSelectHotspotFromList}
+          onSelectPlace={handleSelectPlaceFromList}
+        />
         <HotspotDialog isOpen={hotspotId !== null} hotspotId={hotspotId} onClose={handleHotspotDialogClose} />
         <PlaceDialog
           isOpen={customPinCoordinates !== null || placeId !== null}
@@ -194,6 +246,7 @@ export default function HomeScreen() {
           isOpen={isHotspotListOpen}
           onClose={handleCloseHotspotList}
           onSelectHotspot={handleSelectHotspotFromList}
+          onSelectPlace={handleSelectPlaceFromList}
         />
       </View>
     </GestureHandlerRootView>

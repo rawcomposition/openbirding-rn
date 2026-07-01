@@ -4,7 +4,7 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "1.8.0",
+    version: "2.0.0",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
@@ -58,6 +58,7 @@ module.exports = ({ config }) => ({
       "expo-web-browser",
       "expo-font",
       "expo-image",
+      "expo-localization",
     ],
     experiments: { typedRoutes: true, reactCompiler: true },
     extra: {

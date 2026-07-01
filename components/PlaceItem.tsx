@@ -1,20 +1,19 @@
+import { getPlaceIconImage } from "@/lib/placeIconImages";
 import tw from "@/lib/tw";
-import { Hotspot } from "@/lib/types";
-import { getSavedHotspotIconImage } from "@/lib/hotspotIconImages";
-import { formatDistance, getMarkerColor } from "@/lib/utils";
+import { SavedPlace } from "@/lib/types";
+import { formatDistance } from "@/lib/utils";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 
-type HotspotItemProps = {
-  item: Hotspot & { distance?: number };
-  onSelect: (hotspot: Hotspot & { distance?: number }) => void;
-  isSaved?: boolean;
+type PlaceItemProps = {
+  item: SavedPlace & { distance?: number };
+  onSelect: (place: SavedPlace & { distance?: number }) => void;
 };
 
-const HotspotItem = React.memo(
-  ({ item, onSelect, isSaved = false }: HotspotItemProps) => {
+const PlaceItem = React.memo(
+  ({ item, onSelect }: PlaceItemProps) => {
     const useMiles = useSettingsStore((state) => state.distanceUnits === "imperial");
     const handlePress = useCallback(() => {
       onSelect(item);
@@ -32,16 +31,8 @@ const HotspotItem = React.memo(
             {item.name}
           </Text>
           <View style={tw`flex-row items-center mt-1`}>
-            {isSaved ? (
-              <Image
-                source={getSavedHotspotIconImage(item.species || 0)}
-                style={tw`w-3.5 h-3.5 mr-2`}
-                resizeMode="contain"
-              />
-            ) : (
-              <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(item.species || 0) }]} />
-            )}
-            <Text style={tw`text-gray-600 text-sm`}>{item.species} species</Text>
+            <Image source={getPlaceIconImage(item.icon)} style={tw`w-3.5 h-3.5 mr-2`} resizeMode="contain" />
+            <Text style={tw`text-gray-600 text-sm`}>{item.notes ? item.notes : "Saved Pin"}</Text>
           </View>
         </View>
         {item.distance !== undefined && (
@@ -53,19 +44,18 @@ const HotspotItem = React.memo(
   },
   (prevProps, nextProps) => {
     return (
+      prevProps.item.id === nextProps.item.id &&
       prevProps.item.lat === nextProps.item.lat &&
       prevProps.item.lng === nextProps.item.lng &&
-      prevProps.item.id === nextProps.item.id &&
       prevProps.item.name === nextProps.item.name &&
-      prevProps.item.species === nextProps.item.species &&
+      prevProps.item.icon === nextProps.item.icon &&
+      prevProps.item.notes === nextProps.item.notes &&
       prevProps.item.distance === nextProps.item.distance &&
-      prevProps.item.country === nextProps.item.country &&
-      prevProps.isSaved === nextProps.isSaved &&
       prevProps.onSelect === nextProps.onSelect
     );
   }
 );
 
-HotspotItem.displayName = "HotspotItem";
+PlaceItem.displayName = "PlaceItem";
 
-export default HotspotItem;
+export default PlaceItem;

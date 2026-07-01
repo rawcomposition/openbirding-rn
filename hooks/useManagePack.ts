@@ -1,5 +1,6 @@
 import { cleanupPartialInstall, installPackWithTargets, uninstallPack } from "@/lib/database";
 import { downloadWithProgress } from "@/lib/download";
+import { resetTargetRichHotspotCache } from "@/lib/targetRichHotspots";
 import { StaticPack, StaticPackResponse } from "@/lib/types";
 import { refreshTaxonomy } from "@/lib/taxonomy";
 import { API_URL } from "@/lib/utils";
@@ -69,6 +70,8 @@ export function useManagePack(packId: number) {
 
       downloadStore.setProgress(100);
 
+      resetTargetRichHotspotCache();
+
       await queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
@@ -110,6 +113,8 @@ export function useManagePack(packId: number) {
       setIsUninstalling(true);
 
       await uninstallPack(packId);
+
+      resetTargetRichHotspotCache();
 
       queryClient.invalidateQueries({ queryKey: ["installed-packs"] });
       queryClient.invalidateQueries({ queryKey: ["hotspots"], refetchType: "active" });

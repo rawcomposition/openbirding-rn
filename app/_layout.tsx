@@ -105,6 +105,15 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
+                name="settings-units"
+                options={{
+                  title: "Distance Units",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
                 name="settings-import-life-list"
                 options={{
                   title: "Import Life List",

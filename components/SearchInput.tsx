@@ -9,7 +9,10 @@ type SearchInputProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-} & Pick<TextInputProps, "autoCorrect" | "autoCapitalize" | "autoComplete" | "returnKeyType">;
+  // When false, the inline clear (✕) button is never shown — useful when the
+  // surrounding UI already provides a close affordance and a second ✕ would clash.
+  clearable?: boolean;
+} & Pick<TextInputProps, "autoCorrect" | "autoCapitalize" | "autoComplete" | "returnKeyType" | "autoFocus">;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -28,12 +31,14 @@ export default function SearchInput({
   autoCapitalize = "none",
   autoComplete = "off",
   returnKeyType = "search",
+  autoFocus = false,
+  clearable = true,
 }: SearchInputProps) {
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
-  const showClear = value.length > 0 || isFocused;
+  const showClear = clearable && (value.length > 0 || isFocused);
 
   const handleClear = () => {
     onChangeText("");
@@ -59,6 +64,7 @@ export default function SearchInput({
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         returnKeyType={returnKeyType}
+        autoFocus={autoFocus}
       />
     </Pressable>
   );

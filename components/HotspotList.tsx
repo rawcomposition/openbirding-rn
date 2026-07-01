@@ -1,112 +1,170 @@
+import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useLocation } from "@/hooks/useLocation";
-import { useScrollRestore } from "@/hooks/useScrollRestore";
-import { getAllHotspots, getNearbyHotspots, searchHotspots } from "@/lib/database";
+import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
+import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
 import tw from "@/lib/tw";
-import { Hotspot } from "@/lib/types";
-import { calculateDistance, getBoundingBoxFromLocation } from "@/lib/utils";
+import { Bounds, Hotspot, SavedPlace } from "@/lib/types";
+import { calculateDistance, isWithinBounds, padBoundsBySize } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
+import { useMapStore } from "@/stores/mapStore";
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
-import debounce from "lodash/debounce";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import FilterSlidersIcon from "./icons/FilterSlidersIcon";
 import BaseBottomSheet from "./BaseBottomSheet";
+import FilterSheet from "./FilterSheet";
 import HotspotItem from "./HotspotItem";
 import IconButton from "./IconButton";
 import IconButtonGroup from "./IconButtonGroup";
-import SearchInput from "./SearchInput";
+import PlaceItem from "./PlaceItem";
 
 type HotspotListProps = {
   isOpen: boolean;
   onClose: () => void;
   onSelectHotspot: (hotspotId: string, lat: number, lng: number) => void;
+  onSelectPlace: (placeId: string, lat: number, lng: number) => void;
 };
 
-const NEARBY_LIMIT = 200;
-const SEARCH_LIMIT = 100;
-const ALL_HOTSPOTS_LIMIT = 1000;
-const NEARBY_BUCKETS_KM = [50, 100, 200, 500];
+type HotspotRow = Hotspot & { kind: "hotspot"; distance?: number };
+type PlaceRow = SavedPlace & { kind: "place"; distance?: number };
+type ListRow = HotspotRow | PlaceRow;
 
-export default function HotspotList({ isOpen, onClose, onSelectHotspot }: HotspotListProps) {
+// Captured when the list opens so it reflects the map's viewport at that moment,
+// rather than shifting if the map keeps reporting bounds during the animation.
+type ListSnapshot = {
+  bounds: Bounds | null;
+  center: { lat: number; lng: number } | null;
+  zoomedTooFarOut: boolean;
+};
+
+export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelectPlace }: HotspotListProps) {
   const insets = useSafeAreaInsets();
-  const { status: permissionStatus, isLoading: isLoadingPermission } = useLocationPermissionStore();
+  const { status: permissionStatus } = useLocationPermissionStore();
   const { location, isLoading: isLoadingUserLocation } = useLocation(isOpen);
-  const isLoadingLocation = isLoadingPermission || isLoadingUserLocation;
-  const { showSavedOnly, setShowSavedOnly } = useFiltersStore();
-  const activeFilterCount = [showSavedOnly].filter(Boolean).length;
+  const showSavedOnly = useFiltersStore((state) => state.showSavedOnly);
+  const activeFilterCount = useActiveFilterCount();
   const dismissRef = useRef<(() => Promise<void>) | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const storeBounds = useMapStore((state) => state.bounds);
+  const storeMapCenter = useMapStore((state) => state.mapCenter);
+  const storeZoomedTooFarOut = useMapStore((state) => state.isZoomedTooFarOut);
 
-  const debouncedSetQuery = useMemo(() => debounce(setDebouncedQuery, 150), []);
+  const [snapshot, setSnapshot] = useState<ListSnapshot | null>(null);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const wasOpenRef = useRef(false);
 
+  // Snapshot the current viewport on the closed -> open transition only.
   useEffect(() => {
-    debouncedSetQuery(searchQuery);
-    return () => debouncedSetQuery.cancel();
-  }, [searchQuery, debouncedSetQuery]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setIsFilterPanelOpen(false);
+    if (isOpen && !wasOpenRef.current) {
+      setSnapshot({ bounds: storeBounds, center: storeMapCenter, zoomedTooFarOut: storeZoomedTooFarOut });
     }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, storeBounds, storeMapCenter, storeZoomedTooFarOut]);
+
+  useEffect(() => {
+    if (!isOpen) setIsFilterSheetOpen(false);
   }, [isOpen]);
 
-  const hasLocationAccess = permissionStatus === "granted" && location !== null;
+  const snapshotBounds = snapshot?.bounds ?? null;
+  const isZoomedOut = snapshot?.zoomedTooFarOut ?? false;
 
-  const { data: searchResults = [], dataUpdatedAt: searchUpdatedAt } = useQuery({
-    queryKey: ["hotspotSearch", debouncedQuery, showSavedOnly],
-    queryFn: () => searchHotspots(debouncedQuery, SEARCH_LIMIT, showSavedOnly),
-    enabled: isOpen && debouncedQuery.length >= 2 && !isLoadingLocation,
-    staleTime: 60 * 1000,
-    placeholderData: (prev) => prev,
-  });
-
-  const { data: allHotspots = [] } = useQuery({
-    queryKey:
-      hasLocationAccess && location
-        ? ["nearbyHotspots", location.lat, location.lng, showSavedOnly]
-        : ["allHotspots", showSavedOnly],
+  const { data: hotspots = [], isFetching: isFetchingHotspots } = useQuery({
+    // Same key + padding as Mapbox so we hit the same cached viewport query.
+    queryKey: ["hotspots", snapshotBounds],
     queryFn: async () => {
-      if (hasLocationAccess && location) {
-        // Try the smallest buckets first to get a result quickly
-        let hotspots: Hotspot[] = [];
-        for (const radiusKm of NEARBY_BUCKETS_KM) {
-          const bbox = getBoundingBoxFromLocation(location.lat, location.lng, radiusKm);
-          hotspots = await getNearbyHotspots(bbox, showSavedOnly);
-          if (hotspots.length >= NEARBY_LIMIT) {
-            return hotspots;
-          }
-        }
-        return hotspots;
-      }
-      return getAllHotspots(ALL_HOTSPOTS_LIMIT, showSavedOnly);
+      if (!snapshotBounds) return [];
+      const padded = padBoundsBySize(snapshotBounds);
+      return getHotspotsWithinBounds(padded.west, padded.south, padded.east, padded.north);
     },
-    enabled: isOpen && debouncedQuery.length < 2 && !isLoadingLocation,
+    enabled: isOpen && snapshotBounds !== null,
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     placeholderData: (prev) => prev,
   });
 
-  const displayedHotspots = useMemo(() => {
-    const hotspots = debouncedQuery.length >= 2 ? searchResults : allHotspots;
+  const { data: savedHotspots = [] } = useQuery({
+    queryKey: ["savedHotspots"],
+    queryFn: getSavedHotspots,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-    if (hasLocationAccess && location) {
-      const hotspotsWithDistance = hotspots.map((h) => ({
-        ...h,
-        distance: calculateDistance(location.lat, location.lng, h.lat, h.lng),
-      }));
-      hotspotsWithDistance.sort((a, b) => a.distance - b.distance);
-      return hotspotsWithDistance.slice(0, debouncedQuery.length >= 2 ? hotspots.length : NEARBY_LIMIT);
+  const { data: savedPlaces = [] } = useQuery({
+    queryKey: ["savedPlaces"],
+    queryFn: getSavedPlaces,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const savedHotspotsSet = useMemo(() => new Set(savedHotspots.map((s) => s.hotspot_id)), [savedHotspots]);
+  // Fetch uses padded bounds (shared cache with the map), but clip the list back to the
+  // unpadded viewport so it shows only what's actually visible on the map — not the
+  // off-screen margin hotspots the padding loads ahead of a pan.
+  const candidateHotspots = useMemo(
+    () =>
+      hotspots.filter(
+        (hotspot) =>
+          (!showSavedOnly || savedHotspotsSet.has(hotspot.id)) &&
+          (!snapshotBounds || isWithinBounds(hotspot.lat, hotspot.lng, snapshotBounds))
+      ),
+    [hotspots, savedHotspotsSet, showSavedOnly, snapshotBounds]
+  );
+
+  const targetRichFilter = useTargetRichHotspots(candidateHotspots.map((hotspot) => hotspot.id), {
+    enabled: isOpen && snapshotBounds !== null && !isFetchingHotspots,
+    blockWhileDisabled: true,
+  });
+  const targetRichIds = useMemo(() => new Set(targetRichFilter.filteredIds), [targetRichFilter.filteredIds]);
+  const isTargetRichLoading = targetRichFilter.isActive && (isFetchingHotspots || targetRichFilter.isLoading);
+
+  const filteredHotspots = useMemo(() => {
+    if (!targetRichFilter.isActive) return candidateHotspots;
+    return candidateHotspots.filter((hotspot) => targetRichIds.has(hotspot.id));
+  }, [candidateHotspots, targetRichFilter.isActive, targetRichIds]);
+
+  // Saved places within the same viewport. Excluded from the list when the
+  // target-rich filter is active, since they have no species data to qualify.
+  const placesInView = useMemo(() => {
+    if (!snapshotBounds) return [];
+    return savedPlaces.filter((place) => isWithinBounds(place.lat, place.lng, snapshotBounds));
+  }, [savedPlaces, snapshotBounds]);
+
+  const hasUserLocation = location !== null;
+  const originPoint = location ?? snapshot?.center ?? null;
+
+  const rows = useMemo<ListRow[]>(() => {
+    const placesForList = targetRichFilter.isActive ? [] : placesInView;
+    const base: ListRow[] = [
+      ...filteredHotspots.map((hotspot) => ({ ...hotspot, kind: "hotspot" as const })),
+      ...placesForList.map((place) => ({ ...place, kind: "place" as const })),
+    ];
+
+    const withDistance = base.map((row) => ({
+      row,
+      sortDistance: originPoint ? calculateDistance(originPoint.lat, originPoint.lng, row.lat, row.lng) : 0,
+    }));
+
+    if (originPoint) {
+      withDistance.sort((a, b) => a.sortDistance - b.sortDistance);
     } else {
-      const sorted = [...hotspots].sort((a, b) => a.name.localeCompare(b.name));
-      return sorted.slice(0, debouncedQuery.length >= 2 ? hotspots.length : ALL_HOTSPOTS_LIMIT);
+      withDistance.sort((a, b) => a.row.name.localeCompare(b.row.name));
     }
-  }, [debouncedQuery, searchResults, allHotspots, hasLocationAccess, location]);
 
-  const { listRef, onScroll } = useScrollRestore(isOpen, searchUpdatedAt);
+    return withDistance.map(({ row, sortDistance }) => {
+      const distance = hasUserLocation && originPoint ? sortDistance : undefined;
+      if (row.kind === "hotspot") {
+        return { ...row, distance };
+      }
+      return { ...row, distance };
+    });
+  }, [filteredHotspots, placesInView, targetRichFilter.isActive, originPoint, hasUserLocation]);
+
+  const matchingCount = rows.length;
+
+  const isLocationLoading = isLoadingUserLocation && permissionStatus === "granted" && location === null;
 
   const handleSelectHotspot = useCallback(
     async (hotspot: Hotspot & { distance?: number }) => {
@@ -116,40 +174,72 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
     [onSelectHotspot]
   );
 
-  const renderHotspotItem = useCallback(
-    ({ item }: { item: Hotspot & { distance?: number } }) => <HotspotItem item={item} onSelect={handleSelectHotspot} />,
-    [handleSelectHotspot]
+  const handleSelectPlace = useCallback(
+    async (place: SavedPlace & { distance?: number }) => {
+      await dismissRef.current?.();
+      onSelectPlace(place.id, place.lat, place.lng);
+    },
+    [onSelectPlace]
   );
+
+  const renderItem = useCallback(
+    ({ item }: { item: ListRow }) =>
+      item.kind === "hotspot" ? (
+        <HotspotItem item={item} onSelect={handleSelectHotspot} isSaved={savedHotspotsSet.has(item.id)} />
+      ) : (
+        <PlaceItem item={item} onSelect={handleSelectPlace} />
+      ),
+    [handleSelectHotspot, handleSelectPlace, savedHotspotsSet]
+  );
+
+  const keyExtractor = useCallback((item: ListRow) => `${item.kind}:${item.id}`, []);
+
+  const showEmptyState = isZoomedOut || isTargetRichLoading || isLocationLoading || rows.length === 0;
 
   const listEmptyComponent = (
     <View style={tw`flex-1 items-center justify-center py-12`}>
-      {isLoadingLocation && permissionStatus === "granted" ? (
+      {isZoomedOut ? (
+        <Text style={tw`text-gray-600 text-base`}>Zoom in to list hotspots</Text>
+      ) : isTargetRichLoading ? (
+        <>
+          <ActivityIndicator size="large" color={tw.color("blue-500")} />
+          <Text style={tw`text-gray-600 text-base mt-3`}>Filtering hotspots...</Text>
+        </>
+      ) : isLocationLoading ? (
         <>
           <ActivityIndicator size="large" color={tw.color("blue-500")} />
           <Text style={tw`text-gray-600 text-base mt-3`}>Getting current location...</Text>
         </>
+      ) : activeFilterCount > 0 ? (
+        <Text style={tw`text-gray-600 text-base`}>No hotspots match your filters</Text>
       ) : (
-        <Text style={tw`text-gray-600 text-base`}>No hotspots found</Text>
+        <Text style={tw`text-gray-600 text-base`}>No hotspots in view</Text>
       )}
     </View>
   );
 
-  const headerText = hasLocationAccess ? "Nearby Hotspots" : "Hotspots";
-
-  const keyExtractor = useCallback((item: Hotspot & { distance?: number }) => item.id, []);
+  let headerTitle: string;
+  if (isZoomedOut || snapshotBounds === null || isTargetRichLoading || isLocationLoading) {
+    headerTitle = "Locations";
+  } else {
+    headerTitle = `${matchingCount} ${matchingCount === 1 ? "location" : "locations"}`;
+  }
 
   const headerContent = (dismiss: () => Promise<void>) => {
     dismissRef.current = dismiss;
 
     return (
-      <View style={tw`pr-5 pl-6`}>
+      <View style={tw`pr-5 pl-6 pb-3`}>
         <View style={tw`flex-row items-center justify-between`}>
           <View style={tw`flex-1`}>
-            <Text style={tw`text-gray-900 text-xl font-bold`}>{headerText}</Text>
+            <Text style={tw`text-gray-900 text-xl font-bold`}>{headerTitle}</Text>
           </View>
           <IconButtonGroup>
             <View>
-              <IconButton icon="filter-outline" onPress={() => setIsFilterPanelOpen((open) => !open)} />
+              <IconButton
+                icon={<FilterSlidersIcon size={24} color={tw.color("gray-600")} />}
+                onPress={() => setIsFilterSheetOpen(true)}
+              />
               {activeFilterCount > 0 && (
                 <View
                   style={tw`absolute -top-0.5 -left-0.5 min-w-4 h-4 bg-blue-500 rounded-full items-center justify-center px-1`}
@@ -161,16 +251,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
             <IconButton icon="close" onPress={dismiss} />
           </IconButtonGroup>
         </View>
-
-        <View style={tw`gap-3 py-3`}>
-          {isFilterPanelOpen && (
-            <View style={tw`flex-row items-center justify-between py-1`}>
-              <Text style={tw`text-base font-medium text-gray-900`}>Show saved only</Text>
-              <Switch value={showSavedOnly} onValueChange={setShowSavedOnly} />
-            </View>
-          )}
-          <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search" />
-        </View>
       </View>
     );
   };
@@ -180,27 +260,26 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot }: Hotspo
       <BaseBottomSheet
         isOpen={isOpen}
         onClose={onClose}
-        detents={[1]}
+        detents={[0.92]}
         initialIndex={0}
         headerContent={headerContent}
         scrollable
         dimmed
       >
         <FlashList
-          ref={listRef}
-          data={displayedHotspots}
-          renderItem={renderHotspotItem}
+          data={showEmptyState ? [] : rows}
+          renderItem={renderItem}
           keyExtractor={keyExtractor}
           style={tw`flex-1`}
           contentContainerStyle={
-            displayedHotspots.length === 0 ? tw`flex-1` : { paddingBottom: Math.max(insets.bottom, 16) }
+            (showEmptyState ? 0 : rows.length) === 0 ? tw`flex-1` : { paddingBottom: Math.max(insets.bottom, 16) }
           }
           showsVerticalScrollIndicator
           ListEmptyComponent={listEmptyComponent}
-          onScroll={onScroll}
           keyboardShouldPersistTaps="handled"
         />
       </BaseBottomSheet>
+      <FilterSheet isOpen={isFilterSheetOpen} onClose={() => setIsFilterSheetOpen(false)} />
     </>
   );
 }

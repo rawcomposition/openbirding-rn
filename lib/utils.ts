@@ -155,6 +155,30 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
   return R * c;
 }
 
+export function formatDistance(distanceKm: number, useMiles: boolean): string {
+  if (useMiles) {
+    const distanceMiles = distanceKm * 0.621371;
+    const rounded = Math.round(distanceMiles);
+    if (rounded >= 10) {
+      return `${rounded} mi`;
+    }
+    return `${distanceMiles.toFixed(1)} mi`;
+  }
+  const rounded = Math.round(distanceKm);
+  if (rounded >= 10) {
+    return `${rounded} km`;
+  }
+  return `${distanceKm.toFixed(1)} km`;
+}
+
+// Whether a point falls inside a viewport bbox. Mirrors the SQL date-line logic
+// in getHotspotsWithinBounds (west > east means the box crosses the date line).
+export function isWithinBounds(lat: number, lng: number, bounds: Bbox): boolean {
+  if (lat < bounds.south || lat > bounds.north) return false;
+  const crossesDateLine = bounds.west > bounds.east;
+  return crossesDateLine ? lng >= bounds.west || lng <= bounds.east : lng >= bounds.west && lng <= bounds.east;
+}
+
 export function getBoundingBoxFromLocation(lat: number, lng: number, radiusKm: number): Bbox {
   const latDelta = radiusKm / 111;
   const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));

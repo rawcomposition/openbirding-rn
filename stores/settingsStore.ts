@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLocales } from "expo-localization";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -10,6 +11,15 @@ export type LifeListEntry = {
   isManual?: boolean;
 };
 
+export type DistanceUnits = "metric" | "imperial";
+
+// Default distance units from the device's region. measurementSystem is "us" | "uk" | "metric" | null;
+// both the US and UK use miles for road distances, everything else is metric.
+function getDeviceDistanceUnits(): DistanceUnits {
+  const system = getLocales()[0]?.measurementSystem;
+  return system === "us" || system === "uk" ? "imperial" : "metric";
+}
+
 type SettingsState = {
   version: number;
   directionsProvider: string | null;
@@ -18,6 +28,7 @@ type SettingsState = {
   disableSunTimes: boolean;
   showAllSpecies: boolean;
   targetMonths: number[];
+  distanceUnits: DistanceUnits;
 };
 
 type SettingsActions = {
@@ -27,6 +38,7 @@ type SettingsActions = {
   setDisableSunTimes: (value: boolean) => void;
   setShowAllSpecies: (value: boolean) => void;
   setTargetMonths: (months: number[]) => void;
+  setDistanceUnits: (units: DistanceUnits) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -46,6 +58,17 @@ const migrations: Migration[] = [
       if (legacyProvider) {
         await AsyncStorage.removeItem("default_map_provider");
         return { ...state, directionsProvider: legacyProvider };
+      }
+      return state;
+    },
+  },
+  {
+    version: 2,
+    migrate: async (state) => {
+      // Seed distanceUnits from the device region for users upgrading from a build that
+      // predates the setting, and persist it so it no longer relies on the rehydrate-merge default.
+      if (state.distanceUnits == null) {
+        return { ...state, distanceUnits: getDeviceDistanceUnits() };
       }
       return state;
     },
@@ -77,12 +100,16 @@ export const useSettingsStore = create<SettingsStore>()(
       disableSunTimes: false,
       showAllSpecies: false,
       targetMonths: [],
+      // Seeded from the device region; persisted values from earlier installs fall back to this default
+      // via the shallow rehydrate merge, so existing users also pick up their locale's units.
+      distanceUnits: getDeviceDistanceUnits(),
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
       setDisableSunTimes: (value) => set({ disableSunTimes: value }),
       setShowAllSpecies: (value) => set({ showAllSpecies: value }),
       setTargetMonths: (months) => set({ targetMonths: months }),
+      setDistanceUnits: (units) => set({ distanceUnits: units }),
     }),
     {
       name: "settings",
