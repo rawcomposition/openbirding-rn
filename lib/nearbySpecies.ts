@@ -18,24 +18,24 @@ export type RadiusOption = { km: number; label: string };
 // the actual search radius differs slightly between systems.
 export const RADIUS_OPTIONS: Record<DistanceUnits, RadiusOption[]> = {
   imperial: [
-    { km: 2 * KM_PER_MILE, label: "2 mi" },
     { km: 5 * KM_PER_MILE, label: "5 mi" },
-    { km: 7.5 * KM_PER_MILE, label: "7.5 mi" },
     { km: 10 * KM_PER_MILE, label: "10 mi" },
     { km: 15 * KM_PER_MILE, label: "15 mi" },
     { km: 25 * KM_PER_MILE, label: "25 mi" },
+    { km: 50 * KM_PER_MILE, label: "50 mi" },
+    { km: 100 * KM_PER_MILE, label: "100 mi" },
   ],
   metric: [
-    { km: 3, label: "3 km" },
     { km: 8, label: "8 km" },
-    { km: 12, label: "12 km" },
     { km: 16, label: "16 km" },
     { km: 25, label: "25 km" },
     { km: 40, label: "40 km" },
+    { km: 80, label: "80 km" },
+    { km: 160, label: "160 km" },
   ],
 };
 
-export const DEFAULT_RADIUS_INDEX = 2;
+export const DEFAULT_RADIUS_INDEX = 1;
 
 export function getRadiusOption(units: DistanceUnits, index: number): RadiusOption {
   const options = RADIUS_OPTIONS[units];

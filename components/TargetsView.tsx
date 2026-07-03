@@ -18,6 +18,7 @@ import { FloatingMenuSection } from "./FloatingMenu";
 import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import MonthlyBarChart from "./MonthlyBarChart";
 import MonthStrip from "./MonthStrip";
+import { TargetRowsSkeleton } from "./Skeleton";
 import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
@@ -29,8 +30,8 @@ type TargetsViewProps = {
   lng: number;
   /** Changing this value resets the "view all" local UI state. */
   resetKey?: string;
-  /** Full-screen usage (not inside a bottom sheet) should always show the per-row menus. */
-  rowMenusAlwaysVisible?: boolean;
+  /** Hides the per-row "..." menus entirely (e.g. Nearby Species, where rows open a detail page). */
+  hideRowMenus?: boolean;
   /** Controlled "About This Data" sheet, opened from the caller's menu (hotspot kebab / nav header button). */
   aboutDataOpen: boolean;
   onAboutDataOpenChange: (open: boolean) => void;
@@ -47,6 +48,8 @@ type TargetsViewProps = {
   displayMode?: TargetsDisplayMode;
   /** Makes rows tappable (e.g. to open the species detail page). */
   onSpeciesPress?: (speciesCode: string) => void;
+  /** Filters rows by common name (case-insensitive substring match). */
+  searchQuery?: string;
 };
 
 export default function TargetsView({
@@ -55,7 +58,7 @@ export default function TargetsView({
   lat,
   lng,
   resetKey,
-  rowMenusAlwaysVisible = false,
+  hideRowMenus = false,
   aboutDataOpen,
   onAboutDataOpenChange,
   pinnedTargets = [],
@@ -65,6 +68,7 @@ export default function TargetsView({
   minPercentage = 1,
   displayMode = "percent",
   onSpeciesPress,
+  searchQuery,
 }: TargetsViewProps) {
   const [showAll, setShowAll] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -78,7 +82,7 @@ export default function TargetsView({
   const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const pinningEnabled = !!onPinToggle;
-  const rowMenusVisible = rowMenusAlwaysVisible || isBottomSheetExpanded;
+  const rowMenusVisible = !hideRowMenus && isBottomSheetExpanded;
   const router = useRouter();
 
   useEffect(() => {
@@ -100,6 +104,8 @@ export default function TargetsView({
     setSelectedMonths([]);
   };
 
+  const query = searchQuery?.trim().toLowerCase() ?? "";
+
   const filteredTargets = (() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
@@ -107,6 +113,7 @@ export default function TargetsView({
     const pinnedSet = new Set(pinnedTargets);
     const filtered = data.targets.filter((t) => {
       if (t.percentage < minPercentage) return false;
+      if (query && !(taxonomyMap.get(t.speciesCode) ?? "").toLowerCase().includes(query)) return false;
       if (showAllSpecies) return true;
       if (exclusionCodes?.has(t.speciesCode)) return true;
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
@@ -120,7 +127,22 @@ export default function TargetsView({
     });
   })();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <View>
+        {!hasNoLifeList && (
+          <View style={tw`mt-3`}>
+            <MonthStrip
+              selectedMonths={selectedMonths}
+              onToggleMonth={handleToggleMonth}
+              onSelectAllYear={handleSelectAllYear}
+            />
+          </View>
+        )}
+        <TargetRowsSkeleton style={tw`mt-3`} />
+      </View>
+    );
+  }
 
   const pinnedSet = new Set(pinnedTargets);
   const pinnedFilteredTargets = filteredTargets.filter((t) => pinnedSet.has(t.speciesCode));
@@ -191,6 +213,15 @@ export default function TargetsView({
         <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
           <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
           <Text style={tw`text-sm text-gray-600 flex-1`}>{message}</Text>
+        </View>
+      );
+    }
+
+    if (query && filteredTargets.length === 0) {
+      return (
+        <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
+          <Ionicons name="search" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
+          <Text style={tw`text-sm text-gray-600 flex-1`}>No species match your search.</Text>
         </View>
       );
     }

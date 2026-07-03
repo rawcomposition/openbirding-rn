@@ -1,5 +1,7 @@
+import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
 import HotspotDialog from "@/components/HotspotDialog";
 import MonthlyBarChart from "@/components/MonthlyBarChart";
+import { ChartCardSkeleton, HotspotRowsSkeleton } from "@/components/Skeleton";
 import { useLocation } from "@/hooks/useLocation";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
 import { getBestHotspotsForSpecies, getNearbySpeciesData, getRadiusOption, SpeciesHotspot } from "@/lib/nearbySpecies";
@@ -13,8 +15,9 @@ import { useQuery } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 import Toast from "react-native-toast-message";
 
 const MAX_HOTSPOTS = 25;
@@ -25,6 +28,14 @@ const MAX_HOTSPOTS = 25;
 const REASONABLE_DISTANCE_KM = { imperial: 1609.34, metric: 1000 } as const;
 
 export default function SpeciesDetailPage() {
+  return (
+    <FloatingMenuProvider>
+      <SpeciesDetailContent />
+    </FloatingMenuProvider>
+  );
+}
+
+function SpeciesDetailContent() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams<{ code: string; lat: string; lng: string }>();
@@ -43,15 +54,14 @@ export default function SpeciesDetailPage() {
   const [hotspotId, setHotspotId] = useState<string | null>(null);
   const { location: userLocation } = useLocation();
   const { data: taxonomy } = useTaxonomy();
+  const { openMenu } = useFloatingMenu();
+  const menuAnchorRef = useRef<View>(null!);
   const taxon = taxonomy?.find((entry) => entry.code === code);
   const image = getSpeciesImage(code, 480);
-
-  useEffect(() => {
-    navigation.setOptions({ title: taxon?.name ?? "" });
-  }, [navigation, taxon?.name]);
+  const speciesName = taxon?.name ?? code;
 
   // Same query key as the Nearby Species list, so this is usually an instant cache hit.
-  const { data: nearbyData } = useQuery({
+  const { data: nearbyData, isLoading: isLoadingNearby } = useQuery({
     queryKey: ["nearbySpecies", lat, lng, radius.km, selectedMonths],
     queryFn: () => getNearbySpeciesData(lat, lng, radius.km, selectedMonths.length > 0 ? selectedMonths : undefined),
     enabled: Number.isFinite(lat) && Number.isFinite(lng),
@@ -84,17 +94,85 @@ export default function SpeciesDetailPage() {
       .slice(0, MAX_HOTSPOTS);
   }, [hotspots, sort, distanceOrigin.lat, distanceOrigin.lng]);
 
-  const openMerlin = () => {
+  const openMerlin = useCallback(() => {
     Linking.openURL(`merlinbirdid://species/${code}`).catch(() => {
       Alert.alert("Cannot Open Merlin", "Make sure the Merlin Bird ID app is installed.");
     });
-  };
+  }, [code]);
 
-  const openEbirdMap = () => {
+  const openEbirdMap = useCallback(() => {
     const delta = 0.05;
     const url = `https://ebird.org/map/${code}?gp=true&yr=all&env.minX=${(lng - delta).toFixed(3)}&env.minY=${(lat - delta).toFixed(3)}&env.maxX=${(lng + delta).toFixed(3)}&env.maxY=${(lat + delta).toFixed(3)}`;
     Linking.openURL(url);
-  };
+  }, [code, lat, lng]);
+
+  // Removing a species from the life list is deliberately tucked away in the header
+  // menu, behind a confirmation — it should be hard to do by accident.
+  const confirmRemoveFromLifeList = useCallback(() => {
+    Alert.alert("Remove from Life List", `Remove ${speciesName} from your life list?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          const { lifelist, setLifelist } = useSettingsStore.getState();
+          setLifelist((lifelist || []).filter((e) => e.code !== code));
+        },
+      },
+    ]);
+  }, [code, speciesName]);
+
+  const openHeaderMenu = useCallback(() => {
+    const { lifelist } = useSettingsStore.getState();
+    const isOnLifeList = lifelist?.some((e) => e.code === code) ?? false;
+    openMenu(
+      [
+        {
+          items: [
+            {
+              label: "View in Merlin",
+              icon: <Ionicons name="open-outline" size={18} color={tw.color("gray-700")} />,
+              onPress: openMerlin,
+            },
+            {
+              label: "View eBird Map",
+              icon: <Ionicons name="map-outline" size={18} color={tw.color("gray-700")} />,
+              onPress: openEbirdMap,
+            },
+          ],
+        },
+        ...(isOnLifeList
+          ? [
+              {
+                items: [
+                  {
+                    label: "Remove from Life List",
+                    icon: <Ionicons name="remove-circle-outline" size={18} color={tw.color("red-600")} />,
+                    destructive: true,
+                    onPress: confirmRemoveFromLifeList,
+                  },
+                ],
+              },
+            ]
+          : []),
+      ],
+      menuAnchorRef,
+      { placementOverride: PopoverPlacement.BOTTOM }
+    );
+  }, [openMenu, code, openMerlin, openEbirdMap, confirmRemoveFromLifeList]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: taxon?.name ?? "",
+      headerRight: () => (
+        <TouchableOpacity onPress={openHeaderMenu} activeOpacity={0.7} style={tw`px-2 py-1`}>
+          <View ref={menuAnchorRef}>
+            <Ionicons name="ellipsis-horizontal" size={22} color={tw.color("gray-800")} />
+          </View>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, taxon?.name, openHeaderMenu]);
 
   // Hand the hotspot off to the map screen and unwind the stack down to it. The dialog has
   // already dismissed its sheet by the time this runs; navigate first so the map screen is
@@ -109,26 +187,23 @@ export default function SpeciesDetailPage() {
     <View style={tw`flex-1 bg-gray-50`}>
       <ScrollView contentContainerStyle={tw`px-4 pt-2 pb-12`} showsVerticalScrollIndicator={false}>
         {image && (
-          <View>
-            <Image source={{ uri: image.url }} style={[tw`w-full rounded-2xl bg-gray-200`, { aspectRatio: 4 / 3 }]} />
-            <Text style={tw`text-xs text-gray-400 mt-1.5 text-right`}>
-              Photo © {image.by}
-              {image.license ? ` · ${image.license}` : ""}
-            </Text>
+          <View style={tw`rounded-2xl bg-gray-200 overflow-hidden`}>
+            <Image source={{ uri: image.url }} style={[tw`w-full`, { aspectRatio: 4 / 3 }]} />
+            <View style={tw`absolute bottom-0 right-0 bg-black/45 rounded-tl-lg px-2 py-1`}>
+              <Text style={tw`text-[10px] text-white/95`}>
+                © {image.by}
+                {image.license ? ` · ${image.license}` : ""}
+              </Text>
+            </View>
           </View>
         )}
 
-        <View style={tw`mt-2`}>
+        <View style={tw`mt-3`}>
           <Text style={tw`text-2xl font-bold text-gray-900`}>{taxon?.name ?? code}</Text>
           {taxon?.sciName ? <Text style={tw`text-base italic text-gray-500 mt-0.5`}>{taxon.sciName}</Text> : null}
         </View>
 
-        <LifeListStatus code={code} speciesName={taxon?.name ?? code} />
-
-        <View style={tw`flex-row mt-4 gap-2`}>
-          <ExternalLinkButton icon="sparkles-outline" label="Merlin" onPress={openMerlin} />
-          <ExternalLinkButton icon="map-outline" label="eBird Map" onPress={openEbirdMap} />
-        </View>
+        <LifeListStatus code={code} speciesName={speciesName} />
 
         <View style={tw`mt-6`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Seasonality</Text>
@@ -139,6 +214,8 @@ export default function SpeciesDetailPage() {
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl px-4 pt-3 pb-4 mt-3`}>
               <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} />
             </View>
+          ) : isLoadingNearby ? (
+            <ChartCardSkeleton style={tw`mt-3`} />
           ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
               <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
@@ -169,7 +246,9 @@ export default function SpeciesDetailPage() {
                 </View>
               ))}
             </View>
-          ) : isLoadingHotspots ? null : (
+          ) : isLoadingHotspots ? (
+            <HotspotRowsSkeleton style={tw`mt-3`} />
+          ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
               <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
               <Text style={tw`text-sm text-gray-600 flex-1`}>
@@ -179,6 +258,8 @@ export default function SpeciesDetailPage() {
           )}
         </View>
       </ScrollView>
+
+      <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />
 
       {/* Presented on top of this screen, so dismissing it returns right here. */}
       <HotspotDialog
@@ -213,10 +294,6 @@ function LifeListStatus({ code, speciesName }: { code: string; speciesName: stri
     Toast.show({ type: "success", text1: `Added ${speciesName} to life list` });
   };
 
-  const handleRemove = () => {
-    setLifelist((lifelist || []).filter((e) => e.code !== code));
-  };
-
   const handleRemoveExclusion = () => {
     setLifelistExclusions((lifelistExclusions || []).filter((c) => c !== code));
   };
@@ -233,24 +310,19 @@ function LifeListStatus({ code, speciesName }: { code: string; speciesName: stri
     );
   }
 
+  // Read-only by design: removal lives in the header menu behind a confirmation.
   if (entry) {
     const seenLabel = entry.isManual
       ? "On your life list"
       : `Seen ${dayjs(entry.date).isValid() ? dayjs(entry.date).format("MMM D, YYYY") : entry.date}`;
+    const location = !entry.isManual && entry.location && entry.location !== "N/A" ? entry.location : null;
     return (
-      <View style={tw`mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex-row items-center`}>
-        <Ionicons name="checkmark-circle" size={20} color={tw.color("emerald-600")} style={tw`mr-2.5`} />
-        <View style={tw`flex-1`}>
-          <Text style={tw`text-sm font-medium text-emerald-800`}>{seenLabel}</Text>
-          {!entry.isManual && entry.location && entry.location !== "N/A" ? (
-            <Text style={tw`text-xs text-emerald-700 mt-0.5`} numberOfLines={1}>
-              {entry.location}
-            </Text>
-          ) : null}
-        </View>
-        <TouchableOpacity onPress={handleRemove} activeOpacity={0.7} hitSlop={8}>
-          <Text style={tw`text-sm font-semibold text-emerald-700 ml-2`}>Remove</Text>
-        </TouchableOpacity>
+      <View style={tw`mt-2.5 flex-row items-center`}>
+        <Ionicons name="checkmark-circle" size={15} color={tw.color("emerald-600")} style={tw`mr-1.5`} />
+        <Text style={tw`text-sm text-gray-500 flex-1`} numberOfLines={1}>
+          {seenLabel}
+          {location ? ` · ${location}` : ""}
+        </Text>
       </View>
     );
   }
@@ -263,27 +335,6 @@ function LifeListStatus({ code, speciesName }: { code: string; speciesName: stri
     >
       <Ionicons name="add-circle-outline" size={19} color="white" style={tw`mr-2`} />
       <Text style={tw`text-white text-base font-semibold`}>Add to Life List</Text>
-    </TouchableOpacity>
-  );
-}
-
-function ExternalLinkButton({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={tw`flex-1 flex-row items-center justify-center bg-gray-100 rounded-full h-11`}
-    >
-      <Ionicons name={icon} size={17} color={tw.color("gray-700")} style={tw`mr-2`} />
-      <Text style={tw`text-gray-700 text-sm font-medium`}>{label}</Text>
     </TouchableOpacity>
   );
 }
