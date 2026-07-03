@@ -1,8 +1,7 @@
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
-import SearchInput from "@/components/SearchInput";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
-import { getNearbySpeciesData, getRadiusOption, RADIUS_OPTIONS } from "@/lib/nearbySpecies";
+import { aggregateNearbySpecies, getRadiusOption, getNearbySpeciesRaw, RADIUS_OPTIONS } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
 import { calculateDistance, parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -10,12 +9,13 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
 // Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
 const NEARBY_MIN_PERCENTAGE = 0.1;
+const NEARBY_INITIAL_LIMIT = 100;
 
 export default function NearbySpeciesPage() {
   return (
@@ -57,15 +57,21 @@ function NearbySpeciesContent() {
   const center = atUserLocation ? userLocation : mapCenter;
   const canRecenter = !!userLocation && !atUserLocation;
 
-  const { data, isLoading, isFetching, isPlaceholderData } = useQuery({
-    queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km, selectedMonths],
-    queryFn: () =>
-      getNearbySpeciesData(center!.lat, center!.lng, radius.km, selectedMonths.length > 0 ? selectedMonths : undefined),
+  // The query fetches/merges raw counts once per (center, radius); month filtering is a
+  // synchronous aggregation below, so toggling months never refetches or freezes.
+  const { data: rawData, isLoading, isFetching, isPlaceholderData } = useQuery({
+    queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km],
+    queryFn: () => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km),
     enabled: !!center && !hasNoLifeList,
     placeholderData: (prev) => prev,
   });
-  // Placeholder data is the previous radius/months result; show the skeleton instead of stale rows.
-  const showSkeleton = isLoading || (isFetching && isPlaceholderData);
+  const data = useMemo(
+    () => (rawData ? aggregateNearbySpecies(rawData, selectedMonths.length > 0 ? selectedMonths : undefined) : undefined),
+    [rawData, selectedMonths]
+  );
+  // Placeholder data is the previous radius/location's result; keep it visible but dimmed
+  // under a spinner rather than swapping to a skeleton.
+  const isUpdating = isFetching && isPlaceholderData;
 
   const showMenu = !!data && data.targets.length > 0 && !hasNoLifeList;
   const hasVersion = !!(data?.version && parsePackVersion(data.version));
@@ -108,6 +114,20 @@ function NearbySpeciesContent() {
   }, [openMenu, distanceUnits, nearbyRadiusIndex, setNearbyRadiusIndex]);
 
   const handleRecenter = useCallback(() => setUseMyLocation(true), []);
+
+  // Native header search bar, stacked under the title. hideWhenScrolling is the intended
+  // native collapse behavior; it currently doesn't engage on iOS 26 (react-native-screens
+  // issue), but it's harmless and will start working if that gets fixed upstream.
+  useEffect(() => {
+    navigation.setOptions({
+      headerSearchBarOptions: {
+        placeholder: "Search species",
+        placement: "stacked",
+        hideWhenScrolling: true,
+        onChangeText: (event: { nativeEvent: { text: string } }) => setSearchQuery(event.nativeEvent.text),
+      },
+    });
+  }, [navigation]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -159,10 +179,11 @@ function NearbySpeciesContent() {
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       <ScrollView
-        contentContainerStyle={tw`px-4 pt-2 pb-10`}
+        contentContainerStyle={tw`px-4 pb-10`}
         showsVerticalScrollIndicator={false}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
+        contentInsetAdjustmentBehavior="automatic"
       >
         {!center ? (
           <View style={tw`mt-4 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
@@ -170,33 +191,31 @@ function NearbySpeciesContent() {
             <Text style={tw`text-sm text-gray-600 flex-1`}>Pan the map to a location first, then reopen this screen.</Text>
           </View>
         ) : (
-          <>
-            {!hasNoLifeList && (
-              <View style={tw`mt-1`}>
-                <SearchInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search species..." />
-              </View>
-            )}
-            <TargetsView
-              data={data}
-              isLoading={showSkeleton}
-              lat={center.lat}
-              lng={center.lng}
-              hideRowMenus
-              aboutDataOpen={aboutDataOpen}
-              onAboutDataOpenChange={setAboutDataOpen}
-              caption={caption}
-              disableViewAllLimit
-              minPercentage={NEARBY_MIN_PERCENTAGE}
-              displayMode={displayMode}
-              searchQuery={searchQuery}
-              onSpeciesPress={(speciesCode) =>
-                router.push({
-                  pathname: "/species/[code]",
-                  params: { code: speciesCode, lat: String(center.lat), lng: String(center.lng) },
-                })
-              }
-            />
-          </>
+          // Negative margin trims the slack the collapsed header search bar leaves above
+          // the month strip.
+          <View style={tw`-mt-2`}>
+          <TargetsView
+            data={data}
+            isLoading={isLoading}
+            isUpdating={isUpdating}
+            lat={center.lat}
+            lng={center.lng}
+            hideRowMenus
+            aboutDataOpen={aboutDataOpen}
+            onAboutDataOpenChange={setAboutDataOpen}
+            caption={caption}
+            initialLimit={NEARBY_INITIAL_LIMIT}
+            minPercentage={NEARBY_MIN_PERCENTAGE}
+            displayMode={displayMode}
+            searchQuery={searchQuery}
+            onSpeciesPress={(speciesCode) =>
+              router.push({
+                pathname: "/species/[code]",
+                params: { code: speciesCode, lat: String(center.lat), lng: String(center.lng) },
+              })
+            }
+          />
+          </View>
         )}
       </ScrollView>
       <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />

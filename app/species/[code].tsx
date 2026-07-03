@@ -4,7 +4,13 @@ import MonthlyBarChart from "@/components/MonthlyBarChart";
 import { ChartCardSkeleton, HotspotRowsSkeleton } from "@/components/Skeleton";
 import { useLocation } from "@/hooks/useLocation";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
-import { getBestHotspotsForSpecies, getNearbySpeciesData, getRadiusOption, SpeciesHotspot } from "@/lib/nearbySpecies";
+import {
+  aggregateNearbySpecies,
+  getBestHotspotsForSpecies,
+  getNearbySpeciesRaw,
+  getRadiusOption,
+  SpeciesHotspot,
+} from "@/lib/nearbySpecies";
 import { getSpeciesImage } from "@/lib/species";
 import tw from "@/lib/tw";
 import { calculateDistance, formatDistance, getMarkerColor } from "@/lib/utils";
@@ -61,13 +67,17 @@ function SpeciesDetailContent() {
   const speciesName = taxon?.name ?? code;
 
   // Same query key as the Nearby Species list, so this is usually an instant cache hit.
-  const { data: nearbyData, isLoading: isLoadingNearby } = useQuery({
-    queryKey: ["nearbySpecies", lat, lng, radius.km, selectedMonths],
-    queryFn: () => getNearbySpeciesData(lat, lng, radius.km, selectedMonths.length > 0 ? selectedMonths : undefined),
+  const { data: nearbyRaw, isLoading: isLoadingNearby } = useQuery({
+    queryKey: ["nearbySpecies", lat, lng, radius.km],
+    queryFn: () => getNearbySpeciesRaw(lat, lng, radius.km),
     enabled: Number.isFinite(lat) && Number.isFinite(lng),
     placeholderData: (prev) => prev,
   });
-  const target = nearbyData?.targets.find((t) => t.speciesCode === code);
+  const target = useMemo(() => {
+    if (!nearbyRaw) return undefined;
+    const aggregated = aggregateNearbySpecies(nearbyRaw, selectedMonths.length > 0 ? selectedMonths : undefined);
+    return aggregated.targets.find((t) => t.speciesCode === code);
+  }, [nearbyRaw, selectedMonths, code]);
 
   const { data: hotspots, isLoading: isLoadingHotspots } = useQuery({
     queryKey: ["speciesHotspots", code, lat, lng, radius.km, selectedMonths],
@@ -381,7 +391,7 @@ function SpeciesHotspotRow({
         <View style={tw`flex-row items-center mt-1`}>
           <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.speciesCount) }]} />
           <Text style={tw`text-sm text-gray-600`}>
-            <Text style={tw`font-semibold text-emerald-700`}>
+            <Text style={tw`font-semibold text-gray-900`}>
               {hotspot.percentage < 1 ? hotspot.percentage.toFixed(1) : hotspot.percentage.toFixed(0)}%
             </Text>
             {`  ·  ${hotspot.samples.toLocaleString()} checklist${hotspot.samples === 1 ? "" : "s"}`}

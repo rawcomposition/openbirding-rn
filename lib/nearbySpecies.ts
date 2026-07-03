@@ -5,6 +5,7 @@ import {
   getTotalSamplesForMonths,
   mergeRawTargetData,
   parseHotspotTargetData,
+  RawHotspotTargetData,
 } from "./hotspotTargets";
 import type { DistanceUnits } from "@/stores/settingsStore";
 import { calculateDistance, getBoundingBoxFromLocation } from "./utils";
@@ -42,12 +43,16 @@ export function getRadiusOption(units: DistanceUnits, index: number): RadiusOpti
   return options[Math.min(Math.max(index, 0), options.length - 1)];
 }
 
-export async function getNearbySpeciesData(
-  lat: number,
-  lng: number,
-  radiusKm: number,
-  months?: number[]
-): Promise<HotspotTargetsResult> {
+export type NearbySpeciesRaw = {
+  /** Merged month-by-month counts for every grid cell in range; null when no cells matched. */
+  data: RawHotspotTargetData | null;
+  version: string | null;
+};
+
+// Fetching and JSON-parsing hundreds of grid cells is the expensive part, so it runs once
+// per (center, radius) and is cached; month filtering happens in aggregateNearbySpecies so
+// toggling months never re-parses.
+export async function getNearbySpeciesRaw(lat: number, lng: number, radiusKm: number): Promise<NearbySpeciesRaw> {
   const bounds = getBoundingBoxFromLocation(lat, lng, radiusKm);
   const rows = await getGridCellsWithinBounds(bounds);
 
@@ -58,20 +63,35 @@ export async function getNearbySpeciesData(
   console.log(`[nearbySpecies] ${withinRadius.length} grid cells within ${radiusKm.toFixed(2)} km (${rows.length} in bbox)`);
 
   if (withinRadius.length === 0) {
-    return { samples: 0, targets: [], version: null };
+    return { data: null, version: null };
   }
 
   const version = withinRadius.find((row) => row.version)?.version ?? null;
-  const merged = mergeRawTargetData(withinRadius.map((row) => parseHotspotTargetData(row.data)));
-  const monthIndices = getMonthIndices(merged, months);
-  const totalSamples = getTotalSamplesForMonths(merged, monthIndices);
 
-  if (totalSamples === 0) {
-    return { samples: 0, targets: [], version };
+  // Yield to the event loop periodically so large radii don't freeze the UI mid-parse.
+  const parsed: RawHotspotTargetData[] = [];
+  for (let i = 0; i < withinRadius.length; i++) {
+    parsed.push(parseHotspotTargetData(withinRadius[i].data));
+    if (i % 100 === 99) await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
-  const targets = aggregateHotspotTargets(merged, monthIndices, totalSamples);
-  return { samples: totalSamples, targets, version };
+  return { data: mergeRawTargetData(parsed), version };
+}
+
+export function aggregateNearbySpecies(raw: NearbySpeciesRaw, months?: number[]): HotspotTargetsResult {
+  if (!raw.data) {
+    return { samples: 0, targets: [], version: raw.version };
+  }
+
+  const monthIndices = getMonthIndices(raw.data, months);
+  const totalSamples = getTotalSamplesForMonths(raw.data, monthIndices);
+
+  if (totalSamples === 0) {
+    return { samples: 0, targets: [], version: raw.version };
+  }
+
+  const targets = aggregateHotspotTargets(raw.data, monthIndices, totalSamples);
+  return { samples: totalSamples, targets, version: raw.version };
 }
 
 export type SpeciesHotspot = {

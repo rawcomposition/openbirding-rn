@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
@@ -40,8 +40,10 @@ type TargetsViewProps = {
   onPinToggle?: (speciesCode: string, isPinned: boolean) => void | Promise<void>;
   /** Optional metadata caption rendered under the month strip (e.g. sample size / data scope). */
   caption?: React.ReactNode;
-  /** Show every target at once, hiding the "View all"/"View less" toggle (e.g. Nearby Species). */
-  disableViewAllLimit?: boolean;
+  /** How many rows to show before the "View all" toggle. */
+  initialLimit?: number;
+  /** Fresh data is loading behind currently-visible (stale) results; dims the list and shows a spinner. */
+  isUpdating?: boolean;
   /** Minimum reporting frequency (%) a species must reach to be listed. Defaults to 1. */
   minPercentage?: number;
   /** Render each row's frequency as a mini bar chart or a progress bar. Defaults to progress bar. */
@@ -64,7 +66,8 @@ export default function TargetsView({
   pinnedTargets = [],
   onPinToggle,
   caption,
-  disableViewAllLimit = false,
+  initialLimit = INITIAL_LIMIT,
+  isUpdating = false,
   minPercentage = 1,
   displayMode = "percent",
   onSpeciesPress,
@@ -147,11 +150,10 @@ export default function TargetsView({
   const pinnedSet = new Set(pinnedTargets);
   const pinnedFilteredTargets = filteredTargets.filter((t) => pinnedSet.has(t.speciesCode));
   const unpinnedFilteredTargets = filteredTargets.filter((t) => !pinnedSet.has(t.speciesCode));
-  const displayedTargets =
-    showAll || disableViewAllLimit
-      ? filteredTargets
-      : [...pinnedFilteredTargets, ...unpinnedFilteredTargets.slice(0, INITIAL_LIMIT)];
-  const hasMore = !disableViewAllLimit && unpinnedFilteredTargets.length > INITIAL_LIMIT;
+  const displayedTargets = showAll
+    ? filteredTargets
+    : [...pinnedFilteredTargets, ...unpinnedFilteredTargets.slice(0, initialLimit)];
+  const hasMore = unpinnedFilteredTargets.length > initialLimit;
 
   const hasNoTargetData = !data;
   const hasNoSpeciesData = hasNoTargetData || data.targets.length === 0;
@@ -248,6 +250,7 @@ export default function TargetsView({
         </View>
       )}
 
+      <View style={isUpdating ? tw`opacity-40` : undefined} pointerEvents={isUpdating ? "none" : "auto"}>
       {caption ? <View style={tw`mt-3`}>{caption}</View> : null}
 
       {renderEmptyState()}
@@ -350,6 +353,15 @@ export default function TargetsView({
             </TouchableOpacity>
           )}
         </>
+      )}
+      </View>
+
+      {isUpdating && (
+        <View style={tw`absolute inset-x-0 top-24 items-center`} pointerEvents="none">
+          <View style={tw`bg-white rounded-full p-2.5 shadow-md border border-gray-100`}>
+            <ActivityIndicator size="small" color={tw.color("gray-500")} />
+          </View>
+        </View>
       )}
 
       {data?.version && parsePackVersion(data.version) && (

@@ -41,15 +41,13 @@ function formatPercent(percent: number) {
   return `${percent < 1 ? percent.toFixed(1) : Math.round(percent)}%`;
 }
 
-// Subtle gray/blue bars; the current calendar month gets the one saturated color so
-// "what's around right now" pops without the whole chart shouting.
-function barColor(opts: { highlighted: boolean; isCurrentMonth: boolean; isActive?: boolean }) {
-  if (opts.isCurrentMonth) {
-    if (!opts.highlighted) return "bg-sky-300";
-    return opts.isActive ? "bg-sky-700" : "bg-sky-600";
-  }
-  if (!opts.highlighted) return opts.isActive ? "bg-gray-300" : "bg-gray-200";
-  return opts.isActive ? "bg-slate-500" : "bg-slate-400";
+// The mini list charts stay monochrome so a hundred rows don't shout; the current
+// calendar month is just a darker gray plus a bolder letter underneath.
+function miniBarColor(opts: { highlighted: boolean; isCurrentMonth: boolean; allMonths: boolean }) {
+  if (!opts.highlighted) return "bg-gray-200";
+  if (opts.isCurrentMonth) return "bg-gray-500";
+  // Selected months get a step more contrast when a filter is active.
+  return opts.allMonths ? "bg-gray-300" : "bg-gray-400";
 }
 
 type MonthlyBarChartProps = {
@@ -81,7 +79,7 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
                   style={[
                     tw.style(
                       "w-full rounded-[3px]",
-                      barColor({ highlighted: isHighlighted(month), isCurrentMonth: month === currentMonth })
+                      miniBarColor({ highlighted: isHighlighted(month), isCurrentMonth: month === currentMonth, allMonths })
                     ),
                     { height: Math.max(height, value > 0 ? 2 : 0) },
                   ]}
@@ -96,7 +94,7 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
               key={month}
               style={tw.style(
                 "flex-1 text-center text-[7px]",
-                month === currentMonth ? "text-sky-600 font-semibold" : "text-gray-400 font-normal"
+                month === currentMonth ? "text-gray-600 font-semibold" : "text-gray-400 font-normal"
               )}
             >
               {initial}
@@ -131,7 +129,10 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
               <View style={[tw`w-full justify-end`, { height: barHeight }]}>
                 <View
                   style={[
-                    tw.style("w-full rounded-md", barColor({ highlighted, isCurrentMonth, isActive })),
+                    tw.style(
+                      "w-full rounded-md",
+                      highlighted ? (isActive ? "bg-emerald-700" : "bg-emerald-600") : isActive ? "bg-gray-500" : "bg-gray-300"
+                    ),
                     { height: Math.max(height, value > 0 ? 2 : 0) },
                   ]}
                 />
@@ -139,10 +140,10 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
               <Text
                 style={tw.style(
                   "text-[10px] mt-1.5",
-                  isCurrentMonth
-                    ? "text-sky-700 font-bold"
-                    : highlighted && !allMonths
-                      ? "text-slate-700 font-bold"
+                  highlighted && !allMonths
+                    ? "text-emerald-700 font-bold"
+                    : isCurrentMonth
+                      ? "text-gray-700 font-bold"
                       : "text-gray-500 font-medium"
                 )}
               >
