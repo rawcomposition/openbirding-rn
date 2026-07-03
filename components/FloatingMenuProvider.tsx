@@ -30,6 +30,14 @@ type FloatingMenuProviderProps = {
 
 type FloatingMenuHostProps = {
   width?: number;
+  /**
+   * Popover rendering mode. Defaults to JS_MODAL (required inside a bottom sheet, where a native
+   * modal-in-modal misbehaves). Full-screen pages should pass RN_MODAL so the backdrop and shadow
+   * overlay the whole window, including the navigation header.
+   */
+  mode?: PopoverMode;
+  /** Gap between the trigger and the popover, in px. */
+  offset?: number;
 };
 
 type FloatingMenuTriggerProps = {
@@ -115,7 +123,7 @@ export function useFloatingMenu() {
   return context;
 }
 
-export function FloatingMenuHost({ width }: FloatingMenuHostProps) {
+export function FloatingMenuHost({ width, mode = PopoverMode.JS_MODAL, offset }: FloatingMenuHostProps) {
   const { menu, closeMenu } = useFloatingMenu();
 
   return (
@@ -124,8 +132,9 @@ export function FloatingMenuHost({ width }: FloatingMenuHostProps) {
       onClose={closeMenu}
       from={menu?.from}
       sections={menu?.sections ?? []}
-      mode={PopoverMode.JS_MODAL}
+      mode={mode}
       placement={menu?.placement}
+      offset={offset}
       width={width}
     />
   );

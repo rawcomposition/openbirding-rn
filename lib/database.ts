@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { BirdPlanTripData, SavedPlace, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
+import { BirdPlanTripData, SavedPlace, StaticPackGridCell, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
 import { aggregateHotspotTargets, getMonthIndices, getTotalSamplesForMonths, parseHotspotTargetData } from "./hotspotTargets";
 
 let db: SQLite.SQLiteDatabase | null = null;
@@ -85,6 +85,16 @@ async function createTables(): Promise<void> {
   `);
 
   await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS grid_cells (
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      data TEXT NOT NULL,
+      pack_id INTEGER,
+      FOREIGN KEY (pack_id) REFERENCES packs (id) ON DELETE CASCADE
+    );
+  `);
+
+  await db.execAsync(`
     CREATE TABLE IF NOT EXISTS pinned_targets (
       hotspot_id TEXT NOT NULL,
       code TEXT NOT NULL,
@@ -138,6 +148,16 @@ async function createIndexes(): Promise<void> {
   await db.execAsync(`
     CREATE INDEX IF NOT EXISTS idx_targets_pack_id
     ON targets (pack_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_grid_cells_pack_id
+    ON grid_cells (pack_id);
+  `);
+
+  await db.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_grid_cells_lat_lng
+    ON grid_cells (lat, lng);
   `);
 
   await db.execAsync(`
@@ -369,6 +389,7 @@ export async function uninstallPack(packId: number): Promise<void> {
   const database = db;
   await database.withTransactionAsync(async () => {
     await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
+    await database.runAsync(`DELETE FROM grid_cells WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
   });
@@ -380,7 +401,8 @@ export async function installPackWithTargets(
   version: string,
   updatedAt: string,
   hotspots: StaticPackHotspot[],
-  targets: StaticPackTarget[]
+  targets: StaticPackTarget[],
+  cells?: StaticPackGridCell[]
 ): Promise<void> {
   if (!db) throw new Error("Database not initialized");
 
@@ -398,6 +420,7 @@ export async function installPackWithTargets(
     await database.withTransactionAsync(async () => {
       // Delete existing data for this pack
       await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
+      await database.runAsync(`DELETE FROM grid_cells WHERE pack_id = ?`, [packId]);
       await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
       // Insert/update pack record
@@ -451,6 +474,26 @@ export async function installPackWithTargets(
 
         await database.runAsync(`INSERT INTO targets (id, data, pack_id) VALUES ${values}`, params);
       }
+
+      // Pre-stringify grid cell data outside the insert loop for better performance
+      if (cells && cells.length > 0) {
+        const cellsData = cells.map((cell) => ({
+          lat: cell.lat,
+          lng: cell.lng,
+          data: JSON.stringify({ samples: cell.samples, species: cell.species }),
+        }));
+
+        for (let i = 0; i < cellsData.length; i += batchSize) {
+          const batch = cellsData.slice(i, i + batchSize);
+          const values = batch.map(() => "(?, ?, ?, ?)").join(", ");
+          const params = batch.flatMap((cell) => [cell.lat, cell.lng, cell.data, packId]);
+
+          await database.runAsync(
+            `INSERT INTO grid_cells (lat, lng, data, pack_id) VALUES ${values}`,
+            params
+          );
+        }
+      }
     });
 
     // Reset PRAGMA settings to safe defaults
@@ -469,6 +512,7 @@ export async function cleanupPartialInstall(packId: number): Promise<void> {
   const database = db;
   await database.withTransactionAsync(async () => {
     await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
+    await database.runAsync(`DELETE FROM grid_cells WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
     await database.runAsync(`DELETE FROM packs WHERE id = ?`, [packId]);
   });
@@ -687,6 +731,33 @@ export async function getTargetsForHotspot(hotspotId: string, months?: number[])
   const targets = aggregateHotspotTargets(data, monthIndices, totalSamples);
 
   return { samples: totalSamples, targets, version: row.version };
+}
+
+export type GridCellRow = {
+  lat: number;
+  lng: number;
+  data: string;
+  version: string | null;
+};
+
+export async function getGridCellsWithinBounds(bounds: {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}): Promise<GridCellRow[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  // When west > east, the bounding box crosses the international date line
+  const crossesDateLine = bounds.west > bounds.east;
+  const lngCondition = crossesDateLine ? `(g.lng >= ? OR g.lng <= ?)` : `(g.lng >= ? AND g.lng <= ?)`;
+
+  return db.getAllAsync<GridCellRow>(
+    `SELECT g.lat, g.lng, g.data, p.version FROM grid_cells g
+     LEFT JOIN packs p ON g.pack_id = p.id
+     WHERE g.lat >= ? AND g.lat <= ? AND ${lngCondition}`,
+    [bounds.south, bounds.north, bounds.west, bounds.east]
+  );
 }
 
 export async function getPinnedTargets(hotspotId: string): Promise<string[]> {

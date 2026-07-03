@@ -66,7 +66,15 @@ export function useManagePack(packId: number) {
         },
       });
 
-      await installPackWithTargets(packId, pack.name, pack.v, pack.updatedAt, packData.hotspots, packData.targets);
+      await installPackWithTargets(
+        packId,
+        pack.name,
+        pack.v,
+        pack.updatedAt,
+        packData.hotspots,
+        packData.targets,
+        packData.cells
+      );
 
       downloadStore.setProgress(100);
 

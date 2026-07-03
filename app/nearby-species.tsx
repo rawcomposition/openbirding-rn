@@ -1,0 +1,145 @@
+import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
+import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
+import { useLocation } from "@/hooks/useLocation";
+import { getNearbySpeciesData, NEARBY_RADIUS } from "@/lib/nearbySpecies";
+import tw from "@/lib/tw";
+import { calculateDistance, parsePackVersion } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigation } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
+
+// Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
+const NEARBY_MIN_PERCENTAGE = 0.1;
+
+export default function NearbySpeciesPage() {
+  return (
+    <FloatingMenuProvider>
+      <NearbySpeciesContent />
+    </FloatingMenuProvider>
+  );
+}
+
+function NearbySpeciesContent() {
+  const navigation = useNavigation();
+  const { openMenu } = useFloatingMenu();
+  const menuAnchorRef = useRef<View>(null!);
+  const mapCenter = useMapStore((s) => s.mapCenter);
+  // Poll while this screen is open so the re-center button reacts to movement within ~30s.
+  const { location: userLocation } = useLocation(true, { refetchInterval: 30 * 1000 });
+  const selectedMonths = useSettingsStore((s) => s.targetMonths);
+  const lifelist = useSettingsStore((s) => s.lifelist);
+  const distanceUnits = useSettingsStore((s) => s.distanceUnits);
+  const radius = NEARBY_RADIUS[distanceUnits];
+  const hasNoLifeList = !lifelist || lifelist.length === 0;
+  const [aboutDataOpen, setAboutDataOpen] = useState(false);
+  const [useMyLocation, setUseMyLocation] = useState(false);
+
+  // Snap to the user's actual location when the map center is basically already there,
+  // so the data and caption reflect "your location" rather than an arbitrary map point.
+  const AUTO_SNAP_KM = 1;
+  const nearUser =
+    !!userLocation &&
+    !!mapCenter &&
+    calculateDistance(mapCenter.lat, mapCenter.lng, userLocation.lat, userLocation.lng) <= AUTO_SNAP_KM;
+  const atUserLocation = !!userLocation && (useMyLocation || nearUser);
+  const center = atUserLocation ? userLocation : mapCenter;
+  const canRecenter = !!userLocation && !atUserLocation;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km, selectedMonths],
+    queryFn: () =>
+      getNearbySpeciesData(center!.lat, center!.lng, radius.km, selectedMonths.length > 0 ? selectedMonths : undefined),
+    enabled: !!center && !hasNoLifeList,
+    placeholderData: (prev) => prev,
+  });
+
+  const showMenu = !!data && data.targets.length > 0 && !hasNoLifeList;
+  const hasVersion = !!(data?.version && parsePackVersion(data.version));
+
+  const openNearbyMenu = useCallback(() => {
+    const { showAllSpecies, setShowAllSpecies } = useSettingsStore.getState();
+    openMenu(
+      buildTargetsMenuSections({
+        showAllSpecies,
+        onToggleShowAll: () => setShowAllSpecies(!showAllSpecies),
+        hasVersion,
+        onOpenAbout: () => setAboutDataOpen(true),
+      }),
+      menuAnchorRef,
+      { placementOverride: PopoverPlacement.BOTTOM }
+    );
+  }, [openMenu, hasVersion]);
+
+  const handleRecenter = useCallback(() => setUseMyLocation(true), []);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight:
+        canRecenter || showMenu
+          ? () => (
+              <View style={tw`flex-row items-center`}>
+                {canRecenter ? (
+                  <TouchableOpacity onPress={handleRecenter} activeOpacity={0.7} style={tw`px-2 py-1`}>
+                    <Ionicons name="navigate-outline" size={22} color={tw.color("gray-800")} />
+                  </TouchableOpacity>
+                ) : null}
+                {showMenu ? (
+                  <TouchableOpacity onPress={openNearbyMenu} activeOpacity={0.7} style={tw`px-2 py-1`}>
+                    <View ref={menuAnchorRef}>
+                      <Ionicons name="ellipsis-horizontal" size={22} color={tw.color("gray-800")} />
+                    </View>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )
+          : undefined,
+    });
+  }, [navigation, showMenu, openNearbyMenu, canRecenter, handleRecenter]);
+
+  const locationLabel = atUserLocation ? "your location" : "map center";
+  const speciesCount = data ? data.targets.filter((t) => t.percentage >= NEARBY_MIN_PERCENTAGE).length : 0;
+  const captionText =
+    speciesCount > 0
+      ? `${speciesCount.toLocaleString()} species within ~${radius.label} of ${locationLabel}`
+      : `Reported within ~${radius.label} of ${locationLabel}`;
+
+  const caption =
+    data && data.targets.length > 0 ? (
+      <View style={tw`self-start flex-row items-center bg-gray-100 rounded-full pl-2.5 pr-3 py-1.5`}>
+        <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-500")} style={tw`mr-1.5`} />
+        <Text style={tw`text-xs font-medium text-gray-500`}>{captionText}</Text>
+      </View>
+    ) : null;
+
+  return (
+    <View style={tw`flex-1 bg-gray-50`}>
+      <ScrollView contentContainerStyle={tw`px-4 pt-2 pb-10`} showsVerticalScrollIndicator={false}>
+        {!center ? (
+          <View style={tw`mt-4 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
+            <Ionicons name="map-outline" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
+            <Text style={tw`text-sm text-gray-600 flex-1`}>Pan the map to a location first, then reopen this screen.</Text>
+          </View>
+        ) : (
+          <TargetsView
+            data={data}
+            isLoading={isLoading}
+            lat={center.lat}
+            lng={center.lng}
+            rowMenusAlwaysVisible
+            aboutDataOpen={aboutDataOpen}
+            onAboutDataOpenChange={setAboutDataOpen}
+            caption={caption}
+            disableViewAllLimit
+            minPercentage={NEARBY_MIN_PERCENTAGE}
+          />
+        )}
+      </ScrollView>
+      <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />
+    </View>
+  );
+}

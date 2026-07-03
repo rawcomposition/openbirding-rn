@@ -22,9 +22,10 @@ type FloatingMenuProps = {
   placement?: React.ComponentProps<typeof Popover>["placement"];
   sections: FloatingMenuSection[];
   width?: number;
+  offset?: number;
 };
 
-export default function FloatingMenu({ isOpen, onClose, from, mode, placement, sections, width = 220 }: FloatingMenuProps) {
+export default function FloatingMenu({ isOpen, onClose, from, mode, placement, sections, width = 220, offset }: FloatingMenuProps) {
   if (!isOpen) return null;
 
   return (
@@ -32,6 +33,7 @@ export default function FloatingMenu({ isOpen, onClose, from, mode, placement, s
       from={from}
       mode={mode}
       placement={placement}
+      offset={offset}
       isVisible
       onRequestClose={onClose}
       backgroundStyle={{ backgroundColor: "transparent" }}
