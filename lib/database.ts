@@ -1,6 +1,12 @@
 import * as SQLite from "expo-sqlite";
 import { BirdPlanTripData, SavedPlace, StaticPackGridCell, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
-import { aggregateHotspotTargets, getMonthIndices, getTotalSamplesForMonths, parseHotspotTargetData } from "./hotspotTargets";
+import {
+  AggregatedHotspotTarget,
+  aggregateHotspotTargets,
+  getMonthIndices,
+  getTotalSamplesForMonths,
+  parseHotspotTargetData,
+} from "./hotspotTargets";
 
 let db: SQLite.SQLiteDatabase | null = null;
 let isInstallingPack = false;
@@ -672,11 +678,7 @@ export async function searchHotspots(query: string, limit: number, savedOnly = f
   }));
 }
 
-export type HotspotTarget = {
-  speciesCode: string;
-  observations: number;
-  percentage: number;
-};
+export type HotspotTarget = AggregatedHotspotTarget;
 
 export type HotspotTargetsResult = {
   samples: number;

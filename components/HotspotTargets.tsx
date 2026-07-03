@@ -25,6 +25,8 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
   const lifelist = useSettingsStore((s) => s.lifelist);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
+  const displayMode = useSettingsStore((s) => s.hotspotDisplayMode);
+  const setDisplayMode = useSettingsStore((s) => s.setHotspotDisplayMode);
   const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
@@ -87,6 +89,8 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
             sections={buildTargetsMenuSections({
               showAllSpecies,
               onToggleShowAll: () => setShowAllSpecies(!showAllSpecies),
+              displayMode,
+              onToggleDisplayMode: () => setDisplayMode(displayMode === "chart" ? "percent" : "chart"),
               hasVersion,
               onOpenAbout: () => setAboutDataOpen(true),
             })}
@@ -117,6 +121,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
         onAboutDataOpenChange={setAboutDataOpen}
         pinnedTargets={pinnedTargets}
         onPinToggle={handlePinToggle}
+        displayMode={displayMode}
       />
     </View>
   );

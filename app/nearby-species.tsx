@@ -1,14 +1,14 @@
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
-import { getNearbySpeciesData, NEARBY_RADIUS } from "@/lib/nearbySpecies";
+import { getNearbySpeciesData, getRadiusOption, RADIUS_OPTIONS } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
 import { calculateDistance, parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigation } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
@@ -26,15 +26,20 @@ export default function NearbySpeciesPage() {
 
 function NearbySpeciesContent() {
   const navigation = useNavigation();
+  const router = useRouter();
   const { openMenu } = useFloatingMenu();
   const menuAnchorRef = useRef<View>(null!);
+  const radiusAnchorRef = useRef<View>(null!);
   const mapCenter = useMapStore((s) => s.mapCenter);
   // Poll while this screen is open so the re-center button reacts to movement within ~30s.
   const { location: userLocation } = useLocation(true, { refetchInterval: 30 * 1000 });
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const lifelist = useSettingsStore((s) => s.lifelist);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
-  const radius = NEARBY_RADIUS[distanceUnits];
+  const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
+  const setNearbyRadiusIndex = useSettingsStore((s) => s.setNearbyRadiusIndex);
+  const displayMode = useSettingsStore((s) => s.nearbyDisplayMode);
+  const radius = getRadiusOption(distanceUnits, nearbyRadiusIndex);
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
   const [useMyLocation, setUseMyLocation] = useState(false);
@@ -62,11 +67,13 @@ function NearbySpeciesContent() {
   const hasVersion = !!(data?.version && parsePackVersion(data.version));
 
   const openNearbyMenu = useCallback(() => {
-    const { showAllSpecies, setShowAllSpecies } = useSettingsStore.getState();
+    const { showAllSpecies, setShowAllSpecies, nearbyDisplayMode, setNearbyDisplayMode } = useSettingsStore.getState();
     openMenu(
       buildTargetsMenuSections({
         showAllSpecies,
         onToggleShowAll: () => setShowAllSpecies(!showAllSpecies),
+        displayMode: nearbyDisplayMode,
+        onToggleDisplayMode: () => setNearbyDisplayMode(nearbyDisplayMode === "chart" ? "percent" : "chart"),
         hasVersion,
         onOpenAbout: () => setAboutDataOpen(true),
       }),
@@ -74,6 +81,27 @@ function NearbySpeciesContent() {
       { placementOverride: PopoverPlacement.BOTTOM }
     );
   }, [openMenu, hasVersion]);
+
+  const openRadiusMenu = useCallback(() => {
+    openMenu(
+      [
+        {
+          items: RADIUS_OPTIONS[distanceUnits].map((option, index) => ({
+            label: `Within ${option.label}`,
+            icon:
+              index === nearbyRadiusIndex ? (
+                <Ionicons name="checkmark" size={18} color={tw.color("emerald-600")} />
+              ) : (
+                <View style={tw`w-5`} />
+              ),
+            onPress: () => setNearbyRadiusIndex(index),
+          })),
+        },
+      ],
+      radiusAnchorRef,
+      { placementOverride: PopoverPlacement.BOTTOM }
+    );
+  }, [openMenu, distanceUnits, nearbyRadiusIndex, setNearbyRadiusIndex]);
 
   const handleRecenter = useCallback(() => setUseMyLocation(true), []);
 
@@ -108,12 +136,20 @@ function NearbySpeciesContent() {
       ? `${speciesCount.toLocaleString()} species within ~${radius.label} of ${locationLabel}`
       : `Reported within ~${radius.label} of ${locationLabel}`;
 
+  // The caption chip doubles as the radius picker.
   const caption =
     data && data.targets.length > 0 ? (
-      <View style={tw`self-start flex-row items-center bg-gray-100 rounded-full pl-2.5 pr-3 py-1.5`}>
-        <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-500")} style={tw`mr-1.5`} />
-        <Text style={tw`text-xs font-medium text-gray-500`}>{captionText}</Text>
-      </View>
+      <TouchableOpacity
+        onPress={openRadiusMenu}
+        activeOpacity={0.7}
+        style={tw`self-start flex-row items-center bg-gray-100 rounded-full pl-2.5 pr-3 py-1.5`}
+      >
+        <View ref={radiusAnchorRef} style={tw`flex-row items-center`}>
+          <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-500")} style={tw`mr-1.5`} />
+          <Text style={tw`text-xs font-medium text-gray-500`}>{captionText}</Text>
+          <Ionicons name="chevron-down" size={12} color={tw.color("gray-400")} style={tw`ml-1`} />
+        </View>
+      </TouchableOpacity>
     ) : null;
 
   return (
@@ -136,6 +172,13 @@ function NearbySpeciesContent() {
             caption={caption}
             disableViewAllLimit
             minPercentage={NEARBY_MIN_PERCENTAGE}
+            displayMode={displayMode}
+            onSpeciesPress={(speciesCode) =>
+              router.push({
+                pathname: "/species/[code]",
+                params: { code: speciesCode, lat: String(center.lat), lng: String(center.lng) },
+              })
+            }
           />
         )}
       </ScrollView>

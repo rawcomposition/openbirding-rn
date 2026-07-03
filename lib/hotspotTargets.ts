@@ -7,6 +7,8 @@ export type AggregatedHotspotTarget = {
   speciesCode: string;
   observations: number;
   percentage: number;
+  /** Full-year reporting frequency (%) per calendar month, regardless of the month filter. */
+  monthly: number[];
 };
 
 export function parseHotspotTargetData(rawData: string): RawHotspotTargetData {
@@ -60,7 +62,7 @@ export function aggregateHotspotTargets(
     return [];
   }
 
-  const speciesMap = new Map<string, number>();
+  const speciesMap = new Map<string, { observations: number; monthlyCounts: number[] }>();
 
   for (const speciesEntry of data.species) {
     const speciesCode = String(speciesEntry[0]);
@@ -70,15 +72,28 @@ export function aggregateHotspotTargets(
     }, 0);
 
     if (totalObservations > 0) {
-      speciesMap.set(speciesCode, (speciesMap.get(speciesCode) ?? 0) + totalObservations);
+      let entry = speciesMap.get(speciesCode);
+      if (!entry) {
+        entry = { observations: 0, monthlyCounts: new Array(MONTH_COUNT).fill(0) };
+        speciesMap.set(speciesCode, entry);
+      }
+      entry.observations += totalObservations;
+      for (let month = 0; month < MONTH_COUNT; month++) {
+        const value = speciesEntry[month + 1];
+        entry.monthlyCounts[month] += typeof value === "number" ? value : 0;
+      }
     }
   }
 
   return Array.from(speciesMap.entries())
-    .map(([speciesCode, observations]) => ({
+    .map(([speciesCode, { observations, monthlyCounts }]) => ({
       speciesCode,
       observations,
       percentage: (observations / totalSamples) * 100,
+      monthly: monthlyCounts.map((count, month) => {
+        const monthSamples = data.samples[month] ?? 0;
+        return monthSamples > 0 ? (count / monthSamples) * 100 : 0;
+      }),
     }))
     .sort((a, b) => b.percentage - a.percentage);
 }

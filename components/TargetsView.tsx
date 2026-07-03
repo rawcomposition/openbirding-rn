@@ -4,7 +4,7 @@ import { HotspotTargetsResult } from "@/lib/database";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { TargetsDisplayMode, useSettingsStore } from "@/stores/settingsStore";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -16,6 +16,7 @@ import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
 import { FloatingMenuTrigger } from "./FloatingMenuProvider";
+import MonthlyBarChart from "./MonthlyBarChart";
 import MonthStrip from "./MonthStrip";
 import { IconSymbol } from "./ui/IconSymbol";
 
@@ -42,6 +43,10 @@ type TargetsViewProps = {
   disableViewAllLimit?: boolean;
   /** Minimum reporting frequency (%) a species must reach to be listed. Defaults to 1. */
   minPercentage?: number;
+  /** Render each row's frequency as a mini bar chart or a progress bar. Defaults to progress bar. */
+  displayMode?: TargetsDisplayMode;
+  /** Makes rows tappable (e.g. to open the species detail page). */
+  onSpeciesPress?: (speciesCode: string) => void;
 };
 
 export default function TargetsView({
@@ -58,6 +63,8 @@ export default function TargetsView({
   caption,
   disableViewAllLimit = false,
   minPercentage = 1,
+  displayMode = "percent",
+  onSpeciesPress,
 }: TargetsViewProps) {
   const [showAll, setShowAll] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -232,7 +239,11 @@ export default function TargetsView({
                 )}
                 {idx > 0 && !showOtherHeader && <View style={tw`h-px bg-gray-100`} />}
 
-                <View style={tw`px-5 py-3`}>
+                <Pressable
+                  onPress={onSpeciesPress ? () => onSpeciesPress(t.speciesCode) : undefined}
+                  disabled={!onSpeciesPress}
+                  style={({ pressed }) => [tw`px-5 py-3`, pressed && onSpeciesPress ? tw`bg-gray-100` : null]}
+                >
                   <View style={tw`flex-row items-center`}>
                     <View style={tw`w-20 h-15 mr-3`}>
                       {avicommons[t.speciesCode as keyof typeof avicommons] ? (
@@ -280,14 +291,21 @@ export default function TargetsView({
                         </Text>
                       </View>
 
-                      <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
-                        <View
-                          style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(t.percentage, 100)}%` }]}
-                        />
-                      </View>
+                      {displayMode === "chart" ? (
+                        <MonthlyBarChart monthly={t.monthly} variant="mini" selectedMonths={selectedMonths} style={tw`mt-1.5`} />
+                      ) : (
+                        <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
+                          <View
+                            style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(t.percentage, 100)}%` }]}
+                          />
+                        </View>
+                      )}
                     </View>
+                    {onSpeciesPress && (
+                      <Ionicons name="chevron-forward" size={16} color={tw.color("gray-300")} style={tw`ml-2`} />
+                    )}
                   </View>
-                </View>
+                </Pressable>
               </View>
               );
             })}
@@ -354,6 +372,8 @@ export default function TargetsView({
 export function buildTargetsMenuSections(opts: {
   showAllSpecies: boolean;
   onToggleShowAll: () => void;
+  displayMode: TargetsDisplayMode;
+  onToggleDisplayMode: () => void;
   hasVersion: boolean;
   onOpenAbout: () => void;
 }): FloatingMenuSection[] {
@@ -370,6 +390,17 @@ export function buildTargetsMenuSections(opts: {
             />
           ),
           onPress: opts.onToggleShowAll,
+        },
+        {
+          label: opts.displayMode === "chart" ? "Show Progress Bars" : "Show Bar Charts",
+          icon: (
+            <Ionicons
+              name={opts.displayMode === "chart" ? "options-outline" : "bar-chart-outline"}
+              size={18}
+              color={tw.color("gray-700")}
+            />
+          ),
+          onPress: opts.onToggleDisplayMode,
         },
         ...(opts.hasVersion
           ? [

@@ -2,7 +2,7 @@ import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsav
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -30,6 +30,10 @@ type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
   onClose: () => void | false;
+  /** Dim the backdrop. Use when the dialog opens over a page rather than the map. */
+  dimmed?: boolean;
+  /** Adds a "Show on Map" action for contexts outside the map view. */
+  onShowOnMap?: (hotspot: { id: string; lat: number; lng: number }) => void;
 };
 
 export default function HotspotDialog(props: HotspotDialogProps) {
@@ -42,7 +46,7 @@ export default function HotspotDialog(props: HotspotDialogProps) {
   );
 }
 
-function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
+function HotspotDialogContent({ isOpen, hotspotId, onClose, dimmed = false, onShowOnMap }: HotspotDialogProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
@@ -153,6 +157,7 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
         detents={[0.4, 0.97]}
         headerContent={headerContent}
         scrollable
+        dimmed={dimmed}
       >
         <View style={tw`flex-1`}>
           <ScrollView
@@ -193,6 +198,21 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
                       stacked={useStackedActionButtons}
                     />
                   </ActionButtonRow>
+
+                  {onShowOnMap && (
+                    <View style={tw`mt-3`}>
+                      <ActionButton
+                        icon={<Ionicons name="map-outline" size={20} color={tw.color("sky-600")} />}
+                        label="Show on Map"
+                        onPress={async () => {
+                          // Fully dismiss this sheet before the caller navigates, so the
+                          // native sheet isn't orphaned when the screen unmounts.
+                          await sheetRef.current?.dismiss();
+                          onShowOnMap({ id: hotspot.id, lat: hotspot.lat, lng: hotspot.lng });
+                        }}
+                      />
+                    </View>
+                  )}
 
                   <HotspotTargets
                     hotspotId={hotspot.id}

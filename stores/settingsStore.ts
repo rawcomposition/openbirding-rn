@@ -1,3 +1,4 @@
+import { DEFAULT_RADIUS_INDEX } from "@/lib/nearbySpecies";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getLocales } from "expo-localization";
 import { create } from "zustand";
@@ -12,6 +13,10 @@ export type LifeListEntry = {
 };
 
 export type DistanceUnits = "metric" | "imperial";
+
+export type TargetsDisplayMode = "chart" | "percent";
+
+export type SpeciesHotspotSort = "frequency" | "distance";
 
 // Default distance units from the device's region. measurementSystem is "us" | "uk" | "metric" | null;
 // both the US and UK use miles for road distances, everything else is metric.
@@ -29,6 +34,10 @@ type SettingsState = {
   showAllSpecies: boolean;
   targetMonths: number[];
   distanceUnits: DistanceUnits;
+  nearbyDisplayMode: TargetsDisplayMode;
+  hotspotDisplayMode: TargetsDisplayMode;
+  nearbyRadiusIndex: number;
+  speciesHotspotSort: SpeciesHotspotSort;
 };
 
 type SettingsActions = {
@@ -39,6 +48,10 @@ type SettingsActions = {
   setShowAllSpecies: (value: boolean) => void;
   setTargetMonths: (months: number[]) => void;
   setDistanceUnits: (units: DistanceUnits) => void;
+  setNearbyDisplayMode: (mode: TargetsDisplayMode) => void;
+  setHotspotDisplayMode: (mode: TargetsDisplayMode) => void;
+  setNearbyRadiusIndex: (index: number) => void;
+  setSpeciesHotspotSort: (sort: SpeciesHotspotSort) => void;
 };
 
 type SettingsStore = SettingsState & SettingsActions;
@@ -103,6 +116,11 @@ export const useSettingsStore = create<SettingsStore>()(
       // Seeded from the device region; persisted values from earlier installs fall back to this default
       // via the shallow rehydrate merge, so existing users also pick up their locale's units.
       distanceUnits: getDeviceDistanceUnits(),
+      // Bar charts by default for Nearby Species, progress bars for hotspot targets.
+      nearbyDisplayMode: "chart",
+      hotspotDisplayMode: "percent",
+      nearbyRadiusIndex: DEFAULT_RADIUS_INDEX,
+      speciesHotspotSort: "frequency",
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
@@ -110,6 +128,10 @@ export const useSettingsStore = create<SettingsStore>()(
       setShowAllSpecies: (value) => set({ showAllSpecies: value }),
       setTargetMonths: (months) => set({ targetMonths: months }),
       setDistanceUnits: (units) => set({ distanceUnits: units }),
+      setNearbyDisplayMode: (mode) => set({ nearbyDisplayMode: mode }),
+      setHotspotDisplayMode: (mode) => set({ hotspotDisplayMode: mode }),
+      setNearbyRadiusIndex: (index) => set({ nearbyRadiusIndex: index }),
+      setSpeciesHotspotSort: (sort) => set({ speciesHotspotSort: sort }),
     }),
     {
       name: "settings",
