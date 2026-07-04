@@ -1,4 +1,10 @@
-import { getGridCellsWithinBounds, getNearbyHotspots, getTargetDataForHotspots, HotspotTargetsResult } from "./database";
+import {
+  getGridCellsWithinBounds,
+  getNearbyHotspots,
+  getPacksCoveringBounds,
+  getTargetDataForHotspots,
+  HotspotTargetsResult,
+} from "./database";
 import {
   aggregateHotspotTargets,
   getMonthIndices,
@@ -92,6 +98,22 @@ export function aggregateNearbySpecies(raw: NearbySpeciesRaw, months?: number[])
 
   const targets = aggregateHotspotTargets(raw.data, monthIndices, totalSamples);
   return { samples: totalSamples, targets, version: raw.version };
+}
+
+export type NearbyPackCoverage = {
+  /** At least one installed pack overlaps this area. */
+  hasCoverage: boolean;
+  /** Overlapping packs installed before grid data existed — they need a pack update. */
+  gridlessPackNames: string[];
+};
+
+export async function getNearbyPackCoverage(lat: number, lng: number, radiusKm: number): Promise<NearbyPackCoverage> {
+  const bounds = getBoundingBoxFromLocation(lat, lng, radiusKm);
+  const packs = await getPacksCoveringBounds(bounds);
+  return {
+    hasCoverage: packs.length > 0,
+    gridlessPackNames: packs.filter((pack) => pack.gridCells === 0).map((pack) => pack.name),
+  };
 }
 
 export type SpeciesHotspot = {

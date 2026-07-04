@@ -1,4 +1,5 @@
 import avicommons from "@/avicommons";
+import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { HotspotTargetsResult } from "@/lib/database";
 import { AggregatedHotspotTarget } from "@/lib/hotspotTargets";
@@ -19,7 +20,8 @@ import { FloatingMenuSection } from "./FloatingMenu";
 import { FloatingMenuTrigger } from "./FloatingMenuProvider";
 import MonthlyBarChart from "./MonthlyBarChart";
 import MonthStrip from "./MonthStrip";
-import { TargetRowsSkeleton } from "./Skeleton";
+import PacksNotice from "./PacksNotice";
+import SpinnerPill from "./SpinnerPill";
 import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
@@ -61,6 +63,13 @@ type TargetsViewProps = {
    * Defaults to the live month selection.
    */
   chartMonths?: number[];
+  /**
+   * Rendered instead of the generic "no species data" message when the empty result has a
+   * more specific cause the caller knows about (e.g. installed packs don't cover the area).
+   */
+  emptyNotice?: React.ReactNode;
+  /** Skip the built-in loading spinner (the caller renders its own, e.g. a screen-centered one). */
+  hideLoadingIndicator?: boolean;
 };
 
 export default function TargetsView({
@@ -82,6 +91,8 @@ export default function TargetsView({
   onSpeciesPress,
   searchQuery,
   chartMonths,
+  emptyNotice,
+  hideLoadingIndicator = false,
 }: TargetsViewProps) {
   const [showAll, setShowAll] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -91,8 +102,11 @@ export default function TargetsView({
   const setLifelist = useSettingsStore((s) => s.setLifelist);
   const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
   const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
+  const lifelistPromptDismissed = useSettingsStore((s) => s.lifelistPromptDismissed);
+  const setLifelistPromptDismissed = useSettingsStore((s) => s.setLifelistPromptDismissed);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
+  const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
   const hasNoLifeList = !lifelist || lifelist.length === 0;
   const pinningEnabled = !!onPinToggle;
   const rowMenusVisible = !hideRowMenus && isBottomSheetExpanded;
@@ -143,19 +157,39 @@ export default function TargetsView({
     });
   }, [data, query, lifelist, lifelistExclusions, pinnedTargets, showAllSpecies, minPercentage, taxonomyMap]);
 
+  // Even without a life list the list still renders (as all species); this banner nudges
+  // toward importing one and stays dismissed once closed. Installing packs is the more
+  // fundamental setup step, so the banner waits until at least one pack is installed.
+  const importBanner =
+    hasNoLifeList && !lifelistPromptDismissed && !isLoadingInstalledPacks && installedPacks.size > 0 ? (
+      <View style={tw`mt-3 bg-sky-50 border border-sky-200/80 rounded-lg flex-row items-start`}>
+        <Pressable
+          onPress={() => router.push("/settings-import-life-list" as Href)}
+          style={tw`flex-1 flex-row items-center p-4 pr-1`}
+        >
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-base font-semibold text-sky-900 mb-1`}>Import Life List</Text>
+            <Text style={tw`text-sm text-sky-700 mt-0.5`}>See personalized targets based on species you need.</Text>
+          </View>
+        </Pressable>
+        <Pressable onPress={() => setLifelistPromptDismissed(true)} hitSlop={8} style={tw`p-3`}>
+          <Ionicons name="close" size={18} color={tw.color("sky-400")} />
+        </Pressable>
+      </View>
+    ) : null;
+
   if (isLoading) {
     return (
       <View>
-        {!hasNoLifeList && (
-          <View style={tw`mt-3`}>
-            <MonthStrip
-              selectedMonths={selectedMonths}
-              onToggleMonth={handleToggleMonth}
-              onSelectAllYear={handleSelectAllYear}
-            />
-          </View>
-        )}
-        <TargetRowsSkeleton style={tw`mt-3`} />
+        {importBanner}
+        <View style={tw`mt-3`}>
+          <MonthStrip
+            selectedMonths={selectedMonths}
+            onToggleMonth={handleToggleMonth}
+            onSelectAllYear={handleSelectAllYear}
+          />
+        </View>
+        {!hideLoadingIndicator && <SpinnerPill style={tw`mt-10`} />}
       </View>
     );
   }
@@ -204,22 +238,19 @@ export default function TargetsView({
   };
 
   const renderEmptyState = () => {
-    if (hasNoLifeList) {
-      return (
-        <Pressable
-          onPress={() => router.push("/settings-import-life-list" as Href)}
-          style={tw`mt-3 bg-sky-50 border border-sky-200/80 rounded-lg p-4 flex-row items-center`}
-        >
-          <View style={tw`flex-1`}>
-            <Text style={tw`text-base font-semibold text-sky-900 mb-1`}>Import Life List</Text>
-            <Text style={tw`text-sm text-sky-700 mt-0.5`}>See personalized targets based on species you need.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={tw.color("sky-400")} style={tw`ml-3`} />
-        </Pressable>
-      );
-    }
-
     if (hasNoSpeciesData) {
+      if (!isLoadingInstalledPacks && installedPacks.size === 0) {
+        return (
+          <View style={tw`mt-3`}>
+            <PacksNotice variant="inline" />
+          </View>
+        );
+      }
+
+      if (emptyNotice) {
+        return <View style={tw`mt-3`}>{emptyNotice}</View>;
+      }
+
       const message =
         selectedMonths.length > 0
           ? "No checklist data for the selected months."
@@ -255,9 +286,15 @@ export default function TargetsView({
     return null;
   };
 
+  // Keep the strip visible when a month selection is what emptied the list, so the user
+  // can always toggle back; hide it when there's genuinely no data for this area.
+  const showMonthStrip = !hasNoTargetData && (data.targets.length > 0 || selectedMonths.length > 0);
+
   return (
     <View>
-      {!hasNoLifeList && !hasNoTargetData && (
+      {importBanner}
+
+      {showMonthStrip && (
         <View style={tw`mt-3`}>
           <MonthStrip selectedMonths={selectedMonths} onToggleMonth={handleToggleMonth} onSelectAllYear={handleSelectAllYear} />
         </View>
@@ -268,7 +305,7 @@ export default function TargetsView({
 
       {renderEmptyState()}
 
-      {filteredTargets.length > 0 && !hasNoLifeList && (
+      {filteredTargets.length > 0 && (
         <>
           <View style={tw`${caption ? "mt-1" : "mt-3"} -mx-4`}>
             {displayedTargets.map((t, idx) => {

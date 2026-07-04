@@ -22,13 +22,11 @@ type HotspotTargetsProps = {
 
 export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: HotspotTargetsProps) {
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
-  const lifelist = useSettingsStore((s) => s.lifelist);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
   const setShowAllSpecies = useSettingsStore((s) => s.setShowAllSpecies);
   const displayMode = useSettingsStore((s) => s.hotspotDisplayMode);
   const setDisplayMode = useSettingsStore((s) => s.setHotspotDisplayMode);
   const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
-  const hasNoLifeList = !lifelist || lifelist.length === 0;
   const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -40,7 +38,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
   const { data, isLoading } = useQuery({
     queryKey: ["hotspotTargets", hotspotId, selectedMonths],
     queryFn: () => getTargetsForHotspot(hotspotId, selectedMonths.length > 0 ? selectedMonths : undefined),
-    enabled: !!hotspotId && !hasNoLifeList,
+    enabled: !!hotspotId,
     placeholderData: (prev) => prev,
   });
 
@@ -73,14 +71,14 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
   };
 
   const hasVersion = !!(data?.version && parsePackVersion(data.version));
-  const showMenu = !!data && data.targets.length > 0 && !hasNoLifeList;
+  const showMenu = !!data && data.targets.length > 0;
 
   return (
     <View style={tw`mt-4`}>
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-          {data?.samples && data.samples > 0 && !hasNoLifeList && (
+          {data?.samples && data.samples > 0 && (
             <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
           )}
         </View>

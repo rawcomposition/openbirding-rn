@@ -30,6 +30,7 @@ type SettingsState = {
   directionsProvider: string | null;
   lifelist: LifeListEntry[] | null;
   lifelistExclusions: string[] | null;
+  lifelistPromptDismissed: boolean;
   disableSunTimes: boolean;
   showAllSpecies: boolean;
   targetMonths: number[];
@@ -44,6 +45,7 @@ type SettingsActions = {
   setDirectionsProvider: (provider: string | null) => void;
   setLifelist: (lifelist: LifeListEntry[] | null) => void;
   setLifelistExclusions: (exclusions: string[] | null) => void;
+  setLifelistPromptDismissed: (value: boolean) => void;
   setDisableSunTimes: (value: boolean) => void;
   setShowAllSpecies: (value: boolean) => void;
   setTargetMonths: (months: number[]) => void;
@@ -110,6 +112,7 @@ export const useSettingsStore = create<SettingsStore>()(
       directionsProvider: null,
       lifelist: null,
       lifelistExclusions: null,
+      lifelistPromptDismissed: false,
       disableSunTimes: false,
       showAllSpecies: false,
       targetMonths: [],
@@ -124,6 +127,7 @@ export const useSettingsStore = create<SettingsStore>()(
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),
+      setLifelistPromptDismissed: (value) => set({ lifelistPromptDismissed: value }),
       setDisableSunTimes: (value) => set({ disableSunTimes: value }),
       setShowAllSpecies: (value) => set({ showAllSpecies: value }),
       setTargetMonths: (months) => set({ targetMonths: months }),

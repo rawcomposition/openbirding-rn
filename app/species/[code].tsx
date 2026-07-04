@@ -1,7 +1,7 @@
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
 import HotspotDialog from "@/components/HotspotDialog";
 import MonthlyBarChart from "@/components/MonthlyBarChart";
-import { ChartCardSkeleton, HotspotRowsSkeleton } from "@/components/Skeleton";
+import SpinnerPill from "@/components/SpinnerPill";
 import { useLocation } from "@/hooks/useLocation";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
 import {
@@ -225,7 +225,7 @@ function SpeciesDetailContent() {
               <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} />
             </View>
           ) : isLoadingNearby ? (
-            <ChartCardSkeleton style={tw`mt-3`} />
+            <SpinnerPill style={tw`mt-8 mb-5`} />
           ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
               <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
@@ -257,7 +257,7 @@ function SpeciesDetailContent() {
               ))}
             </View>
           ) : isLoadingHotspots ? (
-            <HotspotRowsSkeleton style={tw`mt-3`} />
+            <SpinnerPill style={tw`mt-8 mb-5`} />
           ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
               <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />

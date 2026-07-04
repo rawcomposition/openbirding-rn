@@ -1,7 +1,14 @@
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
+import SpinnerPill from "@/components/SpinnerPill";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
-import { aggregateNearbySpecies, getRadiusOption, getNearbySpeciesRaw, RADIUS_OPTIONS } from "@/lib/nearbySpecies";
+import {
+  aggregateNearbySpecies,
+  getNearbyPackCoverage,
+  getNearbySpeciesRaw,
+  getRadiusOption,
+  RADIUS_OPTIONS,
+} from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
 import { calculateDistance, parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -10,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
 // Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
@@ -35,13 +42,11 @@ function NearbySpeciesContent() {
   // Poll while this screen is open so the re-center button reacts to movement within ~30s.
   const { location: userLocation } = useLocation(true, { refetchInterval: 30 * 1000 });
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
-  const lifelist = useSettingsStore((s) => s.lifelist);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
   const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
   const setNearbyRadiusIndex = useSettingsStore((s) => s.setNearbyRadiusIndex);
   const displayMode = useSettingsStore((s) => s.nearbyDisplayMode);
   const radius = getRadiusOption(distanceUnits, nearbyRadiusIndex);
-  const hasNoLifeList = !lifelist || lifelist.length === 0;
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
   const [useMyLocation, setUseMyLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,8 +67,15 @@ function NearbySpeciesContent() {
   const { data: rawData, isLoading, isFetching, isPlaceholderData } = useQuery({
     queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km],
     queryFn: () => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km),
-    enabled: !!center && !hasNoLifeList,
+    enabled: !!center,
     placeholderData: (prev) => prev,
+  });
+  // Cheap pack-overlap check that powers the "packs don't cover this area" and
+  // "pack needs an update for Nearby Species" notices.
+  const { data: coverage } = useQuery({
+    queryKey: ["nearbyPackCoverage", center?.lat, center?.lng, radius.km],
+    queryFn: () => getNearbyPackCoverage(center!.lat, center!.lng, radius.km),
+    enabled: !!center,
   });
   // Deferring the month selection lets a toggle paint immediately (strip + spinner) while
   // the aggregation and the 100-row re-render happen in a lower-priority render pass.
@@ -78,7 +90,7 @@ function NearbySpeciesContent() {
   // dimmed under a spinner rather than swapping to a skeleton.
   const isUpdating = (isFetching && isPlaceholderData) || isRecalculating;
 
-  const showMenu = !!data && data.targets.length > 0 && !hasNoLifeList;
+  const showMenu = !!data && data.targets.length > 0;
   const hasVersion = !!(data?.version && parsePackVersion(data.version));
 
   const openNearbyMenu = useCallback(() => {
@@ -196,6 +208,42 @@ function NearbySpeciesContent() {
       </TouchableOpacity>
     ) : null;
 
+  // Packs installed before Nearby Species existed have no grid data, so results in their
+  // area are missing or incomplete — prompt for a pack update whenever one overlaps the radius.
+  const gridlessNames = coverage?.gridlessPackNames ?? [];
+  const updateNotice =
+    gridlessNames.length > 0 ? (
+      <TouchableOpacity
+        onPress={() => router.push("/packs")}
+        activeOpacity={0.7}
+        style={tw`mt-3 bg-amber-50 border border-amber-200 rounded-lg p-4 flex-row items-center`}
+      >
+        <Ionicons name="cloud-download-outline" size={20} color={tw.color("amber-600")} style={tw`mr-3`} />
+        <Text style={tw`text-sm text-amber-800 flex-1`}>
+          {gridlessNames.join(", ")} {gridlessNames.length === 1 ? "doesn't" : "don't"} include Nearby Species data
+          yet. Update {gridlessNames.length === 1 ? "it" : "them"} on the Hotspot Packs page.
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={tw.color("amber-400")} style={tw`ml-2`} />
+      </TouchableOpacity>
+    ) : null;
+
+  // Rendered by TargetsView in place of the generic empty message when packs are installed
+  // but none of them overlap this area.
+  const noCoverageNotice =
+    coverage && !coverage.hasCoverage ? (
+      <TouchableOpacity
+        onPress={() => router.push("/packs")}
+        activeOpacity={0.7}
+        style={tw`bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}
+      >
+        <Ionicons name="map-outline" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
+        <Text style={tw`text-sm text-gray-600 flex-1`}>
+          None of your installed packs cover this area. Browse packs to download one.
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={tw.color("gray-400")} style={tw`ml-2`} />
+      </TouchableOpacity>
+    ) : undefined;
+
   return (
     <View style={tw`flex-1 bg-gray-50`}>
       <ScrollView
@@ -214,6 +262,7 @@ function NearbySpeciesContent() {
           // Negative margin trims the slack the collapsed header search bar leaves above
           // the month strip.
           <View style={tw`-mt-2`}>
+          {updateNotice}
           <TargetsView
             data={data}
             isLoading={isLoading}
@@ -230,16 +279,16 @@ function NearbySpeciesContent() {
             searchQuery={deferredSearch}
             chartMonths={deferredMonths}
             onSpeciesPress={handleSpeciesPress}
+            emptyNotice={noCoverageNotice}
+            hideLoadingIndicator
           />
           </View>
         )}
       </ScrollView>
 
-      {isUpdating && (
+      {(isLoading || isUpdating) && (
         <View style={tw`absolute inset-0 items-center justify-center`} pointerEvents="none">
-          <View style={tw`bg-white rounded-full p-2.5 shadow-md border border-gray-100`}>
-            <ActivityIndicator size="small" color={tw.color("gray-500")} />
-          </View>
+          <SpinnerPill />
         </View>
       )}
 

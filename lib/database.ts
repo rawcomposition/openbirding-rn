@@ -34,7 +34,8 @@ async function createTables(): Promise<void> {
       hotspots INTEGER,
       installed_at TEXT,
       version TEXT,
-      updated_at TEXT
+      updated_at TEXT,
+      grid_cells INTEGER
     );
   `);
 
@@ -431,8 +432,8 @@ export async function installPackWithTargets(
 
       // Insert/update pack record
       await database.runAsync(
-        `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-        [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt]
+        `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at, grid_cells) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt, cells?.length ?? 0]
       );
 
       if (hotspots.length === 0) {
@@ -760,6 +761,38 @@ export async function getGridCellsWithinBounds(bounds: {
      WHERE g.lat >= ? AND g.lat <= ? AND ${lngCondition}`,
     [bounds.south, bounds.north, bounds.west, bounds.east]
   );
+}
+
+export type PackCoverage = {
+  id: number;
+  name: string;
+  /** Grid cells the pack shipped with; 0 means it predates Nearby Species data. */
+  gridCells: number;
+};
+
+/** Installed packs whose region overlaps the bounds (i.e. they have at least one hotspot inside). */
+export async function getPacksCoveringBounds(bounds: {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}): Promise<PackCoverage[]> {
+  if (!db) throw new Error("Database not initialized");
+
+  // When west > east, the bounding box crosses the international date line
+  const crossesDateLine = bounds.west > bounds.east;
+  const lngCondition = crossesDateLine ? `(h.lng >= ? OR h.lng <= ?)` : `(h.lng >= ? AND h.lng <= ?)`;
+
+  const rows = await db.getAllAsync<{ id: number; name: string; grid_cells: number | null }>(
+    `SELECT p.id, p.name, p.grid_cells FROM packs p
+     WHERE EXISTS (
+       SELECT 1 FROM hotspots h
+       WHERE h.pack_id = p.id AND h.lat >= ? AND h.lat <= ? AND ${lngCondition}
+     )`,
+    [bounds.south, bounds.north, bounds.west, bounds.east]
+  );
+
+  return rows.map((row) => ({ id: row.id, name: row.name, gridCells: row.grid_cells ?? 0 }));
 }
 
 export async function getPinnedTargets(hotspotId: string): Promise<string[]> {
