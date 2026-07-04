@@ -9,8 +9,8 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
 // Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
@@ -58,20 +58,25 @@ function NearbySpeciesContent() {
   const canRecenter = !!userLocation && !atUserLocation;
 
   // The query fetches/merges raw counts once per (center, radius); month filtering is a
-  // synchronous aggregation below, so toggling months never refetches or freezes.
+  // synchronous aggregation below, so toggling months never refetches.
   const { data: rawData, isLoading, isFetching, isPlaceholderData } = useQuery({
     queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km],
     queryFn: () => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km),
     enabled: !!center && !hasNoLifeList,
     placeholderData: (prev) => prev,
   });
+  // Deferring the month selection lets a toggle paint immediately (strip + spinner) while
+  // the aggregation and the 100-row re-render happen in a lower-priority render pass.
+  const deferredMonths = useDeferredValue(selectedMonths);
   const data = useMemo(
-    () => (rawData ? aggregateNearbySpecies(rawData, selectedMonths.length > 0 ? selectedMonths : undefined) : undefined),
-    [rawData, selectedMonths]
+    () => (rawData ? aggregateNearbySpecies(rawData, deferredMonths.length > 0 ? deferredMonths : undefined) : undefined),
+    [rawData, deferredMonths]
   );
-  // Placeholder data is the previous radius/location's result; keep it visible but dimmed
-  // under a spinner rather than swapping to a skeleton.
-  const isUpdating = isFetching && isPlaceholderData;
+  const deferredSearch = useDeferredValue(searchQuery);
+  const isRecalculating = deferredMonths !== selectedMonths;
+  // Placeholder data is the previous radius/location's result; keep stale rows visible but
+  // dimmed under a spinner rather than swapping to a skeleton.
+  const isUpdating = (isFetching && isPlaceholderData) || isRecalculating;
 
   const showMenu = !!data && data.targets.length > 0 && !hasNoLifeList;
   const hasVersion = !!(data?.version && parsePackVersion(data.version));
@@ -114,6 +119,21 @@ function NearbySpeciesContent() {
   }, [openMenu, distanceUnits, nearbyRadiusIndex, setNearbyRadiusIndex]);
 
   const handleRecenter = useCallback(() => setUseMyLocation(true), []);
+
+  const centerLat = center?.lat;
+  const centerLng = center?.lng;
+  // Stable reference so the memoized rows aren't invalidated by unrelated re-renders
+  // (e.g. the 30s location poll).
+  const handleSpeciesPress = useCallback(
+    (speciesCode: string) => {
+      if (centerLat == null || centerLng == null) return;
+      router.push({
+        pathname: "/species/[code]",
+        params: { code: speciesCode, lat: String(centerLat), lng: String(centerLng) },
+      });
+    },
+    [router, centerLat, centerLng]
+  );
 
   // Native header search bar, stacked under the title. hideWhenScrolling is the intended
   // native collapse behavior; it currently doesn't engage on iOS 26 (react-native-screens
@@ -207,17 +227,22 @@ function NearbySpeciesContent() {
             initialLimit={NEARBY_INITIAL_LIMIT}
             minPercentage={NEARBY_MIN_PERCENTAGE}
             displayMode={displayMode}
-            searchQuery={searchQuery}
-            onSpeciesPress={(speciesCode) =>
-              router.push({
-                pathname: "/species/[code]",
-                params: { code: speciesCode, lat: String(center.lat), lng: String(center.lng) },
-              })
-            }
+            searchQuery={deferredSearch}
+            chartMonths={deferredMonths}
+            onSpeciesPress={handleSpeciesPress}
           />
           </View>
         )}
       </ScrollView>
+
+      {isUpdating && (
+        <View style={tw`absolute inset-0 items-center justify-center`} pointerEvents="none">
+          <View style={tw`bg-white rounded-full p-2.5 shadow-md border border-gray-100`}>
+            <ActivityIndicator size="small" color={tw.color("gray-500")} />
+          </View>
+        </View>
+      )}
+
       <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />
     </View>
   );

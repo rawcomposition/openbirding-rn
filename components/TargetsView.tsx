@@ -1,6 +1,7 @@
 import avicommons from "@/avicommons";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { HotspotTargetsResult } from "@/lib/database";
+import { AggregatedHotspotTarget } from "@/lib/hotspotTargets";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -10,8 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { memo, useEffect, useMemo, useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
@@ -22,6 +23,8 @@ import { TargetRowsSkeleton } from "./Skeleton";
 import { IconSymbol } from "./ui/IconSymbol";
 
 const INITIAL_LIMIT = 10;
+// Stable default so memoized derivations don't recompute on every render.
+const NO_PINNED_TARGETS: string[] = [];
 
 type TargetsViewProps = {
   data: HotspotTargetsResult | null | undefined;
@@ -42,7 +45,7 @@ type TargetsViewProps = {
   caption?: React.ReactNode;
   /** How many rows to show before the "View all" toggle. */
   initialLimit?: number;
-  /** Fresh data is loading behind currently-visible (stale) results; dims the list and shows a spinner. */
+  /** Fresh data is loading behind currently-visible (stale) results; dims the list (the caller renders its own loader). */
   isUpdating?: boolean;
   /** Minimum reporting frequency (%) a species must reach to be listed. Defaults to 1. */
   minPercentage?: number;
@@ -52,6 +55,12 @@ type TargetsViewProps = {
   onSpeciesPress?: (speciesCode: string) => void;
   /** Filters rows by common name (case-insensitive substring match). */
   searchQuery?: string;
+  /**
+   * Months the rendered data corresponds to. Pass a deferred value so a month toggle
+   * repaints the strip instantly while the rows update in a lower-priority render.
+   * Defaults to the live month selection.
+   */
+  chartMonths?: number[];
 };
 
 export default function TargetsView({
@@ -63,7 +72,7 @@ export default function TargetsView({
   hideRowMenus = false,
   aboutDataOpen,
   onAboutDataOpenChange,
-  pinnedTargets = [],
+  pinnedTargets = NO_PINNED_TARGETS,
   onPinToggle,
   caption,
   initialLimit = INITIAL_LIMIT,
@@ -72,6 +81,7 @@ export default function TargetsView({
   displayMode = "percent",
   onSpeciesPress,
   searchQuery,
+  chartMonths,
 }: TargetsViewProps) {
   const [showAll, setShowAll] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -108,8 +118,11 @@ export default function TargetsView({
   };
 
   const query = searchQuery?.trim().toLowerCase() ?? "";
+  const effectiveChartMonths = chartMonths ?? selectedMonths;
 
-  const filteredTargets = (() => {
+  // Stable across unrelated re-renders so the memoized rows can skip work — this is what
+  // keeps the month strip responsive while the list catches up in a deferred render.
+  const filteredTargets = useMemo(() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
     const exclusionCodes = lifelistExclusions ? new Set(lifelistExclusions) : null;
@@ -128,7 +141,7 @@ export default function TargetsView({
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  })();
+  }, [data, query, lifelist, lifelistExclusions, pinnedTargets, showAllSpecies, minPercentage, taxonomyMap]);
 
   if (isLoading) {
     return (
@@ -261,86 +274,33 @@ export default function TargetsView({
             {displayedTargets.map((t, idx) => {
               const isPinned = pinnedTargets.includes(t.speciesCode);
               const prevIsPinned = idx > 0 && pinnedTargets.includes(displayedTargets[idx - 1].speciesCode);
-              const showPinnedHeader = isPinned && idx === 0;
               const showOtherHeader = pinnedFilteredTargets.length > 0 && !isPinned && (idx === 0 || prevIsPinned);
               return (
-              <View key={t.speciesCode}>
-                {showPinnedHeader && (
-                  <Text style={tw`px-5 pt-2 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Pinned</Text>
-                )}
-                {showOtherHeader && (
-                  <Text style={tw`px-5 pt-3 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Other Targets</Text>
-                )}
-                {idx > 0 && !showOtherHeader && <View style={tw`h-px bg-gray-100`} />}
-
-                <Pressable
-                  onPress={onSpeciesPress ? () => onSpeciesPress(t.speciesCode) : undefined}
-                  disabled={!onSpeciesPress}
-                  style={({ pressed }) => [tw`px-5 py-3`, pressed && onSpeciesPress ? tw`bg-gray-100` : null]}
-                >
-                  <View style={tw`flex-row items-center`}>
-                    <View style={tw`w-20 h-15 mr-3`}>
-                      {avicommons[t.speciesCode as keyof typeof avicommons] ? (
-                        <Image
-                          source={{
-                            uri: `https://static.avicommons.org/${t.speciesCode}-${
-                              avicommons[t.speciesCode as keyof typeof avicommons][0]
-                            }-160.webp`,
-                          }}
-                          style={tw`w-20 h-15 rounded bg-gray-200`}
-                        />
-                      ) : (
-                        <View style={tw`w-20 h-15 rounded bg-gray-200`} />
-                      )}
-                      {isPinned && (
-                        <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
-                          <IconSymbol name="pin.fill" size={10} color="white" />
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={tw`flex-1`}>
-                      <View style={tw`flex-row items-center justify-between`}>
-                        <View style={tw`flex-row items-center flex-1 mr-3`}>
-                          <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
-                            {taxonomyMap.get(t.speciesCode) || "Unknown species"}
-                          </Text>
-                          {rowMenusVisible && (
-                            <TargetRowMenuButton
-                              sections={buildRowMenuSections(t.speciesCode, {
-                                pinnedTargets,
-                                lat,
-                                lng,
-                                pinningEnabled,
-                                onPinToggle,
-                                handleLifeListAction,
-                                getLifeListMenuProps,
-                              })}
-                            />
-                          )}
-                        </View>
-
-                        <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
-                          {t.percentage < 1 ? t.percentage.toFixed(1) : t.percentage.toFixed(0)}%
-                        </Text>
-                      </View>
-
-                      {displayMode === "chart" ? (
-                        <MonthlyBarChart monthly={t.monthly} variant="mini" selectedMonths={selectedMonths} style={tw`mt-1.5`} />
-                      ) : (
-                        <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
-                          <View
-                            style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(t.percentage, 100)}%` }]}
-                          />
-                        </View>
-                      )}
-                    </View>
-                    {onSpeciesPress && (
-                      <Ionicons name="chevron-forward" size={16} color={tw.color("gray-300")} style={tw`ml-2`} />
-                    )}
-                  </View>
-                </Pressable>
-              </View>
+                <TargetRow
+                  key={t.speciesCode}
+                  target={t}
+                  name={taxonomyMap.get(t.speciesCode) || "Unknown species"}
+                  isPinned={isPinned}
+                  showPinnedHeader={isPinned && idx === 0}
+                  showOtherHeader={showOtherHeader}
+                  showDivider={idx > 0 && !showOtherHeader}
+                  displayMode={displayMode}
+                  chartMonths={effectiveChartMonths}
+                  onSpeciesPress={onSpeciesPress}
+                  menuSections={
+                    rowMenusVisible
+                      ? buildRowMenuSections(t.speciesCode, {
+                          pinnedTargets,
+                          lat,
+                          lng,
+                          pinningEnabled,
+                          onPinToggle,
+                          handleLifeListAction,
+                          getLifeListMenuProps,
+                        })
+                      : null
+                  }
+                />
               );
             })}
           </View>
@@ -355,14 +315,6 @@ export default function TargetsView({
         </>
       )}
       </View>
-
-      {isUpdating && (
-        <View style={tw`absolute inset-x-0 top-24 items-center`} pointerEvents="none">
-          <View style={tw`bg-white rounded-full p-2.5 shadow-md border border-gray-100`}>
-            <ActivityIndicator size="small" color={tw.color("gray-500")} />
-          </View>
-        </View>
-      )}
 
       {data?.version && parsePackVersion(data.version) && (
         <BaseBottomSheet
@@ -410,6 +362,100 @@ export default function TargetsView({
     </View>
   );
 }
+
+type TargetRowProps = {
+  target: AggregatedHotspotTarget;
+  name: string;
+  isPinned: boolean;
+  showPinnedHeader: boolean;
+  showOtherHeader: boolean;
+  showDivider: boolean;
+  displayMode: TargetsDisplayMode;
+  chartMonths: number[];
+  onSpeciesPress?: (speciesCode: string) => void;
+  menuSections: FloatingMenuSection[] | null;
+};
+
+// Memoized so re-renders that don't change the data (e.g. the urgent render of a month
+// toggle, where only the strip and spinner change) skip all 100 rows.
+const TargetRow = memo(function TargetRow({
+  target,
+  name,
+  isPinned,
+  showPinnedHeader,
+  showOtherHeader,
+  showDivider,
+  displayMode,
+  chartMonths,
+  onSpeciesPress,
+  menuSections,
+}: TargetRowProps) {
+  return (
+    <View>
+      {showPinnedHeader && (
+        <Text style={tw`px-5 pt-2 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Pinned</Text>
+      )}
+      {showOtherHeader && (
+        <Text style={tw`px-5 pt-3 pb-0 text-xs font-medium text-gray-500 uppercase tracking-wide`}>Other Targets</Text>
+      )}
+      {showDivider && <View style={tw`h-px bg-gray-100`} />}
+
+      <Pressable
+        onPress={onSpeciesPress ? () => onSpeciesPress(target.speciesCode) : undefined}
+        disabled={!onSpeciesPress}
+        style={({ pressed }) => [tw`px-5 py-3`, pressed && onSpeciesPress ? tw`bg-gray-100` : null]}
+      >
+        <View style={tw`flex-row items-center`}>
+          <View style={tw`w-20 h-15 mr-3`}>
+            {avicommons[target.speciesCode as keyof typeof avicommons] ? (
+              <Image
+                source={{
+                  uri: `https://static.avicommons.org/${target.speciesCode}-${
+                    avicommons[target.speciesCode as keyof typeof avicommons][0]
+                  }-160.webp`,
+                }}
+                style={tw`w-20 h-15 rounded bg-gray-200`}
+              />
+            ) : (
+              <View style={tw`w-20 h-15 rounded bg-gray-200`} />
+            )}
+            {isPinned && (
+              <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
+                <IconSymbol name="pin.fill" size={10} color="white" />
+              </View>
+            )}
+          </View>
+
+          <View style={tw`flex-1`}>
+            <View style={tw`flex-row items-center justify-between`}>
+              <View style={tw`flex-row items-center flex-1 mr-3`}>
+                <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
+                  {name}
+                </Text>
+                {menuSections && <TargetRowMenuButton sections={menuSections} />}
+              </View>
+
+              <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
+                {target.percentage < 1 ? target.percentage.toFixed(1) : target.percentage.toFixed(0)}%
+              </Text>
+            </View>
+
+            {displayMode === "chart" ? (
+              <MonthlyBarChart monthly={target.monthly} variant="mini" selectedMonths={chartMonths} style={tw`mt-1.5`} />
+            ) : (
+              <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
+                <View
+                  style={[tw`h-full bg-emerald-600 rounded-full`, { width: `${Math.min(target.percentage, 100)}%` }]}
+                />
+              </View>
+            )}
+          </View>
+          {onSpeciesPress && <Ionicons name="chevron-forward" size={16} color={tw.color("gray-300")} style={tw`ml-2`} />}
+        </View>
+      </Pressable>
+    </View>
+  );
+});
 
 // Shared "..." menu content used by both the hotspot kebab and the Nearby Species header button.
 export function buildTargetsMenuSections(opts: {
