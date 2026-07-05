@@ -93,6 +93,7 @@ async function createTables(): Promise<void> {
 
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS grid_cells (
+      id TEXT,
       lat REAL NOT NULL,
       lng REAL NOT NULL,
       data TEXT NOT NULL,
@@ -485,6 +486,7 @@ export async function installPackWithTargets(
       // Pre-stringify grid cell data outside the insert loop for better performance
       if (cells && cells.length > 0) {
         const cellsData = cells.map((cell) => ({
+          id: cell.id,
           lat: cell.lat,
           lng: cell.lng,
           data: JSON.stringify({ samples: cell.samples, species: cell.species }),
@@ -492,11 +494,11 @@ export async function installPackWithTargets(
 
         for (let i = 0; i < cellsData.length; i += batchSize) {
           const batch = cellsData.slice(i, i + batchSize);
-          const values = batch.map(() => "(?, ?, ?, ?)").join(", ");
-          const params = batch.flatMap((cell) => [cell.lat, cell.lng, cell.data, packId]);
+          const values = batch.map(() => "(?, ?, ?, ?, ?)").join(", ");
+          const params = batch.flatMap((cell) => [cell.id, cell.lat, cell.lng, cell.data, packId]);
 
           await database.runAsync(
-            `INSERT INTO grid_cells (lat, lng, data, pack_id) VALUES ${values}`,
+            `INSERT INTO grid_cells (id, lat, lng, data, pack_id) VALUES ${values}`,
             params
           );
         }
@@ -737,6 +739,7 @@ export async function getTargetsForHotspot(hotspotId: string, months?: number[])
 }
 
 export type GridCellRow = {
+  id: string | null;
   lat: number;
   lng: number;
   data: string;
@@ -756,7 +759,7 @@ export async function getGridCellsWithinBounds(bounds: {
   const lngCondition = crossesDateLine ? `(g.lng >= ? OR g.lng <= ?)` : `(g.lng >= ? AND g.lng <= ?)`;
 
   return db.getAllAsync<GridCellRow>(
-    `SELECT g.lat, g.lng, g.data, p.version FROM grid_cells g
+    `SELECT g.id, g.lat, g.lng, g.data, p.version FROM grid_cells g
      LEFT JOIN packs p ON g.pack_id = p.id
      WHERE g.lat >= ? AND g.lat <= ? AND ${lngCondition}`,
     [bounds.south, bounds.north, bounds.west, bounds.east]

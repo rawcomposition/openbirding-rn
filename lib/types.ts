@@ -36,6 +36,7 @@ export type StaticPackTarget = {
 };
 
 export type StaticPackGridCell = {
+  id: string;
   lat: number;
   lng: number;
   samples: (number | null)[];
