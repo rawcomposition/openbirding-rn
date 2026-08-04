@@ -4,6 +4,7 @@ import MonthlyBarChart from "@/components/MonthlyBarChart";
 import SpinnerPill from "@/components/SpinnerPill";
 import { useLocation } from "@/hooks/useLocation";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
+import { getLifeListMenuProps, handleLifeListAction } from "@/lib/lifelist";
 import {
   aggregateNearbySpecies,
   getBestHotspotsForSpecies,
@@ -11,7 +12,6 @@ import {
   getRadiusOption,
   SpeciesHotspot,
 } from "@/lib/nearbySpecies";
-import { getLifeListMenuProps, handleLifeListAction } from "@/lib/lifelist";
 import { getSpeciesImage } from "@/lib/species";
 import tw from "@/lib/tw";
 import { calculateDistance, formatDistance, getMarkerColor } from "@/lib/utils";
@@ -91,7 +91,8 @@ function SpeciesDetailContent() {
   // Measure distances from the user when they're near the search area, otherwise
   // from the search center itself.
   const userIsNearby =
-    !!userLocation && calculateDistance(userLocation.lat, userLocation.lng, lat, lng) <= REASONABLE_DISTANCE_KM[distanceUnits];
+    !!userLocation &&
+    calculateDistance(userLocation.lat, userLocation.lng, lat, lng) <= REASONABLE_DISTANCE_KM[distanceUnits];
   const distanceOrigin = userIsNearby && userLocation ? userLocation : { lat, lng };
 
   const sortedHotspots = useMemo(() => {
@@ -154,7 +155,7 @@ function SpeciesDetailContent() {
         },
       ],
       menuAnchorRef,
-      { placementOverride: PopoverPlacement.BOTTOM }
+      { placementOverride: PopoverPlacement.BOTTOM },
     );
   }, [openMenu, code, speciesName, openMerlin, openEbirdMap]);
 
@@ -208,8 +209,7 @@ function SpeciesDetailContent() {
           {taxon?.sciName ? <Text style={tw`text-base italic text-gray-500 mt-0.5`}>{taxon.sciName}</Text> : null}
         </View>
 
-        <View style={tw`mt-6`}>
-          <Text style={tw`text-base font-semibold text-gray-900`}>Seasonality</Text>
+        <View>
           {target ? (
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl px-4 pt-3 pb-4 mt-3`}>
               <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} />
@@ -235,11 +235,7 @@ function SpeciesDetailContent() {
               {sortedHotspots.map((hotspot, idx) => (
                 <View key={hotspot.id}>
                   {idx > 0 && <View style={tw`h-px bg-gray-100 ml-4`} />}
-                  <SpeciesHotspotRow
-                    hotspot={hotspot}
-                    useMiles={useMiles}
-                    onPress={() => setHotspotId(hotspot.id)}
-                  />
+                  <SpeciesHotspotRow hotspot={hotspot} useMiles={useMiles} onPress={() => setHotspotId(hotspot.id)} />
                 </View>
               ))}
             </View>
@@ -304,13 +300,18 @@ function SpeciesHotspotRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [tw`px-4 py-3 flex-row items-center`, pressed && tw`bg-gray-50`]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [tw`px-4 py-3 flex-row items-center`, pressed && tw`bg-gray-50`]}
+    >
       <View style={tw`flex-1`}>
         <Text style={tw`text-gray-900 text-base font-medium`} numberOfLines={1}>
           {hotspot.name}
         </Text>
         <View style={tw`flex-row items-center mt-1`}>
-          <View style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.speciesCount) }]} />
+          <View
+            style={[tw`w-2.5 h-2.5 rounded-full mr-2`, { backgroundColor: getMarkerColor(hotspot.speciesCount) }]}
+          />
           <Text style={tw`text-sm text-gray-600`}>
             <Text style={tw`font-semibold text-gray-900`}>
               {hotspot.percentage < 1 ? hotspot.percentage.toFixed(1) : hotspot.percentage.toFixed(0)}%
