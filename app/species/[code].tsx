@@ -1,8 +1,12 @@
+import ActionButton from "@/components/ActionButton";
+import ActionButtonRow from "@/components/ActionButtonRow";
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
 import HotspotDialog from "@/components/HotspotDialog";
 import MonthlyBarChart from "@/components/MonthlyBarChart";
 import SpinnerPill from "@/components/SpinnerPill";
+import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useLocation } from "@/hooks/useLocation";
+import { usePinnedTargets } from "@/hooks/usePinnedTargets";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
 import { getLifeListMenuProps, handleLifeListAction } from "@/lib/lifelist";
 import {
@@ -22,7 +26,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
 const MAX_HOTSPOTS = 100;
@@ -43,10 +47,13 @@ export default function SpeciesDetailPage() {
 function SpeciesDetailContent() {
   const navigation = useNavigation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ code: string; lat: string; lng: string }>();
+  const params = useLocalSearchParams<{ code: string; lat: string; lng: string; hotspotId?: string }>();
   const code = params.code;
   const lat = Number(params.lat);
   const lng = Number(params.lng);
+  // Only set when arriving from a hotspot's targets list, which is the only context
+  // where pinning means anything.
+  const hotspotId = params.hotspotId;
 
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
@@ -56,9 +63,13 @@ function SpeciesDetailContent() {
   const radius = getRadiusOption(distanceUnits, nearbyRadiusIndex);
   const useMiles = distanceUnits === "imperial";
 
-  const [hotspotId, setHotspotId] = useState<string | null>(null);
+  const [openHotspotId, setOpenHotspotId] = useState<string | null>(null);
+  const { pinnedTargets, togglePin } = usePinnedTargets(hotspotId);
+  const isPinned = pinnedTargets.includes(code);
   const { location: userLocation } = useLocation();
   const { data: taxonomy } = useTaxonomy();
+  const { fontScale } = useWindowDimensions();
+  const useStackedActionButtons = fontScale >= 1.25;
   const { openMenu } = useFloatingMenu();
   const menuAnchorRef = useRef<View>(null!);
   const lifelist = useSettingsStore((s) => s.lifelist);
@@ -126,11 +137,6 @@ function SpeciesDetailContent() {
         {
           items: [
             {
-              label: "View in Merlin",
-              icon: <Ionicons name="open-outline" size={18} color={tw.color("gray-700")} />,
-              onPress: openMerlin,
-            },
-            {
               label: "View eBird Map",
               icon: <Ionicons name="map-outline" size={18} color={tw.color("gray-700")} />,
               onPress: openEbirdMap,
@@ -157,7 +163,7 @@ function SpeciesDetailContent() {
       menuAnchorRef,
       { placementOverride: PopoverPlacement.BOTTOM },
     );
-  }, [openMenu, code, speciesName, openMerlin, openEbirdMap]);
+  }, [openMenu, code, speciesName, openEbirdMap]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -176,7 +182,7 @@ function SpeciesDetailContent() {
   // already dismissed its sheet by the time this runs; navigate first so the map screen is
   // focused when it consumes the pending focus request.
   const handleShowOnMap = (hotspot: { id: string; lat: number; lng: number }) => {
-    setHotspotId(null);
+    setOpenHotspotId(null);
     router.dismissTo("/");
     useMapStore.getState().setPendingMapFocus({ hotspotId: hotspot.id, lat: hotspot.lat, lng: hotspot.lng });
   };
@@ -209,6 +215,28 @@ function SpeciesDetailContent() {
           {taxon?.sciName ? <Text style={tw`text-base italic text-gray-500 mt-0.5`}>{taxon.sciName}</Text> : null}
         </View>
 
+        {/* The page sits on gray-50, so these need their own white surface to read as buttons. */}
+        <ActionButtonRow stacked={useStackedActionButtons}>
+          {hotspotId ? (
+            <ActionButton
+              icon={
+                <IconSymbol name={isPinned ? "pin.fill" : "pin"} size={20} color={tw.color("sky-600") ?? "#0284c7"} />
+              }
+              label={isPinned ? "Unpin Target" : "Pin Target"}
+              stacked={useStackedActionButtons}
+              style={tw`bg-white border border-gray-200/80`}
+              onPress={() => void togglePin(code, isPinned)}
+            />
+          ) : null}
+          <ActionButton
+            icon={<Ionicons name="open-outline" size={20} color={tw.color("sky-600")} />}
+            label="View in Merlin"
+            stacked={useStackedActionButtons}
+            style={tw`bg-white border border-gray-200/80`}
+            onPress={openMerlin}
+          />
+        </ActionButtonRow>
+
         <View>
           {target ? (
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl px-4 pt-3 pb-4 mt-3`}>
@@ -235,7 +263,7 @@ function SpeciesDetailContent() {
               {sortedHotspots.map((hotspot, idx) => (
                 <View key={hotspot.id}>
                   {idx > 0 && <View style={tw`h-px bg-gray-100 ml-4`} />}
-                  <SpeciesHotspotRow hotspot={hotspot} useMiles={useMiles} onPress={() => setHotspotId(hotspot.id)} />
+                  <SpeciesHotspotRow hotspot={hotspot} useMiles={useMiles} onPress={() => setOpenHotspotId(hotspot.id)} />
                 </View>
               ))}
             </View>
@@ -256,9 +284,9 @@ function SpeciesDetailContent() {
 
       {/* Presented on top of this screen, so dismissing it returns right here. */}
       <HotspotDialog
-        isOpen={hotspotId !== null}
-        hotspotId={hotspotId}
-        onClose={() => setHotspotId(null)}
+        isOpen={openHotspotId !== null}
+        hotspotId={openHotspotId}
+        onClose={() => setOpenHotspotId(null)}
         dimmed
         onShowOnMap={handleShowOnMap}
       />

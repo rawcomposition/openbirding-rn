@@ -132,21 +132,6 @@ function NearbySpeciesContent() {
 
   const handleRecenter = useCallback(() => setUseMyLocation(true), []);
 
-  const centerLat = center?.lat;
-  const centerLng = center?.lng;
-  // Stable reference so the memoized rows aren't invalidated by unrelated re-renders
-  // (e.g. the 30s location poll).
-  const handleSpeciesPress = useCallback(
-    (speciesCode: string) => {
-      if (centerLat == null || centerLng == null) return;
-      router.push({
-        pathname: "/species/[code]",
-        params: { code: speciesCode, lat: String(centerLat), lng: String(centerLng) },
-      });
-    },
-    [router, centerLat, centerLng]
-  );
-
   // Native header search bar, stacked under the title. hideWhenScrolling is the intended
   // native collapse behavior; it currently doesn't engage on iOS 26 (react-native-screens
   // issue), but it's harmless and will start working if that gets fixed upstream.
@@ -269,7 +254,6 @@ function NearbySpeciesContent() {
             isUpdating={isUpdating}
             lat={center.lat}
             lng={center.lng}
-            hideRowMenus
             aboutDataOpen={aboutDataOpen}
             onAboutDataOpenChange={setAboutDataOpen}
             caption={caption}
@@ -278,7 +262,6 @@ function NearbySpeciesContent() {
             displayMode={displayMode}
             searchQuery={deferredSearch}
             chartMonths={deferredMonths}
-            onSpeciesPress={handleSpeciesPress}
             emptyNotice={noCoverageNotice}
             hideLoadingIndicator
           />
