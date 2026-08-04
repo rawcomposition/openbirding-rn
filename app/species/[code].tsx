@@ -11,6 +11,7 @@ import {
   getRadiusOption,
   SpeciesHotspot,
 } from "@/lib/nearbySpecies";
+import { getLifeListMenuProps, handleLifeListAction } from "@/lib/lifelist";
 import { getSpeciesImage } from "@/lib/species";
 import tw from "@/lib/tw";
 import { calculateDistance, formatDistance, getMarkerColor } from "@/lib/utils";
@@ -18,13 +19,11 @@ import { useMapStore } from "@/stores/mapStore";
 import { SpeciesHotspotSort, useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import dayjs from "dayjs";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
-import Toast from "react-native-toast-message";
 
 const MAX_HOTSPOTS = 25;
 
@@ -62,6 +61,8 @@ function SpeciesDetailContent() {
   const { data: taxonomy } = useTaxonomy();
   const { openMenu } = useFloatingMenu();
   const menuAnchorRef = useRef<View>(null!);
+  const lifelist = useSettingsStore((s) => s.lifelist);
+  const isOnLifeList = lifelist?.some((entry) => entry.code === code) ?? false;
   const taxon = taxonomy?.find((entry) => entry.code === code);
   const image = getSpeciesImage(code, 480);
   const speciesName = taxon?.name ?? code;
@@ -116,25 +117,9 @@ function SpeciesDetailContent() {
     Linking.openURL(url);
   }, [code, lat, lng]);
 
-  // Removing a species from the life list is deliberately tucked away in the header
-  // menu, behind a confirmation — it should be hard to do by accident.
-  const confirmRemoveFromLifeList = useCallback(() => {
-    Alert.alert("Remove from Life List", `Remove ${speciesName} from your life list?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => {
-          const { lifelist, setLifelist } = useSettingsStore.getState();
-          setLifelist((lifelist || []).filter((e) => e.code !== code));
-        },
-      },
-    ]);
-  }, [code, speciesName]);
-
   const openHeaderMenu = useCallback(() => {
-    const { lifelist } = useSettingsStore.getState();
-    const isOnLifeList = lifelist?.some((e) => e.code === code) ?? false;
+    const { lifelist, lifelistExclusions } = useSettingsStore.getState();
+    const lifeProps = getLifeListMenuProps(code, lifelist, lifelistExclusions);
     openMenu(
       [
         {
@@ -151,25 +136,27 @@ function SpeciesDetailContent() {
             },
           ],
         },
-        ...(isOnLifeList
-          ? [
-              {
-                items: [
-                  {
-                    label: "Remove from Life List",
-                    icon: <Ionicons name="remove-circle-outline" size={18} color={tw.color("red-600")} />,
-                    destructive: true,
-                    onPress: confirmRemoveFromLifeList,
-                  },
-                ],
-              },
-            ]
-          : []),
+        {
+          items: [
+            {
+              label: lifeProps.label,
+              icon: (
+                <Ionicons
+                  name={lifeProps.icon === "plus.circle" ? "add-circle-outline" : "remove-circle-outline"}
+                  size={18}
+                  color={lifeProps.isDestructive ? tw.color("red-600") : tw.color("gray-700")}
+                />
+              ),
+              destructive: lifeProps.isDestructive,
+              onPress: () => handleLifeListAction(code, speciesName),
+            },
+          ],
+        },
       ],
       menuAnchorRef,
       { placementOverride: PopoverPlacement.BOTTOM }
     );
-  }, [openMenu, code, openMerlin, openEbirdMap, confirmRemoveFromLifeList]);
+  }, [openMenu, code, speciesName, openMerlin, openEbirdMap]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -209,11 +196,17 @@ function SpeciesDetailContent() {
         )}
 
         <View style={tw`mt-3`}>
-          <Text style={tw`text-2xl font-bold text-gray-900`}>{taxon?.name ?? code}</Text>
+          <Text style={tw`text-2xl font-bold text-gray-900`}>
+            {taxon?.name ?? code}
+            {isOnLifeList ? (
+              <>
+                {" "}
+                <Ionicons name="checkmark-circle" size={20} color={tw.color("emerald-600")} />
+              </>
+            ) : null}
+          </Text>
           {taxon?.sciName ? <Text style={tw`text-base italic text-gray-500 mt-0.5`}>{taxon.sciName}</Text> : null}
         </View>
-
-        <LifeListStatus code={code} speciesName={speciesName} />
 
         <View style={tw`mt-6`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Seasonality</Text>
@@ -274,72 +267,6 @@ function SpeciesDetailContent() {
         onShowOnMap={handleShowOnMap}
       />
     </View>
-  );
-}
-
-function LifeListStatus({ code, speciesName }: { code: string; speciesName: string }) {
-  const lifelist = useSettingsStore((s) => s.lifelist);
-  const setLifelist = useSettingsStore((s) => s.setLifelist);
-  const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
-  const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
-
-  const entry = lifelist?.find((e) => e.code === code);
-  const isExcluded = lifelistExclusions?.includes(code) ?? false;
-
-  const handleAdd = () => {
-    const newEntry = {
-      code,
-      date: new Date().toISOString().split("T")[0],
-      location: "N/A",
-      checklistId: null,
-      isManual: true,
-    };
-    setLifelist([...(lifelist || []), newEntry]);
-    Toast.show({ type: "success", text1: `Added ${speciesName} to life list` });
-  };
-
-  const handleRemoveExclusion = () => {
-    setLifelistExclusions((lifelistExclusions || []).filter((c) => c !== code));
-  };
-
-  if (isExcluded) {
-    return (
-      <View style={tw`mt-4 bg-white border border-gray-200 rounded-xl p-3 flex-row items-center`}>
-        <Ionicons name="eye-off-outline" size={20} color={tw.color("gray-500")} style={tw`mr-2.5`} />
-        <Text style={tw`text-sm text-gray-600 flex-1`}>Excluded from your life list, so it still shows as a target.</Text>
-        <TouchableOpacity onPress={handleRemoveExclusion} activeOpacity={0.7} hitSlop={8}>
-          <Text style={tw`text-sm font-semibold text-blue-500 ml-2`}>Undo</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // Read-only by design: removal lives in the header menu behind a confirmation.
-  if (entry) {
-    const seenLabel = entry.isManual
-      ? "On your life list"
-      : `Seen ${dayjs(entry.date).isValid() ? dayjs(entry.date).format("MMM D, YYYY") : entry.date}`;
-    const location = !entry.isManual && entry.location && entry.location !== "N/A" ? entry.location : null;
-    return (
-      <View style={tw`mt-2.5 flex-row items-center`}>
-        <Ionicons name="checkmark-circle" size={15} color={tw.color("emerald-600")} style={tw`mr-1.5`} />
-        <Text style={tw`text-sm text-gray-500 flex-1`} numberOfLines={1}>
-          {seenLabel}
-          {location ? ` · ${location}` : ""}
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <TouchableOpacity
-      onPress={handleAdd}
-      activeOpacity={0.8}
-      style={tw`mt-4 bg-emerald-600 rounded-full h-11 flex-row items-center justify-center`}
-    >
-      <Ionicons name="add-circle-outline" size={19} color="white" style={tw`mr-2`} />
-      <Text style={tw`text-white text-base font-semibold`}>Add to Life List</Text>
-    </TouchableOpacity>
   );
 }
 

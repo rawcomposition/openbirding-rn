@@ -3,6 +3,7 @@ import { useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useTaxonomyMap } from "@/hooks/useTaxonomy";
 import { HotspotTargetsResult } from "@/lib/database";
 import { AggregatedHotspotTarget } from "@/lib/hotspotTargets";
+import { getLifeListMenuProps, handleLifeListAction, LifeListMenuProps } from "@/lib/lifelist";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
@@ -14,7 +15,6 @@ import { Image } from "expo-image";
 import { Href, useRouter } from "expo-router";
 import { memo, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
-import Toast from "react-native-toast-message";
 import BaseBottomSheet from "./BaseBottomSheet";
 import { FloatingMenuSection } from "./FloatingMenu";
 import { FloatingMenuTrigger } from "./FloatingMenuProvider";
@@ -99,9 +99,7 @@ export default function TargetsView({
   const setSelectedMonths = useSettingsStore((s) => s.setTargetMonths);
   const { taxonomyMap } = useTaxonomyMap();
   const lifelist = useSettingsStore((s) => s.lifelist);
-  const setLifelist = useSettingsStore((s) => s.setLifelist);
   const lifelistExclusions = useSettingsStore((s) => s.lifelistExclusions);
-  const setLifelistExclusions = useSettingsStore((s) => s.setLifelistExclusions);
   const lifelistPromptDismissed = useSettingsStore((s) => s.lifelistPromptDismissed);
   const setLifelistPromptDismissed = useSettingsStore((s) => s.setLifelistPromptDismissed);
   const showAllSpecies = useSettingsStore((s) => s.showAllSpecies);
@@ -206,36 +204,11 @@ export default function TargetsView({
   const hasNoSpeciesData = hasNoTargetData || data.targets.length === 0;
   const hasSeenAllTargets = lifelist && filteredTargets.length === 0 && data?.targets && data.targets.length > 0;
 
-  const handleLifeListAction = (speciesCode: string) => {
-    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
+  const onLifeListAction = (speciesCode: string) =>
+    handleLifeListAction(speciesCode, taxonomyMap.get(speciesCode) ?? speciesCode);
 
-    if (isExcluded) {
-      const current = lifelistExclusions || [];
-      setLifelistExclusions(current.filter((c) => c !== speciesCode));
-    } else if (isOnLifeList) {
-      setLifelist((lifelist || []).filter((e) => e.code !== speciesCode));
-    } else {
-      const newEntry = {
-        code: speciesCode,
-        date: new Date().toISOString().split("T")[0],
-        location: "N/A",
-        checklistId: null,
-        isManual: true,
-      };
-      setLifelist([...(lifelist || []), newEntry]);
-      const speciesName = taxonomyMap.get(speciesCode) ?? speciesCode;
-      Toast.show({ type: "success", text1: `Added ${speciesName} to life list` });
-    }
-  };
-
-  const getLifeListMenuProps = (speciesCode: string) => {
-    const isExcluded = lifelistExclusions?.includes(speciesCode) ?? false;
-    const isOnLifeList = lifelist?.some((e) => e.code === speciesCode) ?? false;
-    if (isExcluded) return { label: "Remove Exclusion", icon: "minus.circle" as const, isDestructive: true };
-    if (isOnLifeList) return { label: "Remove from Life List", icon: "minus.circle" as const, isDestructive: true };
-    return { label: "Add to Life List", icon: "plus.circle" as const, isDestructive: false };
-  };
+  const lifeListMenuProps = (speciesCode: string) =>
+    getLifeListMenuProps(speciesCode, lifelist, lifelistExclusions);
 
   const renderEmptyState = () => {
     if (hasNoSpeciesData) {
@@ -332,8 +305,8 @@ export default function TargetsView({
                           lng,
                           pinningEnabled,
                           onPinToggle,
-                          handleLifeListAction,
-                          getLifeListMenuProps,
+                          handleLifeListAction: onLifeListAction,
+                          getLifeListMenuProps: lifeListMenuProps,
                         })
                       : null
                   }
@@ -549,7 +522,7 @@ type RowMenuCtx = {
   pinningEnabled: boolean;
   onPinToggle?: (code: string, isPinned: boolean) => void | Promise<void>;
   handleLifeListAction: (code: string) => void;
-  getLifeListMenuProps: (code: string) => { label: string; icon: "plus.circle" | "minus.circle"; isDestructive: boolean };
+  getLifeListMenuProps: (code: string) => LifeListMenuProps;
 };
 
 function buildRowMenuSections(code: string, ctx: RowMenuCtx): FloatingMenuSection[] {
