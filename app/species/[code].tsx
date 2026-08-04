@@ -25,7 +25,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Alert, Linking, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
-const MAX_HOTSPOTS = 25;
+const MAX_HOTSPOTS = 100;
 
 // Only show distances measured from the user when they're reasonably close to the
 // search area; when browsing a remote spot, distances from the search center are

@@ -32,6 +32,7 @@ export const RADIUS_OPTIONS: Record<DistanceUnits, RadiusOption[]> = {
     { km: 25 * KM_PER_MILE, label: "25 mi" },
     { km: 50 * KM_PER_MILE, label: "50 mi" },
     { km: 100 * KM_PER_MILE, label: "100 mi" },
+    { km: 200 * KM_PER_MILE, label: "200 mi" },
   ],
   metric: [
     { km: 8, label: "8 km" },
@@ -40,6 +41,7 @@ export const RADIUS_OPTIONS: Record<DistanceUnits, RadiusOption[]> = {
     { km: 40, label: "40 km" },
     { km: 80, label: "80 km" },
     { km: 160, label: "160 km" },
+    { km: 320, label: "320 km" },
   ],
 };
 
