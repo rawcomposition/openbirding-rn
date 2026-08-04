@@ -1,12 +1,13 @@
+import { HeaderHeightContext } from "@react-navigation/elements";
 import React, { createContext, ReactNode, RefObject, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { StyleProp, TouchableOpacity, TouchableOpacityProps, useWindowDimensions, View, ViewStyle } from "react-native";
-import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
+import { PopoverMode, PopoverPlacement, Rect } from "react-native-popover-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FloatingMenu, { FloatingMenuSection } from "./FloatingMenu";
+import FloatingMenu, { FloatingMenuAnchor, FloatingMenuSection } from "./FloatingMenu";
 
 type FloatingMenuState = {
   sections: FloatingMenuSection[];
-  from: RefObject<View>;
+  from: FloatingMenuAnchor;
   placement: PopoverPlacement;
 };
 
@@ -55,6 +56,23 @@ const MENU_SECTION_SEPARATOR_HEIGHT = 9;
 
 const FloatingMenuContext = createContext<FloatingMenuInternalContextValue | null>(null);
 
+/**
+ * A native header lays its children out in the strip *above* the screen content even though
+ * UIKit draws them over it, so a trigger in the header measures at a negative window y, short by
+ * exactly the header's height (software-mansion/react-native-screens#2539). Nothing else can
+ * report a negative y — a trigger the user just tapped is on screen — so a negative y both
+ * identifies a header trigger and tells us how to correct it.
+ *
+ * Returns the trigger's real window rect, or null when the measurement needed no correction.
+ * Popover re-measures a ref itself, so a header trigger has to be handed a fixed rect; everything
+ * else keeps passing the ref, since Popover's ref path is also what compensates for the container
+ * offset of a menu hosted inside a bottom sheet.
+ */
+function getHeaderTriggerRect(measured: { x: number; y: number; width: number; height: number }, headerHeight: number) {
+  if (measured.y >= 0) return null;
+  return new Rect(measured.x, measured.y + headerHeight, measured.width, measured.height);
+}
+
 function getEstimatedMenuHeight(sections: FloatingMenuSection[]) {
   const itemCount = sections.reduce((total, section) => total + section.items.length, 0);
   const separatorCount = Math.max(sections.length - 1, 0);
@@ -64,6 +82,7 @@ function getEstimatedMenuHeight(sections: FloatingMenuSection[]) {
 export function FloatingMenuProvider({ children, placementOverride }: FloatingMenuProviderProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const [menu, setMenu] = useState<FloatingMenuState | null>(null);
 
   const closeMenu = useCallback(() => {
@@ -77,30 +96,28 @@ export function FloatingMenuProvider({ children, placementOverride }: FloatingMe
       options?: { placementOverride?: PopoverPlacement }
     ) => {
       const effectivePlacementOverride = options?.placementOverride ?? placementOverride;
-      if (effectivePlacementOverride) {
-        setMenu({ sections, from, placement: effectivePlacementOverride });
-        return;
-      }
-
-      const fallbackPlacement = PopoverPlacement.TOP;
       if (!from.current) {
-        setMenu({ sections, from, placement: fallbackPlacement });
+        setMenu({ sections, from, placement: effectivePlacementOverride ?? PopoverPlacement.TOP });
         return;
       }
 
-      from.current.measureInWindow((_x, y, _width, height) => {
-        const estimatedMenuHeight = getEstimatedMenuHeight(sections);
-        const availableAbove = y - insets.top - MENU_EDGE_MARGIN;
-        const availableBelow = windowHeight - (y + height) - Math.max(insets.bottom, 16) - MENU_EDGE_MARGIN;
-        const placement =
-          availableBelow >= estimatedMenuHeight || availableBelow >= availableAbove
-            ? PopoverPlacement.BOTTOM
-            : PopoverPlacement.TOP;
+      from.current.measureInWindow((x, y, width, height) => {
+        const headerRect = getHeaderTriggerRect({ x, y, width, height }, headerHeight);
+        const anchorY = headerRect ? headerRect.y : y;
 
-        setMenu({ sections, from, placement });
+        const estimatedMenuHeight = getEstimatedMenuHeight(sections);
+        const availableAbove = anchorY - insets.top - MENU_EDGE_MARGIN;
+        const availableBelow = windowHeight - (anchorY + height) - Math.max(insets.bottom, 16) - MENU_EDGE_MARGIN;
+        const placement =
+          effectivePlacementOverride ??
+          (availableBelow >= estimatedMenuHeight || availableBelow >= availableAbove
+            ? PopoverPlacement.BOTTOM
+            : PopoverPlacement.TOP);
+
+        setMenu({ sections, from: headerRect ?? from, placement });
       });
     },
-    [insets.bottom, insets.top, placementOverride, windowHeight]
+    [headerHeight, insets.bottom, insets.top, placementOverride, windowHeight]
   );
 
   const value = useMemo(
