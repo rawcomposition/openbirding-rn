@@ -64,7 +64,7 @@ function SpeciesDetailContent() {
   const lifelist = useSettingsStore((s) => s.lifelist);
   const isOnLifeList = lifelist?.some((entry) => entry.code === code) ?? false;
   const taxon = taxonomy?.find((entry) => entry.code === code);
-  const image = getSpeciesImage(code, 480);
+  const image = getSpeciesImage(code, 900);
   const speciesName = taxon?.name ?? code;
 
   // Same query key as the Nearby Species list, so this is usually an instant cache hit.
@@ -184,7 +184,7 @@ function SpeciesDetailContent() {
     <View style={tw`flex-1 bg-gray-50`}>
       <ScrollView contentContainerStyle={tw`px-4 pt-2 pb-12`} showsVerticalScrollIndicator={false}>
         {image && (
-          <View style={tw`rounded-2xl bg-gray-200 overflow-hidden`}>
+          <View style={tw`-mx-4 -mt-2 bg-gray-200 overflow-hidden`}>
             <Image source={{ uri: image.url }} style={[tw`w-full`, { aspectRatio: 4 / 3 }]} />
             <View style={tw`absolute bottom-0 right-0 bg-black/45 rounded-tl-lg px-2 py-1`}>
               <Text style={tw`text-[10px] text-white/95`}>
