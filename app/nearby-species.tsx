@@ -216,14 +216,14 @@ function NearbySpeciesContent() {
       <TouchableOpacity
         onPress={() => router.push("/packs")}
         activeOpacity={0.7}
-        style={tw`mt-3 bg-amber-50 border border-amber-200 rounded-lg p-4 flex-row items-center`}
+        style={tw`mt-3 bg-white border border-gray-200 rounded-lg p-4 flex-row items-center`}
       >
-        <Ionicons name="cloud-download-outline" size={20} color={tw.color("amber-600")} style={tw`mr-3`} />
-        <Text style={tw`text-sm text-amber-800 flex-1`}>
+        <Ionicons name="cloud-download-outline" size={20} color={tw.color("gray-500")} style={tw`mr-3`} />
+        <Text style={tw`text-sm text-gray-600 flex-1`}>
           {gridlessNames.join(", ")} {gridlessNames.length === 1 ? "doesn't" : "don't"} include Nearby Species data
           yet. Update {gridlessNames.length === 1 ? "it" : "them"} on the Hotspot Packs page.
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={tw.color("amber-400")} style={tw`ml-2`} />
+        <Ionicons name="chevron-forward" size={16} color={tw.color("gray-400")} style={tw`ml-2`} />
       </TouchableOpacity>
     ) : null;
 

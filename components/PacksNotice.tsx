@@ -58,15 +58,15 @@ export default function PacksNotice({ variant = "banner", onPress }: PacksNotice
 
   if (variant === "inline") {
     return (
-      <View style={tw`bg-amber-50 border border-amber-200 rounded-lg p-4`}>
+      <View style={tw`bg-white border border-gray-200 rounded-lg p-4`}>
         <View style={tw`flex-row items-start`}>
-          <Ionicons name="information-circle" size={20} color={tw.color("amber-600")} style={tw`mr-3 mt-0.5`} />
+          <Ionicons name="information-circle" size={20} color={tw.color("gray-500")} style={tw`mr-3 mt-0.5`} />
           <View style={tw`flex-1`}>
-            <Text style={tw`text-amber-900 font-medium mb-1 text-base`}>No packs installed</Text>
-            <Text style={tw`text-amber-700 text-sm mb-3`}>
+            <Text style={tw`text-gray-900 font-semibold mb-1 text-base`}>No packs installed</Text>
+            <Text style={tw`text-gray-600 text-sm mb-3`}>
               Download hotspot packs to see birding locations and get the most out of OpenBirding
             </Text>
-            <Pressable onPress={handlePress} style={tw`bg-amber-600 px-4 py-2 rounded-md self-start`}>
+            <Pressable onPress={handlePress} style={tw`bg-blue-500 px-4 py-2 rounded-md self-start`}>
               <Text style={tw`text-white font-medium text-base`}>Download Packs</Text>
             </Pressable>
           </View>

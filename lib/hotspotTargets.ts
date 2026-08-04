@@ -1,3 +1,5 @@
+import { WILSON_SCORE_Z_INDEX } from "./config";
+
 export type RawHotspotTargetData = {
   samples: (number | null)[];
   species: (string | number)[][];
@@ -43,6 +45,19 @@ export function mergeRawTargetData(cells: RawHotspotTargetData[]): RawHotspotTar
   const species: (string | number)[][] = Array.from(speciesMap.entries()).map(([code, counts]) => [code, ...counts]);
 
   return { samples, species };
+}
+
+const Z = WILSON_SCORE_Z_INDEX;
+const Z_SQ = Z * Z;
+
+/** Wilson score lower bound of `observations / samples`, matching the aggregator's `score` column. */
+export function wilsonScore(observations: number, samples: number): number {
+  if (samples <= 0) return 0;
+  const numerator =
+    observations +
+    Z_SQ / 2 -
+    Z * Math.sqrt((observations * (samples - observations)) / samples + Z_SQ / 4);
+  return numerator / (samples + Z_SQ);
 }
 
 export function getMonthIndices(data: RawHotspotTargetData, months?: number[]): number[] {

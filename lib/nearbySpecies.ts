@@ -12,6 +12,7 @@ import {
   mergeRawTargetData,
   parseHotspotTargetData,
   RawHotspotTargetData,
+  wilsonScore,
 } from "./hotspotTargets";
 import type { DistanceUnits } from "@/stores/settingsStore";
 import { calculateDistance, getBoundingBoxFromLocation } from "./utils";
@@ -127,6 +128,8 @@ export type SpeciesHotspot = {
   samples: number;
   /** Reporting frequency (%) of the species at this hotspot for the selected months. */
   percentage: number;
+  /** Wilson score lower bound (0-1) of that frequency; ranking value, never displayed. */
+  score: number;
   /** Distance from the search center. */
   distanceKm: number;
 };
@@ -175,9 +178,10 @@ export async function getBestHotspotsForSpecies(
       speciesCount: hotspot.species,
       samples: totalSamples,
       percentage: (observations / totalSamples) * 100,
+      score: wilsonScore(observations, totalSamples),
       distanceKm: hotspot.distanceKm,
     });
   }
 
-  return results.sort((a, b) => b.percentage - a.percentage);
+  return results.sort((a, b) => b.score - a.score);
 }

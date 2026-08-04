@@ -16,7 +16,7 @@ export type DistanceUnits = "metric" | "imperial";
 
 export type TargetsDisplayMode = "chart" | "percent";
 
-export type SpeciesHotspotSort = "frequency" | "distance";
+export type SpeciesHotspotSort = "best" | "distance";
 
 // Default distance units from the device's region. measurementSystem is "us" | "uk" | "metric" | null;
 // both the US and UK use miles for road distances, everything else is metric.
@@ -123,7 +123,7 @@ export const useSettingsStore = create<SettingsStore>()(
       nearbyDisplayMode: "chart",
       hotspotDisplayMode: "percent",
       nearbyRadiusIndex: DEFAULT_RADIUS_INDEX,
-      speciesHotspotSort: "frequency",
+      speciesHotspotSort: "best",
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
       setLifelistExclusions: (exclusions) => set({ lifelistExclusions: exclusions }),

@@ -100,7 +100,7 @@ function SpeciesDetailContent() {
       distanceKm: calculateDistance(distanceOrigin.lat, distanceOrigin.lng, hotspot.lat, hotspot.lng),
     }));
     return withDistance
-      .sort((a, b) => (sort === "distance" ? a.distanceKm - b.distanceKm : b.percentage - a.percentage))
+      .sort((a, b) => (sort === "distance" ? a.distanceKm - b.distanceKm : b.score - a.score))
       .slice(0, MAX_HOTSPOTS);
   }, [hotspots, sort, distanceOrigin.lat, distanceOrigin.lng]);
 
@@ -217,9 +217,6 @@ function SpeciesDetailContent() {
 
         <View style={tw`mt-6`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Seasonality</Text>
-          <Text style={tw`text-sm text-gray-500 mt-1`}>
-            Share of checklists reporting this species within ~{radius.label}
-          </Text>
           {target ? (
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl px-4 pt-3 pb-4 mt-3`}>
               <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} />
@@ -236,12 +233,9 @@ function SpeciesDetailContent() {
 
         <View style={tw`mt-6`}>
           <View style={tw`flex-row items-center justify-between`}>
-            <Text style={tw`text-base font-semibold text-gray-900`}>Best Hotspots</Text>
+            <Text style={tw`text-base font-semibold text-gray-900`}>Top Hotspots</Text>
             {sortedHotspots.length > 1 && <SortToggle sort={sort} onChange={setSort} />}
           </View>
-          <Text style={tw`text-sm text-gray-500 mt-1`}>
-            Where this species is reported most often within ~{radius.label}
-          </Text>
 
           {sortedHotspots.length > 0 ? (
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl mt-3 overflow-hidden`}>
@@ -310,11 +304,11 @@ function LifeListStatus({ code, speciesName }: { code: string; speciesName: stri
 
   if (isExcluded) {
     return (
-      <View style={tw`mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex-row items-center`}>
-        <Ionicons name="eye-off-outline" size={20} color={tw.color("amber-600")} style={tw`mr-2.5`} />
-        <Text style={tw`text-sm text-amber-800 flex-1`}>Excluded from your life list, so it still shows as a target.</Text>
+      <View style={tw`mt-4 bg-white border border-gray-200 rounded-xl p-3 flex-row items-center`}>
+        <Ionicons name="eye-off-outline" size={20} color={tw.color("gray-500")} style={tw`mr-2.5`} />
+        <Text style={tw`text-sm text-gray-600 flex-1`}>Excluded from your life list, so it still shows as a target.</Text>
         <TouchableOpacity onPress={handleRemoveExclusion} activeOpacity={0.7} hitSlop={8}>
-          <Text style={tw`text-sm font-semibold text-amber-700 ml-2`}>Undo</Text>
+          <Text style={tw`text-sm font-semibold text-blue-500 ml-2`}>Undo</Text>
         </TouchableOpacity>
       </View>
     );
@@ -354,7 +348,7 @@ function SortToggle({ sort, onChange }: { sort: SpeciesHotspotSort; onChange: (s
     <View style={tw`flex-row bg-gray-200/70 rounded-full p-0.5`}>
       {(
         [
-          { value: "frequency", label: "Frequency" },
+          { value: "best", label: "Best" },
           { value: "distance", label: "Distance" },
         ] as const
       ).map((option) => (
