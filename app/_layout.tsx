@@ -162,6 +162,7 @@ export default function RootLayout() {
                 name="nearby-species"
                 options={{
                   title: "Nearby Species",
+                  headerBackTitle: "Species",
                   headerBackButtonDisplayMode: "minimal",
                   headerStyle: { backgroundColor: "#f9fafb" },
                   headerShadowVisible: false,
