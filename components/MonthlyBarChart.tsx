@@ -123,7 +123,8 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
           return (
             <Pressable
               key={month}
-              onPress={() => setActiveMonth(isActive ? null : month)}
+              onPressIn={() => setActiveMonth(month)}
+              onPressOut={() => setActiveMonth(null)}
               style={tw`flex-1 items-center`}
             >
               <View style={[tw`w-full justify-end`, { height: barHeight }]}>
