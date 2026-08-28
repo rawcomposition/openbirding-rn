@@ -87,6 +87,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
         lng={lng}
         resetKey={hotspotId}
         hotspotId={hotspotId}
+        onExpandSheet={onExpandSheet}
         aboutDataOpen={aboutDataOpen}
         onAboutDataOpenChange={setAboutDataOpen}
         displayMode={displayMode}

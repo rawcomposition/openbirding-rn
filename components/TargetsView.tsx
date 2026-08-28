@@ -7,6 +7,7 @@ import { AggregatedHotspotTarget } from "@/lib/hotspotTargets";
 import { getLifeListMenuProps, handleLifeListAction, LifeListMenuProps } from "@/lib/lifelist";
 import tw from "@/lib/tw";
 import { parsePackVersion } from "@/lib/utils";
+import { useMapStore } from "@/stores/mapStore";
 import { TargetsDisplayMode, useSettingsStore } from "@/stores/settingsStore";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +39,11 @@ type TargetsViewProps = {
    * handed to the species page so it can offer Pin/Unpin too.
    */
   hotspotId?: string;
+  /**
+   * Expands the hosting bottom sheet. Called before the row long-press menu opens while the
+   * sheet is collapsed, so the menu has room and its anchor measures at its final position.
+   */
+  onExpandSheet?: () => Promise<void>;
   /** Controlled "About This Data" sheet, opened from the caller's menu (hotspot kebab / nav header button). */
   aboutDataOpen: boolean;
   onAboutDataOpenChange: (open: boolean) => void;
@@ -75,6 +81,7 @@ export default function TargetsView({
   lng,
   resetKey,
   hotspotId,
+  onExpandSheet,
   aboutDataOpen,
   onAboutDataOpenChange,
   caption,
@@ -101,6 +108,7 @@ export default function TargetsView({
   const router = useRouter();
   const { openMenu } = useFloatingMenu();
   const { pinnedTargets, togglePin } = usePinnedTargets(hotspotId);
+  const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
 
   useEffect(() => {
     setShowAll(false);
@@ -118,7 +126,7 @@ export default function TargetsView({
   );
 
   // Long-pressing a row opens the actions that used to live in the per-row "..." menu.
-  const handleSpeciesLongPress = useCallback(
+  const openRowMenu = useCallback(
     (speciesCode: string, anchorRef: RefObject<View>) => {
       const sections = buildRowMenuSections(speciesCode, {
         name: taxonomyMap.get(speciesCode) ?? speciesCode,
@@ -132,6 +140,32 @@ export default function TargetsView({
     },
     [openMenu, taxonomyMap, lat, lng, pinnedTargets, hotspotId, togglePin, lifelist, lifelistExclusions]
   );
+
+  const pendingRowMenu = useRef<{ speciesCode: string; anchorRef: RefObject<View> } | null>(null);
+
+  const handleSpeciesLongPress = useCallback(
+    (speciesCode: string, anchorRef: RefObject<View>) => {
+      // The menu is hosted inside the sheet, so a collapsed sheet clips it no matter where it's
+      // placed — that's why the old kebab only appeared once expanded. Grow the sheet first and
+      // let the effect below open the menu against the settled layout.
+      if (onExpandSheet && !isBottomSheetExpanded) {
+        pendingRowMenu.current = { speciesCode, anchorRef };
+        void onExpandSheet();
+        return;
+      }
+      openRowMenu(speciesCode, anchorRef);
+    },
+    [onExpandSheet, isBottomSheetExpanded, openRowMenu]
+  );
+
+  useEffect(() => {
+    if (!isBottomSheetExpanded || !pendingRowMenu.current) return;
+    const { speciesCode, anchorRef } = pendingRowMenu.current;
+    pendingRowMenu.current = null;
+    // One frame past the detent change, so the row measures at its post-resize position.
+    const frame = requestAnimationFrame(() => openRowMenu(speciesCode, anchorRef));
+    return () => cancelAnimationFrame(frame);
+  }, [isBottomSheetExpanded, openRowMenu]);
 
   const handleToggleMonth = (month: number) => {
     if (selectedMonths.length === 0) {
