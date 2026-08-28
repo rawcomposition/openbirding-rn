@@ -247,7 +247,7 @@ function SpeciesDetailContent() {
           ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
               <Ionicons name="alert-circle" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
-              <Text style={tw`text-sm text-gray-600 flex-1`}>No frequency data for this species here.</Text>
+              <Text style={tw`text-sm text-gray-600 flex-1`}>No frequency data available.</Text>
             </View>
           )}
         </View>
@@ -263,7 +263,11 @@ function SpeciesDetailContent() {
               {sortedHotspots.map((hotspot, idx) => (
                 <View key={hotspot.id}>
                   {idx > 0 && <View style={tw`h-px bg-gray-100 ml-4`} />}
-                  <SpeciesHotspotRow hotspot={hotspot} useMiles={useMiles} onPress={() => setOpenHotspotId(hotspot.id)} />
+                  <SpeciesHotspotRow
+                    hotspot={hotspot}
+                    useMiles={useMiles}
+                    onPress={() => setOpenHotspotId(hotspot.id)}
+                  />
                 </View>
               ))}
             </View>

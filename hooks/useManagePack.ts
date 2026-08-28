@@ -86,7 +86,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
-      queryClient.invalidateQueries({ queryKey: ["nearbyPackCoverage"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
       queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
       queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
       refreshTaxonomy();
@@ -134,7 +134,7 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
-      queryClient.invalidateQueries({ queryKey: ["nearbyPackCoverage"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
       queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
       queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
     } catch (error) {

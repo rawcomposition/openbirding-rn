@@ -1,12 +1,13 @@
 import { FloatingMenuHost, FloatingMenuProvider, useFloatingMenu } from "@/components/FloatingMenuProvider";
+import { PackUpdateNotice } from "@/components/PackCoverageNotice";
 import SpinnerPill from "@/components/SpinnerPill";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
 import {
   aggregateNearbySpecies,
-  getNearbyPackCoverage,
   getNearbySpeciesRaw,
   getRadiusOption,
+  hasOutdatedNearbySpeciesPacks,
   RADIUS_OPTIONS,
 } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
@@ -15,7 +16,7 @@ import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigation, useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
@@ -34,7 +35,7 @@ export default function NearbySpeciesPage() {
 
 function NearbySpeciesContent() {
   const navigation = useNavigation();
-  const router = useRouter();
+
   const { openMenu } = useFloatingMenu();
   const menuAnchorRef = useRef<View>(null!);
   const radiusAnchorRef = useRef<View>(null!);
@@ -70,12 +71,9 @@ function NearbySpeciesContent() {
     enabled: !!center,
     placeholderData: (prev) => prev,
   });
-  // Cheap pack-overlap check that powers the "packs don't cover this area" and
-  // "pack needs an update for Nearby Species" notices.
-  const { data: coverage } = useQuery({
-    queryKey: ["nearbyPackCoverage", center?.lat, center?.lng, radius.km],
-    queryFn: () => getNearbyPackCoverage(center!.lat, center!.lng, radius.km),
-    enabled: !!center,
+  const { data: hasOutdatedPacks } = useQuery({
+    queryKey: ["nearbyOutdatedPacks"],
+    queryFn: hasOutdatedNearbySpeciesPacks,
   });
   // Deferring the month selection lets a toggle paint immediately (strip + spinner) while
   // the aggregation and the 100-row re-render happen in a lower-priority render pass.
@@ -193,41 +191,7 @@ function NearbySpeciesContent() {
       </TouchableOpacity>
     ) : null;
 
-  // Packs installed before Nearby Species existed have no grid data, so results in their
-  // area are missing or incomplete — prompt for a pack update whenever one overlaps the radius.
-  const gridlessNames = coverage?.gridlessPackNames ?? [];
-  const updateNotice =
-    gridlessNames.length > 0 ? (
-      <TouchableOpacity
-        onPress={() => router.push("/packs")}
-        activeOpacity={0.7}
-        style={tw`mt-3 bg-white border border-gray-200 rounded-lg p-4 flex-row items-center`}
-      >
-        <Ionicons name="cloud-download-outline" size={20} color={tw.color("gray-500")} style={tw`mr-3`} />
-        <Text style={tw`text-sm text-gray-600 flex-1`}>
-          {gridlessNames.join(", ")} {gridlessNames.length === 1 ? "doesn't" : "don't"} include Nearby Species data
-          yet. Update {gridlessNames.length === 1 ? "it" : "them"} on the Hotspot Packs page.
-        </Text>
-        <Ionicons name="chevron-forward" size={16} color={tw.color("gray-400")} style={tw`ml-2`} />
-      </TouchableOpacity>
-    ) : null;
-
-  // Rendered by TargetsView in place of the generic empty message when packs are installed
-  // but none of them overlap this area.
-  const noCoverageNotice =
-    coverage && !coverage.hasCoverage ? (
-      <TouchableOpacity
-        onPress={() => router.push("/packs")}
-        activeOpacity={0.7}
-        style={tw`bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}
-      >
-        <Ionicons name="map-outline" size={20} color={tw.color("gray-400")} style={tw`mr-3`} />
-        <Text style={tw`text-sm text-gray-600 flex-1`}>
-          None of your installed packs cover this area. Browse packs to download one.
-        </Text>
-        <Ionicons name="chevron-forward" size={16} color={tw.color("gray-400")} style={tw`ml-2`} />
-      </TouchableOpacity>
-    ) : undefined;
+  const updateNotice = hasOutdatedPacks ? <PackUpdateNotice /> : null;
 
   return (
     <View style={tw`flex-1 bg-gray-50`}>
@@ -247,7 +211,8 @@ function NearbySpeciesContent() {
           // Negative margin trims the slack the collapsed header search bar leaves above
           // the month strip.
           <View style={tw`-mt-2`}>
-          {updateNotice}
+          {/* When the list is empty the update notice renders as the empty state instead */}
+          {showMenu && updateNotice ? <View style={tw`mt-3 mb-2`}>{updateNotice}</View> : null}
           <TargetsView
             data={data}
             isLoading={isLoading}
@@ -262,7 +227,7 @@ function NearbySpeciesContent() {
             displayMode={displayMode}
             searchQuery={deferredSearch}
             chartMonths={deferredMonths}
-            emptyNotice={noCoverageNotice}
+            emptyNotice={updateNotice}
             hideLoadingIndicator
           />
           </View>

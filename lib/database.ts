@@ -774,36 +774,12 @@ export async function getGridCellsWithinBounds(bounds: {
   );
 }
 
-export type PackCoverage = {
-  id: number;
-  name: string;
-  /** Pack format at install time; null means it predates format tracking. */
-  format: number | null;
-};
-
-/** Installed packs whose region overlaps the bounds (i.e. they have at least one hotspot inside). */
-export async function getPacksCoveringBounds(bounds: {
-  west: number;
-  south: number;
-  east: number;
-  north: number;
-}): Promise<PackCoverage[]> {
+export async function hasPacksBelowFormat(minFormat: number): Promise<boolean> {
   if (!db) throw new Error("Database not initialized");
-
-  // When west > east, the bounding box crosses the international date line
-  const crossesDateLine = bounds.west > bounds.east;
-  const lngCondition = crossesDateLine ? `(h.lng >= ? OR h.lng <= ?)` : `(h.lng >= ? AND h.lng <= ?)`;
-
-  const rows = await db.getAllAsync<{ id: number; name: string; format: number | null }>(
-    `SELECT p.id, p.name, p.format FROM packs p
-     WHERE EXISTS (
-       SELECT 1 FROM hotspots h
-       WHERE h.pack_id = p.id AND h.lat >= ? AND h.lat <= ? AND ${lngCondition}
-     )`,
-    [bounds.south, bounds.north, bounds.west, bounds.east]
-  );
-
-  return rows.map((row) => ({ id: row.id, name: row.name, format: row.format }));
+  const row = await db.getFirstAsync<{ id: number }>(`SELECT id FROM packs WHERE COALESCE(format, 0) < ? LIMIT 1`, [
+    minFormat,
+  ]);
+  return row !== null;
 }
 
 export async function getPinnedTargets(hotspotId: string): Promise<string[]> {

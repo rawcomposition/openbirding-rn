@@ -5,11 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 export type InstalledPackInfo = {
   installed_at: string;
   version: string | null;
-  /** Pack format at install time; null means it predates format tracking. */
   format: number | null;
 };
 
-/** A pack needs an update when the remote version differs or it was installed with an older data format. */
 export function packNeedsUpdate(installedPack: InstalledPackInfo, remoteVersion: string): boolean {
   return installedPack.version !== remoteVersion || (installedPack.format ?? 0) < PACK_FORMAT_VERSION;
 }

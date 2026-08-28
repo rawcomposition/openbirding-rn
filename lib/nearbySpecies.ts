@@ -1,8 +1,8 @@
 import {
   getGridCellsWithinBounds,
   getNearbyHotspots,
-  getPacksCoveringBounds,
   getTargetDataForHotspots,
+  hasPacksBelowFormat,
   HotspotTargetsResult,
 } from "./database";
 import {
@@ -15,7 +15,7 @@ import {
   wilsonScore,
 } from "./hotspotTargets";
 import type { DistanceUnits } from "@/stores/settingsStore";
-import { PACK_FORMAT_VERSION } from "./config";
+import { NEARBY_SPECIES_MIN_PACK_FORMAT } from "./config";
 import { calculateDistance, getBoundingBoxFromLocation } from "./utils";
 
 const KM_PER_MILE = 1.609344;
@@ -104,20 +104,9 @@ export function aggregateNearbySpecies(raw: NearbySpeciesRaw, months?: number[])
   return { samples: totalSamples, targets, version: raw.version };
 }
 
-export type NearbyPackCoverage = {
-  /** At least one installed pack overlaps this area. */
-  hasCoverage: boolean;
-  /** Overlapping packs installed with an older data format — they need a pack update. */
-  gridlessPackNames: string[];
-};
-
-export async function getNearbyPackCoverage(lat: number, lng: number, radiusKm: number): Promise<NearbyPackCoverage> {
-  const bounds = getBoundingBoxFromLocation(lat, lng, radiusKm);
-  const packs = await getPacksCoveringBounds(bounds);
-  return {
-    hasCoverage: packs.length > 0,
-    gridlessPackNames: packs.filter((pack) => (pack.format ?? 0) < PACK_FORMAT_VERSION).map((pack) => pack.name),
-  };
+/** Any installed pack, regardless of region, has a format too old for Nearby Species. */
+export function hasOutdatedNearbySpeciesPacks(): Promise<boolean> {
+  return hasPacksBelowFormat(NEARBY_SPECIES_MIN_PACK_FORMAT);
 }
 
 export type SpeciesHotspot = {
