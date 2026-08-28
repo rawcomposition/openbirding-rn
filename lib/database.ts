@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { PACK_FORMAT_VERSION } from "./config";
 import { BirdPlanTripData, SavedPlace, StaticPackGridCell, StaticPackHotspot, StaticPackTarget, Trip } from "./types";
 import {
   AggregatedHotspotTarget,
@@ -35,7 +36,8 @@ async function createTables(): Promise<void> {
       installed_at TEXT,
       version TEXT,
       updated_at TEXT,
-      grid_cells INTEGER
+      grid_cells INTEGER,
+      format INTEGER
     );
   `);
 
@@ -195,6 +197,12 @@ async function runMigrations(): Promise<void> {
   }
   if (!packsColumns.includes("updated_at")) {
     await db.execAsync(`ALTER TABLE packs ADD COLUMN updated_at TEXT`);
+  }
+  if (!packsColumns.includes("grid_cells")) {
+    await db.execAsync(`ALTER TABLE packs ADD COLUMN grid_cells INTEGER`);
+  }
+  if (!packsColumns.includes("format")) {
+    await db.execAsync(`ALTER TABLE packs ADD COLUMN format INTEGER`);
   }
 
   const savedHotspotsTableInfo = await db.getAllAsync<{ name: string }>("PRAGMA table_info(saved_hotspots)");
@@ -433,8 +441,8 @@ export async function installPackWithTargets(
 
       // Insert/update pack record
       await database.runAsync(
-        `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at, grid_cells) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt, cells?.length ?? 0]
+        `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at, grid_cells, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt, cells?.length ?? 0, PACK_FORMAT_VERSION]
       );
 
       if (hotspots.length === 0) {
@@ -769,8 +777,8 @@ export async function getGridCellsWithinBounds(bounds: {
 export type PackCoverage = {
   id: number;
   name: string;
-  /** Grid cells the pack shipped with; 0 means it predates Nearby Species data. */
-  gridCells: number;
+  /** Pack format at install time; null means it predates format tracking. */
+  format: number | null;
 };
 
 /** Installed packs whose region overlaps the bounds (i.e. they have at least one hotspot inside). */
@@ -786,8 +794,8 @@ export async function getPacksCoveringBounds(bounds: {
   const crossesDateLine = bounds.west > bounds.east;
   const lngCondition = crossesDateLine ? `(h.lng >= ? OR h.lng <= ?)` : `(h.lng >= ? AND h.lng <= ?)`;
 
-  const rows = await db.getAllAsync<{ id: number; name: string; grid_cells: number | null }>(
-    `SELECT p.id, p.name, p.grid_cells FROM packs p
+  const rows = await db.getAllAsync<{ id: number; name: string; format: number | null }>(
+    `SELECT p.id, p.name, p.format FROM packs p
      WHERE EXISTS (
        SELECT 1 FROM hotspots h
        WHERE h.pack_id = p.id AND h.lat >= ? AND h.lat <= ? AND ${lngCondition}
@@ -795,7 +803,7 @@ export async function getPacksCoveringBounds(bounds: {
     [bounds.south, bounds.north, bounds.west, bounds.east]
   );
 
-  return rows.map((row) => ({ id: row.id, name: row.name, gridCells: row.grid_cells ?? 0 }));
+  return rows.map((row) => ({ id: row.id, name: row.name, format: row.format }));
 }
 
 export async function getPinnedTargets(hotspotId: string): Promise<string[]> {

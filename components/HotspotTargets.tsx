@@ -49,7 +49,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
-          {data?.samples && data.samples > 0 && (
+          {!!data?.samples && data.samples > 0 && (
             <Text style={tw`text-sm text-gray-500 mt-1`}>Based on {data.samples.toLocaleString()} checklists</Text>
           )}
         </View>

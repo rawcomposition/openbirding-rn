@@ -15,6 +15,7 @@ import {
   wilsonScore,
 } from "./hotspotTargets";
 import type { DistanceUnits } from "@/stores/settingsStore";
+import { PACK_FORMAT_VERSION } from "./config";
 import { calculateDistance, getBoundingBoxFromLocation } from "./utils";
 
 const KM_PER_MILE = 1.609344;
@@ -106,7 +107,7 @@ export function aggregateNearbySpecies(raw: NearbySpeciesRaw, months?: number[])
 export type NearbyPackCoverage = {
   /** At least one installed pack overlaps this area. */
   hasCoverage: boolean;
-  /** Overlapping packs installed before grid data existed — they need a pack update. */
+  /** Overlapping packs installed with an older data format — they need a pack update. */
   gridlessPackNames: string[];
 };
 
@@ -115,7 +116,7 @@ export async function getNearbyPackCoverage(lat: number, lng: number, radiusKm: 
   const packs = await getPacksCoveringBounds(bounds);
   return {
     hasCoverage: packs.length > 0,
-    gridlessPackNames: packs.filter((pack) => pack.gridCells === 0).map((pack) => pack.name),
+    gridlessPackNames: packs.filter((pack) => (pack.format ?? 0) < PACK_FORMAT_VERSION).map((pack) => pack.name),
   };
 }
 
