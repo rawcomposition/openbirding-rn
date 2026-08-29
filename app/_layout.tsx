@@ -158,6 +158,25 @@ export default function RootLayout() {
                   headerShadowVisible: false,
                 }}
               />
+              <Stack.Screen
+                name="nearby-species"
+                options={{
+                  title: "Nearby Species",
+                  headerBackTitle: "Species",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
+              <Stack.Screen
+                name="species/[code]"
+                options={{
+                  title: "",
+                  headerBackButtonDisplayMode: "minimal",
+                  headerStyle: { backgroundColor: "#f9fafb" },
+                  headerShadowVisible: false,
+                }}
+              />
               <Stack.Screen name="+not-found" />
             </Stack>
             <Toast
