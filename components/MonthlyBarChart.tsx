@@ -1,6 +1,7 @@
 import tw from "@/lib/tw";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, Text, View, ViewStyle } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 const MONTH_INITIALS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const MONTH_NAMES = [
@@ -63,6 +64,8 @@ type MonthlyBarChartProps = {
 
 export default function MonthlyBarChart({ monthly, variant = "default", selectedMonths, caption, style }: MonthlyBarChartProps) {
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
+  const rowWidth = useRef(0);
+  const scrubbing = useRef(false);
   const currentMonth = new Date().getMonth();
   const isMini = variant === "mini";
   const barHeight = isMini ? 28 : 110;
@@ -107,6 +110,27 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
     );
   }
 
+  const monthFromX = (x: number) => {
+    if (rowWidth.current <= 0) return null;
+    return Math.min(11, Math.max(0, Math.floor((x / rowWidth.current) * 12)));
+  };
+
+  // Horizontal-only pan so scrubbing across bars works without stealing vertical
+  // scrolls from the enclosing ScrollView.
+  const scrub = Gesture.Pan()
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-10, 10])
+    .runOnJS(true)
+    .onStart((e) => {
+      scrubbing.current = true;
+      setActiveMonth(monthFromX(e.x));
+    })
+    .onUpdate((e) => setActiveMonth(monthFromX(e.x)))
+    .onFinalize(() => {
+      scrubbing.current = false;
+      setActiveMonth(null);
+    });
+
   return (
     <View style={style}>
       <View style={tw`h-5 flex-row items-center justify-between`}>
@@ -119,8 +143,12 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
           </Text>
         )}
       </View>
-      <View style={[tw`flex-row items-end mt-1`, { gap: 5 }]}>
-        {monthly.map((value, month) => {
+      <GestureDetector gesture={scrub}>
+        <View
+          style={[tw`flex-row items-end mt-1`, { gap: 5 }]}
+          onLayout={(e) => (rowWidth.current = e.nativeEvent.layout.width)}
+        >
+          {monthly.map((value, month) => {
           const height = frequencyFraction(value) * barHeight;
           const highlighted = isHighlighted(month);
           const isCurrentMonth = month === currentMonth;
@@ -129,7 +157,10 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
             <Pressable
               key={month}
               onPressIn={() => setActiveMonth(month)}
-              onPressOut={() => setActiveMonth(null)}
+              onPressOut={() => {
+                // The pan cancels the press when it activates; don't wipe its selection.
+                if (!scrubbing.current) setActiveMonth(null);
+              }}
               style={tw`flex-1 items-center`}
             >
               <View style={[tw`w-full justify-end`, { height: barHeight }]}>
@@ -157,8 +188,9 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
               </Text>
             </Pressable>
           );
-        })}
-      </View>
+          })}
+        </View>
+      </GestureDetector>
     </View>
   );
 }
