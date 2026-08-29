@@ -83,7 +83,7 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
                 <View
                   style={[
                     tw.style(
-                      "w-full rounded-[3px]",
+                      "w-full rounded-[1.5px]",
                       miniBarColor({ highlighted: isHighlighted(month), isCurrentMonth: month === currentMonth, allMonths })
                     ),
                     { height: Math.max(height, value > 0 ? 2 : 0) },
@@ -167,7 +167,7 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
                 <View
                   style={[
                     tw.style(
-                      "w-full rounded-md",
+                      "w-full rounded-[3px]",
                       highlighted ? (isActive ? "bg-emerald-700" : "bg-emerald-600") : isActive ? "bg-gray-500" : "bg-gray-300"
                     ),
                     { height: Math.max(height, value > 0 ? 2 : 0) },

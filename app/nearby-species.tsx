@@ -181,12 +181,12 @@ function NearbySpeciesContent() {
       <TouchableOpacity
         onPress={openRadiusMenu}
         activeOpacity={0.7}
-        style={tw`self-start flex-row items-center bg-gray-100 rounded-full pl-2.5 pr-3 py-1.5`}
+        style={tw`self-start flex-row items-center bg-gray-200 rounded-full pl-2.5 pr-3 py-1.5`}
       >
         <View ref={radiusAnchorRef} style={tw`flex-row items-center`}>
-          <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-500")} style={tw`mr-1.5`} />
-          <Text style={tw`text-xs font-medium text-gray-500`}>{captionText}</Text>
-          <Ionicons name="chevron-down" size={12} color={tw.color("gray-400")} style={tw`ml-1`} />
+          <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-600")} style={tw`mr-1.5`} />
+          <Text style={tw`text-xs font-medium text-gray-700`}>{captionText}</Text>
+          <Ionicons name="chevron-down" size={12} color={tw.color("gray-600")} style={tw`ml-1`} />
         </View>
       </TouchableOpacity>
     ) : null;
