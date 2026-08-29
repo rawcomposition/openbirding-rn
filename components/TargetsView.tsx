@@ -77,6 +77,7 @@ type TargetsViewProps = {
   emptyNotice?: React.ReactNode;
   /** Skip the built-in loading spinner (the caller renders its own, e.g. a screen-centered one). */
   hideLoadingIndicator?: boolean;
+  prominentRows?: boolean;
 };
 
 export default function TargetsView({
@@ -99,6 +100,7 @@ export default function TargetsView({
   chartMonths,
   emptyNotice,
   hideLoadingIndicator = false,
+  prominentRows = false,
 }: TargetsViewProps) {
   const [showAll, setShowAll] = useState(false);
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
@@ -355,6 +357,7 @@ export default function TargetsView({
                   showDivider={idx > 0 && !showOtherHeader}
                   displayMode={displayMode}
                   chartMonths={effectiveChartMonths}
+                  prominentRows={prominentRows}
                   onSpeciesPress={handleSpeciesPress}
                   onSpeciesLongPress={handleSpeciesLongPress}
                 />
@@ -429,6 +432,7 @@ type TargetRowProps = {
   showDivider: boolean;
   displayMode: TargetsDisplayMode;
   chartMonths: number[];
+  prominentRows: boolean;
   onSpeciesPress: (speciesCode: string) => void;
   onSpeciesLongPress: (speciesCode: string, anchorRef: RefObject<View>) => void;
 };
@@ -444,6 +448,7 @@ const TargetRow = memo(function TargetRow({
   showDivider,
   displayMode,
   chartMonths,
+  prominentRows,
   onSpeciesPress,
   onSpeciesLongPress,
 }: TargetRowProps) {
@@ -465,7 +470,7 @@ const TargetRow = memo(function TargetRow({
         style={({ pressed }) => [tw`px-5 py-3`, pressed ? tw`bg-gray-100` : null]}
       >
         <View ref={anchorRef} style={tw`flex-row items-center`}>
-          <View style={tw`w-20 h-15 mr-3`}>
+          <View style={tw`${prominentRows ? "w-24 h-18" : "w-20 h-15"} mr-3`}>
             {avicommons[target.speciesCode as keyof typeof avicommons] ? (
               <Image
                 source={{
@@ -473,10 +478,10 @@ const TargetRow = memo(function TargetRow({
                     avicommons[target.speciesCode as keyof typeof avicommons][0]
                   }-160.webp`,
                 }}
-                style={tw`w-20 h-15 rounded bg-gray-200`}
+                style={tw`${prominentRows ? "w-24 h-18" : "w-20 h-15"} rounded bg-gray-200`}
               />
             ) : (
-              <View style={tw`w-20 h-15 rounded bg-gray-200`} />
+              <View style={tw`${prominentRows ? "w-24 h-18" : "w-20 h-15"} rounded bg-gray-200`} />
             )}
             {isPinned && (
               <View style={tw`absolute top-0 left-0 bg-sky-600 rounded-tl rounded-br-lg px-1 py-0.5`}>
@@ -488,7 +493,7 @@ const TargetRow = memo(function TargetRow({
           <View style={tw`flex-1`}>
             <View style={tw`flex-row items-center justify-between`}>
               <View style={tw`flex-row items-center flex-1 mr-3`}>
-                <Text style={tw`text-base text-gray-900 flex-shrink`} numberOfLines={1}>
+                <Text style={tw`text-base ${prominentRows ? "font-medium" : ""} text-gray-900 flex-shrink`} numberOfLines={1}>
                   {name}
                 </Text>
               </View>

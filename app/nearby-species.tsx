@@ -230,6 +230,7 @@ function NearbySpeciesContent() {
             chartMonths={deferredMonths}
             emptyNotice={updateNotice}
             hideLoadingIndicator
+            prominentRows
           />
           </View>
         )}
