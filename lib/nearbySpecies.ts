@@ -20,6 +20,8 @@ import { calculateDistance, getBoundingBoxFromLocation } from "./utils";
 
 const KM_PER_MILE = 1.609344;
 
+const MIN_OBSERVATIONS = 2;
+
 export type RadiusOption = { km: number; label: string };
 
 // Radius choices per unit system, index-aligned so a stored selection maps to a
@@ -160,7 +162,7 @@ export async function getBestHotspotsForSpecies(
       const value = speciesEntry[monthIndex + 1];
       return sum + (typeof value === "number" ? value : 0);
     }, 0);
-    if (observations === 0) continue;
+    if (observations < MIN_OBSERVATIONS) continue;
 
     results.push({
       id: hotspot.id,
