@@ -8,7 +8,7 @@ export function PackUpdateNotice({ style }: { style?: ViewStyle }) {
   const router = useRouter();
   return (
     <TouchableOpacity
-      onPress={() => router.push("/packs")}
+      onPress={() => router.push("/packs?tab=installed")}
       activeOpacity={0.7}
       style={[tw`bg-white border border-gray-200 rounded-2xl p-4 flex-row items-center`, style]}
     >
