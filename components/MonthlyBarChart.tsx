@@ -56,10 +56,12 @@ type MonthlyBarChartProps = {
   variant?: "default" | "mini";
   /** Months (0-11) to render highlighted. Empty or omitted highlights every month. */
   selectedMonths?: number[];
+  /** Describes the area the frequencies cover, e.g. "At this location". Default variant only. */
+  caption?: string;
   style?: ViewStyle;
 };
 
-export default function MonthlyBarChart({ monthly, variant = "default", selectedMonths, style }: MonthlyBarChartProps) {
+export default function MonthlyBarChart({ monthly, variant = "default", selectedMonths, caption, style }: MonthlyBarChartProps) {
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
   const currentMonth = new Date().getMonth();
   const isMini = variant === "mini";
@@ -107,9 +109,12 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
 
   return (
     <View style={style}>
-      <View style={tw`h-5 items-center justify-center`}>
+      <View style={tw`h-5 flex-row items-center justify-between`}>
+        <Text style={tw`text-xs text-gray-500 flex-shrink`} numberOfLines={1}>
+          {caption ?? ""}
+        </Text>
         {activeMonth !== null && (
-          <Text style={tw`text-xs font-medium text-gray-600`}>
+          <Text style={tw`text-xs font-medium text-gray-600 ml-2`}>
             {MONTH_NAMES[activeMonth]} · {formatPercent(monthly[activeMonth])}
           </Text>
         )}

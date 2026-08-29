@@ -40,6 +40,11 @@ type TargetsViewProps = {
    */
   hotspotId?: string;
   /**
+   * What lat/lng represents ("user" = the user's location, "map" = the map center).
+   * Forwarded to the species page so it can label the frequency chart's area.
+   */
+  origin?: "user" | "map";
+  /**
    * Expands the hosting bottom sheet. Called before the row long-press menu opens while the
    * sheet is collapsed, so the menu has room and its anchor measures at its final position.
    */
@@ -81,6 +86,7 @@ export default function TargetsView({
   lng,
   resetKey,
   hotspotId,
+  origin,
   onExpandSheet,
   aboutDataOpen,
   onAboutDataOpenChange,
@@ -119,10 +125,16 @@ export default function TargetsView({
     (speciesCode: string) => {
       router.push({
         pathname: "/species/[code]",
-        params: { code: speciesCode, lat: String(lat), lng: String(lng), ...(hotspotId ? { hotspotId } : {}) },
+        params: {
+          code: speciesCode,
+          lat: String(lat),
+          lng: String(lng),
+          ...(hotspotId ? { hotspotId } : {}),
+          ...(origin ? { origin } : {}),
+        },
       });
     },
-    [router, lat, lng, hotspotId]
+    [router, lat, lng, hotspotId, origin]
   );
 
   // Long-pressing a row opens the actions that used to live in the per-row "..." menu.

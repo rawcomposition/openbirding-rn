@@ -8,6 +8,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useLocation } from "@/hooks/useLocation";
 import { usePinnedTargets } from "@/hooks/usePinnedTargets";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
+import { getTargetsForHotspot } from "@/lib/database";
 import { getLifeListMenuProps, handleLifeListAction } from "@/lib/lifelist";
 import {
   aggregateNearbySpecies,
@@ -47,13 +48,16 @@ export default function SpeciesDetailPage() {
 function SpeciesDetailContent() {
   const navigation = useNavigation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ code: string; lat: string; lng: string; hotspotId?: string }>();
+  const params = useLocalSearchParams<{ code: string; lat: string; lng: string; hotspotId?: string; origin?: string }>();
   const code = params.code;
   const lat = Number(params.lat);
   const lng = Number(params.lng);
   // Only set when arriving from a hotspot's targets list, which is the only context
   // where pinning means anything.
   const hotspotId = params.hotspotId;
+  // Whether lat/lng is the user's location ("user") or the map center ("map");
+  // coordinates alone can't distinguish the two.
+  const origin = params.origin;
 
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
@@ -78,26 +82,42 @@ function SpeciesDetailContent() {
   const image = getSpeciesImage(code, 900);
   const speciesName = taxon?.name ?? code;
 
-  // Same query key as the Nearby Species list, so this is usually an instant cache hit.
+  // From a hotspot the chart shows that hotspot's own frequencies; same query key as
+  // HotspotTargets, so this is an instant cache hit.
+  const { data: hotspotTargets, isLoading: isLoadingHotspotTargets } = useQuery({
+    queryKey: ["hotspotTargets", hotspotId, selectedMonths],
+    queryFn: () => getTargetsForHotspot(hotspotId!, selectedMonths.length > 0 ? selectedMonths : undefined),
+    enabled: !!hotspotId,
+    placeholderData: (prev) => prev,
+  });
+
+  // From Nearby Species the chart shows the regional aggregate. Same query key as that
+  // list, so this is usually an instant cache hit.
   const { data: nearbyRaw, isLoading: isLoadingNearby } = useQuery({
     queryKey: ["nearbySpecies", lat, lng, radius.km],
     queryFn: () => getNearbySpeciesRaw(lat, lng, radius.km),
-    enabled: Number.isFinite(lat) && Number.isFinite(lng),
+    enabled: !hotspotId && Number.isFinite(lat) && Number.isFinite(lng),
     placeholderData: (prev) => prev,
   });
   const target = useMemo(() => {
+    if (hotspotId) return hotspotTargets?.targets.find((t) => t.speciesCode === code);
     if (!nearbyRaw) return undefined;
     const aggregated = aggregateNearbySpecies(nearbyRaw, selectedMonths.length > 0 ? selectedMonths : undefined);
     return aggregated.targets.find((t) => t.speciesCode === code);
-  }, [nearbyRaw, selectedMonths, code]);
+  }, [hotspotId, hotspotTargets, nearbyRaw, selectedMonths, code]);
+  const isLoadingChart = hotspotId ? isLoadingHotspotTargets : isLoadingNearby;
 
   const { data: hotspots, isLoading: isLoadingHotspots } = useQuery({
     queryKey: ["speciesHotspots", code, lat, lng, radius.km, selectedMonths],
     queryFn: () =>
       getBestHotspotsForSpecies(lat, lng, radius.km, code, selectedMonths.length > 0 ? selectedMonths : undefined),
-    enabled: Number.isFinite(lat) && Number.isFinite(lng),
+    enabled: !hotspotId && Number.isFinite(lat) && Number.isFinite(lng),
     placeholderData: (prev) => prev,
   });
+
+  const chartCaption = hotspotId
+    ? "At this location"
+    : `Within ~${radius.label} of ${origin === "user" ? "your location" : "map center"}`;
 
   // Measure distances from the user when they're near the search area, otherwise
   // from the search center itself.
@@ -240,9 +260,9 @@ function SpeciesDetailContent() {
         <View>
           {target ? (
             <View style={tw`bg-white border border-gray-200/80 rounded-2xl px-4 pt-3 pb-4 mt-3`}>
-              <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} />
+              <MonthlyBarChart monthly={target.monthly} selectedMonths={selectedMonths} caption={chartCaption} />
             </View>
-          ) : isLoadingNearby ? (
+          ) : isLoadingChart ? (
             <SpinnerPill style={tw`mt-8 mb-5`} />
           ) : (
             <View style={tw`mt-3 bg-gray-100 border border-gray-200/80 rounded-lg p-4 flex-row items-center`}>
@@ -252,6 +272,8 @@ function SpeciesDetailContent() {
           )}
         </View>
 
+        {/* From a hotspot, "hotspots near this hotspot" isn't a useful list. */}
+        {!hotspotId && (
         <View style={tw`mt-6`}>
           <View style={tw`flex-row items-center justify-between`}>
             <Text style={tw`text-base font-semibold text-gray-900`}>Top Hotspots</Text>
@@ -282,6 +304,7 @@ function SpeciesDetailContent() {
             </View>
           )}
         </View>
+        )}
       </ScrollView>
 
       <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />

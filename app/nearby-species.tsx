@@ -219,6 +219,7 @@ function NearbySpeciesContent() {
             isUpdating={isUpdating}
             lat={center.lat}
             lng={center.lng}
+            origin={atUserLocation ? "user" : "map"}
             aboutDataOpen={aboutDataOpen}
             onAboutDataOpenChange={setAboutDataOpen}
             caption={caption}
