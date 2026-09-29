@@ -506,7 +506,7 @@ const TargetRow = memo(function TargetRow({
                   {name}
                 </Text>
                 {isSeen && (
-                  <Ionicons name="checkmark-circle" size={14} color={tw.color("emerald-500")} style={tw`ml-1`} />
+                  <Ionicons name="checkmark-circle" size={14} color={tw.color("emerald-600")} style={tw`ml-1`} />
                 )}
               </View>
 
