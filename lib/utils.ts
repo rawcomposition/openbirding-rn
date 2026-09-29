@@ -376,7 +376,8 @@ export async function processLifeListCSV(csvText: string): Promise<ProcessLifeLi
     };
   }
 
-  const countableRows = rows.filter((row) => row["Countable"] === "1");
+  // Forms are never countable, but undescribed forms are treated as species
+  const countableRows = rows.filter((row) => row["Countable"] === "1" || row["Category"] === "form");
 
   if (countableRows.length === 0) {
     return { success: false, error: "No countable species found in the life list" };
