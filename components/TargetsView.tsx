@@ -222,6 +222,12 @@ export default function TargetsView({
     });
   }, [data, query, lifelist, lifelistExclusions, pinnedTargets, showAllSpecies, minPercentage, taxonomyMap]);
 
+  // Species on the life list (minus exclusions, which count as unseen) get a checkmark.
+  const seenCodes = useMemo(() => {
+    const excluded = new Set(lifelistExclusions ?? []);
+    return new Set((lifelist ?? []).map((e) => e.code).filter((c) => !excluded.has(c)));
+  }, [lifelist, lifelistExclusions]);
+
   // Even without a life list the list still renders (as all species); this banner nudges
   // toward importing one and stays dismissed once closed. Installing packs is the more
   // fundamental setup step, so the banner waits until at least one pack is installed.
@@ -352,6 +358,7 @@ export default function TargetsView({
                   target={t}
                   name={taxonomyMap.get(t.speciesCode) || "Unknown species"}
                   isPinned={isPinned}
+                  isSeen={seenCodes.has(t.speciesCode)}
                   showPinnedHeader={isPinned && idx === 0}
                   showOtherHeader={showOtherHeader}
                   showDivider={idx > 0 && !showOtherHeader}
@@ -427,6 +434,7 @@ type TargetRowProps = {
   target: AggregatedHotspotTarget;
   name: string;
   isPinned: boolean;
+  isSeen: boolean;
   showPinnedHeader: boolean;
   showOtherHeader: boolean;
   showDivider: boolean;
@@ -443,6 +451,7 @@ const TargetRow = memo(function TargetRow({
   target,
   name,
   isPinned,
+  isSeen,
   showPinnedHeader,
   showOtherHeader,
   showDivider,
@@ -496,6 +505,9 @@ const TargetRow = memo(function TargetRow({
                 <Text style={tw`text-base ${prominentRows ? "font-medium" : ""} text-gray-900 flex-shrink`} numberOfLines={1}>
                   {name}
                 </Text>
+                {isSeen && (
+                  <Ionicons name="checkmark-circle" size={14} color={tw.color("emerald-500")} style={tw`ml-1`} />
+                )}
               </View>
 
               <Text style={tw`text-xs font-semibold text-gray-600 tabular-nums`}>
