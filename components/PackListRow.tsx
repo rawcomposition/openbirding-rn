@@ -1,4 +1,4 @@
-import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { packNeedsUpdate, useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { useManagePack } from "@/hooks/useManagePack";
 import tw from "@/lib/tw";
 import { StaticPack } from "@/lib/types";
@@ -23,7 +23,7 @@ const PackListRow = memo(({ pack }: PackListRowProps) => {
   };
 
   const isInstalled = installedPack !== undefined;
-  const canUpdate = isInstalled && installedPack.version !== pack.v;
+  const canUpdate = isInstalled && packNeedsUpdate(installedPack, pack.v);
   const canInstall = !isInstalled || canUpdate;
   const installDisabled = isInstalling || isUninstalling || isDownloading;
 

@@ -17,7 +17,7 @@ import { useSavedLocation } from "@/hooks/useSavedLocation";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -143,6 +143,15 @@ export default function HomeScreen() {
     },
     [setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
+
+  // Another screen (e.g. species detail's "Show on Map") asked us to open a hotspot.
+  const pendingMapFocus = useMapStore((s) => s.pendingMapFocus);
+  const setPendingMapFocus = useMapStore((s) => s.setPendingMapFocus);
+  useEffect(() => {
+    if (!pendingMapFocus) return;
+    setPendingMapFocus(null);
+    handleSelectHotspotFromList(pendingMapFocus.hotspotId, pendingMapFocus.lat, pendingMapFocus.lng);
+  }, [pendingMapFocus, setPendingMapFocus, handleSelectHotspotFromList]);
 
   const handleSelectPlaceFromList = useCallback(
     (selectedPlaceId: string, lat: number, lng: number) => {

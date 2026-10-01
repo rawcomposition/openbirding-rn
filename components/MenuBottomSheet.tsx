@@ -1,6 +1,6 @@
 import { usePackUpdates } from "@/hooks/usePackUpdates";
 import { useMapStore } from "@/stores/mapStore";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import React from "react";
 import { View } from "react-native";
 import BaseBottomSheet from "./BaseBottomSheet";
@@ -30,6 +30,10 @@ export default function MenuBottomSheet({ isOpen, onClose }: MenuBottomSheetProp
             onNavigateToPacks={async () => {
               await dismiss();
               router.push("/packs?tab=installed");
+            }}
+            onNavigateToNearbySpecies={async () => {
+              await dismiss();
+              router.push("/nearby-species" as Href);
             }}
             onNavigateToSettings={async () => {
               await dismiss();

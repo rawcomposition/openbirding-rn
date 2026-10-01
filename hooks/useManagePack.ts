@@ -66,7 +66,15 @@ export function useManagePack(packId: number) {
         },
       });
 
-      await installPackWithTargets(packId, pack.name, pack.v, pack.updatedAt, packData.hotspots, packData.targets);
+      await installPackWithTargets(
+        packId,
+        pack.name,
+        pack.v,
+        pack.updatedAt,
+        packData.hotspots,
+        packData.targets,
+        packData.cells
+      );
 
       downloadStore.setProgress(100);
 
@@ -77,6 +85,10 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
+      queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
+      queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
       refreshTaxonomy();
 
       logDownload(packId, pack.v);
@@ -121,6 +133,10 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
+      queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
+      queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
     } catch (error) {
       console.error("Failed to uninstall pack:", error);
 

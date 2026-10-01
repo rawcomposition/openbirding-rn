@@ -1,7 +1,7 @@
 import tw from "@/lib/tw";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import Popover from "react-native-popover-view";
+import Popover, { Rect } from "react-native-popover-view";
 
 export type FloatingMenuItem = {
   label: string;
@@ -14,17 +14,21 @@ export type FloatingMenuSection = {
   items: FloatingMenuItem[];
 };
 
+/** Either the trigger itself, or a fixed window rect to hang the menu from. */
+export type FloatingMenuAnchor = React.RefObject<View> | Rect;
+
 type FloatingMenuProps = {
   isOpen: boolean;
   onClose: () => void;
-  from?: React.RefObject<View>;
+  from?: FloatingMenuAnchor;
   mode?: React.ComponentProps<typeof Popover>["mode"];
   placement?: React.ComponentProps<typeof Popover>["placement"];
   sections: FloatingMenuSection[];
   width?: number;
+  offset?: number;
 };
 
-export default function FloatingMenu({ isOpen, onClose, from, mode, placement, sections, width = 220 }: FloatingMenuProps) {
+export default function FloatingMenu({ isOpen, onClose, from, mode, placement, sections, width = 220, offset }: FloatingMenuProps) {
   if (!isOpen) return null;
 
   return (
@@ -32,6 +36,7 @@ export default function FloatingMenu({ isOpen, onClose, from, mode, placement, s
       from={from}
       mode={mode}
       placement={placement}
+      offset={offset}
       isVisible
       onRequestClose={onClose}
       backgroundStyle={{ backgroundColor: "transparent" }}

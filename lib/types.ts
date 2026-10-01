@@ -35,11 +35,20 @@ export type StaticPackTarget = {
   species: (string | number)[][];
 };
 
+export type StaticPackGridCell = {
+  id: string;
+  lat: number;
+  lng: number;
+  samples: (number | null)[];
+  species: (string | number)[][];
+};
+
 export type StaticPackResponse = {
   v: string;
   updatedAt: string;
   hotspots: StaticPackHotspot[];
   targets: StaticPackTarget[];
+  cells?: StaticPackGridCell[];
 };
 
 export type BoundingBox = {

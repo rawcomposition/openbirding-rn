@@ -1,4 +1,4 @@
-import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { packNeedsUpdate, useInstalledPacks } from "@/hooks/useInstalledPacks";
 import { STATIC_PACKS_URL } from "@/lib/config";
 import { fetchJson } from "@/lib/download";
 import { StaticPack, StaticPacksIndex } from "@/lib/types";
@@ -22,7 +22,7 @@ export function usePackUpdates() {
     let count = 0;
     for (const [packId, installedPack] of installedPacks) {
       const remotePack = remotePacks.find((p) => p.id === packId);
-      if (remotePack && installedPack.version !== remotePack.v) {
+      if (remotePack && packNeedsUpdate(installedPack, remotePack.v)) {
         count++;
       }
     }

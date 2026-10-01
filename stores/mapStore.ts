@@ -30,6 +30,9 @@ type MapStore = {
   setIsSunDetailsOpen: (isOpen: boolean) => void;
   isMapAttributionOpen: boolean;
   setIsMapAttributionOpen: (isOpen: boolean) => void;
+  /** Request from another screen (e.g. species detail) for the map to open a hotspot and center on it. */
+  pendingMapFocus: { hotspotId: string; lat: number; lng: number } | null;
+  setPendingMapFocus: (focus: { hotspotId: string; lat: number; lng: number } | null) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -59,4 +62,6 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsSunDetailsOpen: (isOpen) => set({ isSunDetailsOpen: isOpen }),
   isMapAttributionOpen: false,
   setIsMapAttributionOpen: (isOpen) => set({ isMapAttributionOpen: isOpen }),
+  pendingMapFocus: null,
+  setPendingMapFocus: (focus) => set({ pendingMapFocus: focus }),
 }));

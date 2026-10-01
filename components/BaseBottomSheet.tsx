@@ -23,6 +23,8 @@ type BaseBottomSheetProps = {
 
 export type BaseBottomSheetHandle = {
   expand: () => Promise<void>;
+  /** Dismiss the sheet; resolves once the dismiss animation completes. */
+  dismiss: () => Promise<void>;
 };
 
 function BaseBottomSheet(
@@ -68,8 +70,9 @@ function BaseBottomSheet(
         const lastIndex = Math.max(detents.length - 1, 0);
         await sheetRef.current?.resize(lastIndex);
       },
+      dismiss,
     }),
-    [detents.length]
+    [detents.length, dismiss]
   );
 
   const header = showHeader ? (

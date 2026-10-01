@@ -8,7 +8,12 @@ type UseLocationReturn = {
   isLoading: boolean;
 };
 
-export function useLocation(enabled: boolean = true): UseLocationReturn {
+type UseLocationOptions = {
+  /** Poll for a fresh fix on this interval (ms) while mounted. Off by default to save battery. */
+  refetchInterval?: number;
+};
+
+export function useLocation(enabled: boolean = true, options?: UseLocationOptions): UseLocationReturn {
   const { status: permissionStatus } = useLocationPermissionStore();
 
   const { data, error, isLoading } = useQuery({
@@ -23,9 +28,10 @@ export function useLocation(enabled: boolean = true): UseLocationReturn {
       };
     },
     enabled: enabled && permissionStatus === "granted",
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 6 * 60 * 60 * 1000, // 6 hours
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes
     retry: false,
+    refetchInterval: options?.refetchInterval,
   });
 
   const errorMessage =
