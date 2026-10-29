@@ -40,8 +40,8 @@ function NearbySpeciesContent() {
   const menuAnchorRef = useRef<View>(null!);
   const radiusAnchorRef = useRef<View>(null!);
   const mapCenter = useMapStore((s) => s.mapCenter);
-  // Poll while this screen is open so the re-center button reacts to movement within ~30s.
-  const { location: userLocation } = useLocation(true, { refetchInterval: 30 * 1000 });
+  // Poll while this screen is open so the re-center button reacts to movement within ~5 min.
+  const { location: userLocation } = useLocation(true, { refetchInterval: 5 * 60 * 1000 });
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
   const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
