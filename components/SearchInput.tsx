@@ -12,6 +12,7 @@ type SearchInputProps = {
   // When false, the inline clear (✕) button is never shown — useful when the
   // surrounding UI already provides a close affordance and a second ✕ would clash.
   clearable?: boolean;
+  onClose?: () => void;
 } & Pick<TextInputProps, "autoCorrect" | "autoCapitalize" | "autoComplete" | "returnKeyType" | "autoFocus">;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -33,14 +34,19 @@ export default function SearchInput({
   returnKeyType = "search",
   autoFocus = false,
   clearable = true,
+  onClose,
 }: SearchInputProps) {
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
-  const showClear = clearable && (value.length > 0 || isFocused);
+  const showClear = !!onClose || (clearable && (value.length > 0 || isFocused));
 
   const handleClear = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     onChangeText("");
     setTimeout(() => inputRef.current?.blur(), 0);
   };
@@ -78,9 +84,11 @@ export default function SearchInput({
   );
 
   const clearButton = (
+    // A GlassView whose parent mounts below full opacity can fail to render its glass, so the
+    // always-visible close button skips the fade (it mounts with the input anyway).
     <AnimatedPressable
-      entering={FadeIn.duration(150)}
-      exiting={FadeOut.duration(150)}
+      entering={onClose ? undefined : FadeIn.duration(150)}
+      exiting={onClose ? undefined : FadeOut.duration(150)}
       onPress={handleClear}
       hitSlop={8}
     >

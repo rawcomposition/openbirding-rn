@@ -540,10 +540,20 @@ export function buildTargetsMenuSections(opts: {
   onToggleDisplayMode: () => void;
   hasVersion: boolean;
   onOpenAbout: () => void;
+  onSearch?: () => void;
 }): FloatingMenuSection[] {
   return [
     {
       items: [
+        ...(opts.onSearch
+          ? [
+              {
+                label: "Search",
+                icon: <Ionicons name="search" size={18} color={tw.color("gray-700")} />,
+                onPress: opts.onSearch,
+              },
+            ]
+          : []),
         {
           label: opts.showAllSpecies ? "Show Targets Only" : "Show All Species",
           icon: (

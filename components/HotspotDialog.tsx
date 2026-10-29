@@ -164,6 +164,8 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose, dimmed = false, onSh
             style={tw`flex-1`}
             showsVerticalScrollIndicator={false}
             onScrollBeginDrag={closeMenu}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
           >
             <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
               {hotspot ? (

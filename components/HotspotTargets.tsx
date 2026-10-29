@@ -7,10 +7,11 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { PopoverPlacement } from "react-native-popover-view";
 import { FloatingMenuTrigger } from "./FloatingMenuProvider";
+import SearchInput from "./SearchInput";
 import TargetsView, { buildTargetsMenuSections } from "./TargetsView";
 
 type HotspotTargetsProps = {
@@ -29,10 +30,20 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
   const isBottomSheetExpanded = useMapStore((s) => s.isBottomSheetExpanded);
   const useGlassTargetMenuButton = Platform.OS === "ios" && isLiquidGlassAvailable();
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearch = useDeferredValue(searchQuery);
 
   useEffect(() => {
     setAboutDataOpen(false);
+    setIsSearching(false);
+    setSearchQuery("");
   }, [hotspotId]);
+
+  const closeSearch = () => {
+    setIsSearching(false);
+    setSearchQuery("");
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["hotspotTargets", hotspotId, selectedMonths],
@@ -46,6 +57,15 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
 
   return (
     <View style={tw`mt-4`}>
+      {isSearching ? (
+        <SearchInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search species"
+          autoFocus
+          onClose={closeSearch}
+        />
+      ) : (
       <View style={tw`flex-row items-center justify-between`}>
         <View style={tw`flex-1`}>
           <Text style={tw`text-base font-semibold text-gray-900`}>Targets</Text>
@@ -62,6 +82,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
               onToggleDisplayMode: () => setDisplayMode(displayMode === "chart" ? "percent" : "chart"),
               hasVersion,
               onOpenAbout: () => setAboutDataOpen(true),
+              onSearch: () => setIsSearching(true),
             })}
             touchableStyle={tw`w-8 h-8`}
             onBeforeOpen={isBottomSheetExpanded ? undefined : onExpandSheet}
@@ -79,6 +100,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
           </FloatingMenuTrigger>
         )}
       </View>
+      )}
 
       <TargetsView
         data={data}
@@ -91,6 +113,7 @@ export default function HotspotTargets({ hotspotId, lat, lng, onExpandSheet }: H
         aboutDataOpen={aboutDataOpen}
         onAboutDataOpenChange={setAboutDataOpen}
         displayMode={displayMode}
+        searchQuery={isSearching ? deferredSearch : undefined}
       />
     </View>
   );
