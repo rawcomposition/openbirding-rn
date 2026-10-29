@@ -1,6 +1,6 @@
 import tw from "@/lib/tw";
 import { useRef, useState } from "react";
-import { Pressable, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 const MONTH_INITIALS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -42,15 +42,6 @@ function formatPercent(percent: number) {
   return `${percent < 1 ? percent.toFixed(1) : Math.round(percent)}%`;
 }
 
-// The mini list charts stay monochrome so a hundred rows don't shout; the current
-// calendar month is just a darker gray plus a bolder letter underneath.
-function miniBarColor(opts: { highlighted: boolean; isCurrentMonth: boolean; allMonths: boolean }) {
-  if (!opts.highlighted) return "bg-gray-200";
-  if (opts.isCurrentMonth) return "bg-gray-500";
-  // Selected months get a step more contrast when a filter is active.
-  return opts.allMonths ? "bg-gray-300" : "bg-gray-400";
-}
-
 type MonthlyBarChartProps = {
   /** Reporting frequency (%) for each of the 12 calendar months. */
   monthly: number[];
@@ -73,33 +64,37 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
   const isHighlighted = (month: number) => allMonths || selectedMonths.includes(month);
 
   if (isMini) {
+    // The mini list charts stay monochrome so a hundred rows don't shout: every month is the
+    // same light step, and only the letters mark the selected months (or the current month).
+    const isMarked = (month: number) => (allMonths ? month === currentMonth : selectedMonths.includes(month));
     return (
       <View style={style}>
-        <View style={[tw`flex-row items-end`, { height: barHeight, gap: 2 }]}>
+        <View
+          style={[tw`flex-row items-end border-b border-gray-300`, { height: barHeight, gap: StyleSheet.hairlineWidth }]}
+        >
           {monthly.map((value, month) => {
             const height = frequencyFraction(value) * barHeight;
             return (
               <View key={month} style={tw`flex-1 justify-end h-full`}>
-                <View
-                  style={[
-                    tw.style(
-                      "w-full rounded-[1.5px]",
-                      miniBarColor({ highlighted: isHighlighted(month), isCurrentMonth: month === currentMonth, allMonths })
-                    ),
-                    { height: Math.max(height, value > 0 ? 2 : 0) },
-                  ]}
-                />
+                {value > 0 && (
+                  <View
+                    style={[
+                      tw`w-full bg-gray-200 border-gray-400`,
+                      { borderTopWidth: 1.5, height: Math.max(height, 2) },
+                    ]}
+                  />
+                )}
               </View>
             );
           })}
         </View>
-        <View style={[tw`flex-row mt-0.5`, { gap: 2 }]}>
+        <View style={[tw`flex-row mt-0.5`, { gap: StyleSheet.hairlineWidth }]}>
           {MONTH_INITIALS.map((initial, month) => (
             <Text
               key={month}
               style={tw.style(
                 "flex-1 text-center text-[7px]",
-                month === currentMonth ? "text-gray-600 font-semibold" : "text-gray-400 font-normal"
+                isMarked(month) ? "text-gray-800 font-bold" : "text-gray-400 font-normal"
               )}
             >
               {initial}
