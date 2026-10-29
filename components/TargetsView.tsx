@@ -516,7 +516,7 @@ const TargetRow = memo(function TargetRow({
             </View>
 
             {displayMode === "chart" ? (
-              <MonthlyBarChart monthly={target.monthly} variant="mini" selectedMonths={chartMonths} style={tw`mt-1.5`} />
+              <MonthlyBarChart monthly={target.monthly} variant="mini" selectedMonths={chartMonths} style={tw`mt-1.5 mr-8`} />
             ) : (
               <View style={tw`mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden`}>
                 <View
