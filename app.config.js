@@ -8,7 +8,7 @@ module.exports = ({ config }) => ({
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
-    userInterfaceStyle: "automatic",
+    userInterfaceStyle: "light",
     ios: {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,

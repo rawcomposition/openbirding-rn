@@ -1,5 +1,5 @@
 import tw from "@/lib/tw";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -11,7 +11,6 @@ import "react-native-reanimated";
 
 import DownloadOverlay from "@/components/DownloadOverlay";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
-import { useColorScheme } from "@/hooks/useColorScheme";
 import { useManagedSplashScreen } from "@/hooks/useManagedSplashScreen";
 import { initializeDatabase } from "@/lib/database";
 import { queryClient } from "@/lib/queryClient";
@@ -22,7 +21,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
@@ -76,7 +74,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ActionSheetProvider>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+          <ThemeProvider value={DefaultTheme}>
             <Stack>
               <Stack.Screen name="index" options={{ title: "Map", headerShown: false }} />
               <Stack.Screen
