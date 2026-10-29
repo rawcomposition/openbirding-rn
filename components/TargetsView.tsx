@@ -209,7 +209,7 @@ export default function TargetsView({
     const filtered = data.targets.filter((t) => {
       if (t.percentage < minPercentage) return false;
       if (query && !(taxonomyMap.get(t.speciesCode) ?? "").toLowerCase().includes(query)) return false;
-      if (showAllSpecies) return true;
+      if (showAllSpecies || query) return true;
       if (exclusionCodes?.has(t.speciesCode)) return true;
       return !lifelistCodes || !lifelistCodes.has(t.speciesCode);
     });
