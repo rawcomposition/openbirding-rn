@@ -233,6 +233,7 @@ export default function HomeScreen() {
             onOpenFilters={handleOpenFilters}
             onOpenList={handleOpenHotspotList}
             filterCount={activeFilterCount}
+            light={currentLayer === "satellite"}
           />
         </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />

@@ -8,9 +8,10 @@ type MapViewControlsProps = {
   onOpenFilters: () => void;
   onOpenList: () => void;
   filterCount: number;
+  light?: boolean;
 };
 
-export default function MapViewControls({ onOpenFilters, onOpenList, filterCount }: MapViewControlsProps) {
+export default function MapViewControls({ onOpenFilters, onOpenList, filterCount, light }: MapViewControlsProps) {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   const inner = (
@@ -33,7 +34,11 @@ export default function MapViewControls({ onOpenFilters, onOpenList, filterCount
   if (useGlass) {
     return (
       <View style={tw`rounded-full overflow-hidden`}>
-        <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+        <GlassView
+          style={tw`rounded-full overflow-hidden`}
+          glassEffectStyle="regular"
+          tintColor={light ? "rgba(255, 255, 255, 0.8)" : undefined}
+        >
           {inner}
         </GlassView>
       </View>

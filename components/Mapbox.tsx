@@ -711,7 +711,11 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         {isZoomedTooFarOut && hasInstalledPacks && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+              <GlassView
+                style={tw`rounded-full overflow-hidden`}
+                glassEffectStyle="regular"
+                tintColor={currentLayer === "satellite" ? "rgba(255, 255, 255, 0.8)" : undefined}
+              >
                 <View style={tw`flex-row items-center px-4 py-2`}>
                   <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
                 </View>
@@ -727,7 +731,11 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         {isTargetRichBadgeVisible && !isZoomedTooFarOut && (
           <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+              <GlassView
+                style={tw`rounded-full overflow-hidden`}
+                glassEffectStyle="regular"
+                tintColor={currentLayer === "satellite" ? "rgba(255, 255, 255, 0.8)" : undefined}
+              >
                 <View style={tw`flex-row items-center px-4 py-2`}>
                   <Text style={tw`text-sm font-medium text-gray-700`}>Filtering hotspots...</Text>
                 </View>
