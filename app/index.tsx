@@ -222,7 +222,7 @@ export default function HomeScreen() {
             <PacksNotice variant="banner" />
           </View>
         ) : (
-          <SunIndicator style={[tw`absolute`, { top: belowSearchBar, left: 16 }]} />
+          <SunIndicator style={[tw`absolute`, { top: belowSearchBar, left: 16 }]} light={light} />
         )}
         <View style={[tw`absolute right-4`, { bottom: controlsBottom + MAP_VIEW_CONTROLS_HEIGHT + 16 }]}>
           <FloatingButton onPress={handleCenterOnUser} light={light}>

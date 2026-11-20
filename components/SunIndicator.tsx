@@ -4,8 +4,9 @@ import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import dayjs from "dayjs";
 import { BlurView } from "expo-blur";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { useEffect, useMemo } from "react";
-import { PixelRatio, Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
+import { PixelRatio, Platform, Pressable, StyleProp, Text, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import BaseBottomSheet from "./BaseBottomSheet";
 import SunriseIcon from "./icons/SunriseIcon";
@@ -26,9 +27,13 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): 
 
 type SunIndicatorProps = {
   style?: StyleProp<ViewStyle>;
+  light?: boolean;
 };
 
-export default function SunIndicator({ style }: SunIndicatorProps) {
+const FADE_DURATION = 200;
+
+export default function SunIndicator({ style, light }: SunIndicatorProps) {
+  const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
   const { sunrise, sunset, nextEvent, nextEventTime, timeUntilNextEvent, isLoading } = useSunTimes();
   const { location: userLocation } = useLocation();
   const mapCenter = useMapStore((state) => state.mapCenter);
@@ -55,7 +60,7 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
   const opacity = useSharedValue(shouldShow ? 1 : 0);
 
   useEffect(() => {
-    opacity.value = withTiming(shouldShow ? 1 : 0, { duration: 200 });
+    opacity.value = withTiming(shouldShow ? 1 : 0, { duration: FADE_DURATION });
   }, [shouldShow, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -141,17 +146,46 @@ export default function SunIndicator({ style }: SunIndicatorProps) {
     </View>
   );
 
+  const pillContent = (
+    <>
+      <IconComponent size={scaledIconSize} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
+      <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
+    </>
+  );
+  const pillContentStyle = tw`flex-row items-center px-3 py-2 gap-2`;
+
+  // Liquid glass loses its background whenever a parent's opacity is below 1, so the glass
+  // pill never fades as a whole: the glass itself materializes and only its contents fade.
+  const pill = useGlass ? (
+    <View style={style} pointerEvents={shouldShow ? "auto" : "none"}>
+      <Pressable onPress={() => setIsDetailsOpen(true)} style={baseStyle}>
+        <GlassView
+          style={baseStyle}
+          glassEffectStyle={{
+            style: shouldShow ? "regular" : "none",
+            animate: true,
+            animationDuration: FADE_DURATION / 1000,
+          }}
+          tintColor={light ? "rgba(255, 255, 255, 0.8)" : undefined}
+        >
+          <Animated.View style={[pillContentStyle, animatedStyle]}>{pillContent}</Animated.View>
+        </GlassView>
+      </Pressable>
+    </View>
+  ) : (
+    <Animated.View style={[style, animatedStyle]}>
+      <Pressable onPress={() => setIsDetailsOpen(true)} style={baseStyle}>
+        <BlurView tint="light" intensity={10} style={pillContentStyle}>
+          <View style={[tw`absolute inset-0 bg-white/70`]} />
+          {pillContent}
+        </BlurView>
+      </Pressable>
+    </Animated.View>
+  );
+
   return (
     <>
-      <Animated.View style={[style, animatedStyle]}>
-        <Pressable onPress={() => setIsDetailsOpen(true)} style={baseStyle}>
-          <BlurView tint="light" intensity={10} style={tw`flex-row items-center px-3 py-2 gap-2`}>
-            <View style={[tw`absolute inset-0 bg-white/70`]} />
-            <IconComponent size={scaledIconSize} sunColor={tw.color("orange-500")!} color={tw.color("gray-600")!} />
-            <Text style={tw`text-[14px] font-medium text-gray-700`}>{formattedTime}</Text>
-          </BlurView>
-        </Pressable>
-      </Animated.View>
+      {pill}
 
       <BaseBottomSheet isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Daylight" dimmed>
         {sheetContent}

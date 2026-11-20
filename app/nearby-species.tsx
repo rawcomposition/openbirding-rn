@@ -170,7 +170,7 @@ function NearbySpeciesContent() {
   const speciesCount = data ? countNearbySpecies(data, seenCodes) : null;
 
   // Shown even when the area comes up empty, so a wider radius is always one tap away. The
-  // pill is outlined while the radius follows the map and filled once it's a fixed choice.
+  // pill is white while the radius follows the map and green once it's a fixed choice.
   const caption = data ? (
     <View style={tw`flex-row items-center justify-between`}>
       <Text style={tw`flex-1 mr-3 text-sm text-gray-700`} numberOfLines={1}>
@@ -192,8 +192,8 @@ function NearbySpeciesContent() {
           radius.isAuto ? `Radius: ${radius.label}, matching the map view` : `Radius: fixed at ${radius.label}`
         }
         style={[
-          tw`rounded-full border pl-3.5 pr-2.5 py-1.5`,
-          radius.isAuto ? tw`bg-white border-gray-300` : tw`bg-emerald-600 border-emerald-600`,
+          tw`rounded-full pl-3.5 pr-2.5 py-1.5`,
+          radius.isAuto ? tw`bg-white shadow-sm` : tw`bg-emerald-600`,
         ]}
       >
         <View ref={radiusAnchorRef} style={tw`flex-row items-center`}>
