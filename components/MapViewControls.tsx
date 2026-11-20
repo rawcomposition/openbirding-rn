@@ -1,4 +1,5 @@
 import BirdIcon from "@/components/icons/BirdIcon";
+import { formatNearbySpeciesCount, NearbySpeciesCount } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
@@ -12,14 +13,21 @@ type MapViewControlsProps = {
   onOpenSpecies: () => void;
   /** Hotspots in the visible map; null when unknown (e.g. zoomed too far out). */
   hotspotCount: number | null;
-  /** Species reported around the visible map; null when unknown. */
-  speciesCount: number | null;
+  /** Species (or targets) reported around the visible map; null when unknown. */
+  speciesCount: NearbySpeciesCount | null;
   light?: boolean;
 };
 
-function countLabel(count: number | null, singular: string, plural: string) {
-  if (count === null) return plural.charAt(0).toUpperCase() + plural.slice(1);
-  return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
+function hotspotLabel(count: number | null) {
+  if (count === null) return "Hotspots";
+  return `${count.toLocaleString()} ${count === 1 ? "hotspot" : "hotspots"}`;
+}
+
+function speciesLabel(count: NearbySpeciesCount | null) {
+  // No species at all usually means the area has no data rather than no birds, so don't
+  // claim a zero. "0 targets" where there is data is real, though: they've seen them all.
+  if (!count || count.total === 0) return "Species";
+  return formatNearbySpeciesCount(count);
 }
 
 /** The map's bottom bar: what's in this map area, as a hotspot list and a species list. */
@@ -31,8 +39,6 @@ export default function MapViewControls({
   light,
 }: MapViewControlsProps) {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
-  // Zero species usually means the area has no data rather than no birds, so don't claim "0 species".
-  const speciesLabel = countLabel(speciesCount === 0 ? null : speciesCount, "species", "species");
 
   const inner = (
     <View style={[tw`flex-row items-center`, { height: MAP_VIEW_CONTROLS_HEIGHT }]}>
@@ -44,7 +50,7 @@ export default function MapViewControls({
       >
         <Ionicons name="location-outline" size={20} color={tw.color("gray-700")} />
         <Text style={tw`text-base font-semibold text-gray-800`} numberOfLines={1}>
-          {countLabel(hotspotCount, "hotspot", "hotspots")}
+          {hotspotLabel(hotspotCount)}
         </Text>
       </TouchableOpacity>
       <View style={tw`w-px h-7 bg-gray-300`} />
@@ -56,7 +62,7 @@ export default function MapViewControls({
       >
         <BirdIcon size={20} color={tw.color("gray-700")} />
         <Text style={tw`text-base font-semibold text-gray-800`} numberOfLines={1}>
-          {speciesLabel}
+          {speciesLabel(speciesCount)}
         </Text>
       </TouchableOpacity>
     </View>

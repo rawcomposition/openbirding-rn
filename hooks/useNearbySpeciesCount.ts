@@ -1,10 +1,12 @@
 import { useLocation } from "@/hooks/useLocation";
 import { useNearbyRadius } from "@/hooks/useNearbyRadius";
+import { useTargetsOnlySeenCodes } from "@/hooks/useTargetsOnlySeenCodes";
 import {
   aggregateNearbySpecies,
   countNearbySpecies,
   getNearbySpeciesRaw,
   isMapCenteredOnUser,
+  NearbySpeciesCount,
 } from "@/lib/nearbySpecies";
 import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -17,16 +19,18 @@ const SETTLE_DELAY = 600;
 type Area = { lat: number; lng: number; km: number };
 
 /**
- * How many species the Nearby Species screen would list for the current map view.
- * Uses the same center, radius and query key as that screen, so opening it afterwards is
- * an instant cache hit and the two numbers agree. The previous count stays up while the
- * map settles and the new area loads; null when there's nothing to show yet.
+ * How many species (or targets, when that's what it lists) the Nearby Species screen would
+ * show for the current map view. Uses the same center, radius and query key as that screen,
+ * so opening it afterwards is an instant cache hit and the two numbers agree. The previous
+ * count stays up while the map settles and the new area loads; null when there's nothing to
+ * show yet.
  */
-export function useNearbySpeciesCount(enabled: boolean): number | null {
+export function useNearbySpeciesCount(enabled: boolean): NearbySpeciesCount | null {
   const mapCenter = useMapStore((s) => s.mapCenter);
   const { location: userLocation } = useLocation();
   const radius = useNearbyRadius();
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
+  const seenCodes = useTargetsOnlySeenCodes();
 
   const center = isMapCenteredOnUser(mapCenter, userLocation) ? userLocation : mapCenter;
   const lat = center?.lat;
@@ -49,6 +53,9 @@ export function useNearbySpeciesCount(enabled: boolean): number | null {
 
   return useMemo(() => {
     if (!enabled || !data) return null;
-    return countNearbySpecies(aggregateNearbySpecies(data, selectedMonths.length > 0 ? selectedMonths : undefined));
-  }, [enabled, data, selectedMonths]);
+    return countNearbySpecies(
+      aggregateNearbySpecies(data, selectedMonths.length > 0 ? selectedMonths : undefined),
+      seenCodes
+    );
+  }, [enabled, data, selectedMonths, seenCodes]);
 }

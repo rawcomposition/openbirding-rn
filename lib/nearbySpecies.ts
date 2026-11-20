@@ -83,9 +83,33 @@ export function getAutoRadiusOption(units: DistanceUnits, viewRadiusKm: number |
 // Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
 export const NEARBY_MIN_PERCENTAGE = 0.1;
 
-/** Species count shown for an area: everything reported at least NEARBY_MIN_PERCENTAGE of the time. */
-export function countNearbySpecies(result: HotspotTargetsResult): number {
-  return result.targets.reduce((count, target) => count + (target.percentage >= NEARBY_MIN_PERCENTAGE ? 1 : 0), 0);
+export type NearbySpeciesCount = {
+  /** What the list shows: unseen species when counting targets only, otherwise all of them. */
+  count: number;
+  /** Every species reported in the area; zero means the area has no data. */
+  total: number;
+  isTargetsOnly: boolean;
+};
+
+/**
+ * Species count shown for an area: everything reported at least NEARBY_MIN_PERCENTAGE of
+ * the time. Pass the seen species (see useTargetsOnlySeenCodes) to count targets only.
+ */
+export function countNearbySpecies(result: HotspotTargetsResult, seenCodes: Set<string> | null): NearbySpeciesCount {
+  let count = 0;
+  let total = 0;
+  for (const target of result.targets) {
+    if (target.percentage < NEARBY_MIN_PERCENTAGE) continue;
+    total++;
+    if (!seenCodes?.has(target.speciesCode)) count++;
+  }
+  return { count, total, isTargetsOnly: !!seenCodes };
+}
+
+/** "42 targets" / "1 species", matching what countNearbySpecies counted. */
+export function formatNearbySpeciesCount({ count, isTargetsOnly }: NearbySpeciesCount): string {
+  const noun = isTargetsOnly ? (count === 1 ? "target" : "targets") : "species";
+  return `${count.toLocaleString()} ${noun}`;
 }
 
 type LatLng = { lat: number; lng: number };

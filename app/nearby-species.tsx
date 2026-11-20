@@ -4,9 +4,11 @@ import SpinnerPill from "@/components/SpinnerPill";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
 import { useNearbyRadius } from "@/hooks/useNearbyRadius";
+import { useTargetsOnlySeenCodes } from "@/hooks/useTargetsOnlySeenCodes";
 import {
   aggregateNearbySpecies,
   countNearbySpecies,
+  formatNearbySpeciesCount,
   getNearbySpeciesRaw,
   hasOutdatedNearbySpeciesPacks,
   isMapCenteredOnUser,
@@ -44,6 +46,7 @@ function NearbySpeciesContent() {
   // Poll while this screen is open so the re-center button reacts to movement within ~5 min.
   const { location: userLocation } = useLocation(true, { refetchInterval: 5 * 60 * 1000 });
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
+  const seenCodes = useTargetsOnlySeenCodes();
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
   const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
   const setNearbyRadiusIndex = useSettingsStore((s) => s.setNearbyRadiusIndex);
@@ -164,16 +167,16 @@ function NearbySpeciesContent() {
   }, [navigation, showMenu, openNearbyMenu, canRecenter, handleRecenter]);
 
   const locationLabel = atUserLocation ? "your location" : "map center";
-  const speciesCount = data ? countNearbySpecies(data) : 0;
+  const speciesCount = data ? countNearbySpecies(data, seenCodes) : null;
 
   // Shown even when the area comes up empty, so a wider radius is always one tap away. The
   // pill is outlined while the radius follows the map and filled once it's a fixed choice.
   const caption = data ? (
     <View style={tw`flex-row items-center justify-between`}>
       <Text style={tw`flex-1 mr-3 text-sm text-gray-700`} numberOfLines={1}>
-        {speciesCount > 0 ? (
+        {speciesCount && speciesCount.total > 0 ? (
           <>
-            <Text style={tw`font-semibold text-gray-900`}>{speciesCount.toLocaleString()} species</Text> near{" "}
+            <Text style={tw`font-semibold text-gray-900`}>{formatNearbySpeciesCount(speciesCount)}</Text> near{" "}
             {locationLabel}
           </>
         ) : (
