@@ -1,5 +1,5 @@
 import tw from "@/lib/tw";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
@@ -15,14 +15,12 @@ type MenuOption = {
 
 type MenuListProps = {
   onNavigateToPacks: () => void;
-  onNavigateToNearbySpecies: () => void;
   onNavigateToSettings: () => void;
   packUpdateCount?: number;
 };
 
 export default function MenuList({
   onNavigateToPacks,
-  onNavigateToNearbySpecies,
   onNavigateToSettings,
   packUpdateCount = 0,
 }: MenuListProps) {
@@ -33,12 +31,6 @@ export default function MenuList({
       icon: <Ionicons name="location-outline" size={24} color={ICON_COLOR} />,
       onPress: onNavigateToPacks,
       badge: packUpdateCount > 0 ? packUpdateCount : undefined,
-    },
-    {
-      id: "nearby-species",
-      title: "Nearby Species",
-      icon: <Feather name="feather" size={24} color={ICON_COLOR} />,
-      onPress: onNavigateToNearbySpecies,
     },
     {
       id: "settings",

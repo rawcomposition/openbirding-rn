@@ -11,7 +11,7 @@ import {
 import { targetRichHotspotCache } from "@/lib/targetRichHotspots";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
-import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
+import { calculateDistance, findClosestFeature, getMarkerColorIndex, isWithinBounds, padBoundsBySize } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -97,6 +97,8 @@ type MapboxMapProps = {
   onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
   placeCoordinates?: { latitude: number; longitude: number } | null;
   onTouchActiveChange?: (isActive: boolean) => void;
+  /** Distance from the top of the screen to the status badges; defaults to just under the status bar. */
+  overlayTop?: number;
 };
 
 export type MapboxMapRef = {
@@ -153,6 +155,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       onLongPressCoordinates,
       placeCoordinates,
       onTouchActiveChange,
+      overlayTop,
     },
     ref
   ) => {
@@ -160,6 +163,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const currentLayer = useMapStore((state) => state.currentLayer);
     const placeId = useMapStore((state) => state.placeId);
     const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const setViewRadiusKm = useMapStore((state) => state.setViewRadiusKm);
     const setStoreBounds = useMapStore((state) => state.setBounds);
     const setInViewCount = useMapStore((state) => state.setInViewCount);
     const setDisplayedCount = useMapStore((state) => state.setDisplayedCount);
@@ -252,10 +256,18 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       () =>
         throttle(async () => {
           if (!mapRef.current) return;
-          const center = await mapRef.current.getCenter();
+          const [center, visible] = await Promise.all([mapRef.current.getCenter(), mapRef.current.getVisibleBounds()]);
           setMapCenter({ lat: center[1], lng: center[0] });
+          if (visible) {
+            // Radius of the circle that fits inside the visible map; Nearby Species uses it
+            // to match its search radius to what's on screen.
+            const [[east, north], [west, south]] = visible;
+            const widthKm = calculateDistance(center[1], west, center[1], east);
+            const heightKm = calculateDistance(south, center[0], north, center[0]);
+            setViewRadiusKm(Math.min(widthKm, heightKm) / 2);
+          }
         }, 500),
-      [setMapCenter]
+      [setMapCenter, setViewRadiusKm]
     );
 
     const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
@@ -413,6 +425,13 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       setStoreBounds(bounds);
     }, [bounds, setStoreBounds]);
 
+    // Hotspots are fetched for a padded viewport (to have markers ready ahead of a pan), so
+    // clip back to the real bounds for the count the home screen shows.
+    const visibleHotspotCount = useMemo(
+      () => (bounds ? displayedHotspots.filter((hotspot) => isWithinBounds(hotspot.lat, hotspot.lng, bounds)).length : 0),
+      [bounds, displayedHotspots]
+    );
+
     useEffect(() => {
       if (bounds === null) {
         setInViewCount(null);
@@ -420,8 +439,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         return;
       }
       setInViewCount(mapCandidateHotspots.length);
-      setDisplayedCount(displayedHotspots.length);
-    }, [bounds, mapCandidateHotspots.length, displayedHotspots.length, setInViewCount, setDisplayedCount]);
+      setDisplayedCount(visibleHotspotCount);
+    }, [bounds, mapCandidateHotspots.length, visibleHotspotCount, setInViewCount, setDisplayedCount]);
 
     const handleFeaturePress = useCallback(
       (event: any) => {
@@ -709,7 +728,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         </Mapbox.MapView>
 
         {isZoomedTooFarOut && hasInstalledPacks && (
-          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: overlayTop ?? insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
               <GlassView
                 style={tw`rounded-full overflow-hidden`}
@@ -729,7 +748,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         )}
 
         {isTargetRichBadgeVisible && !isZoomedTooFarOut && (
-          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: overlayTop ?? insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
               <GlassView
                 style={tw`rounded-full overflow-hidden`}

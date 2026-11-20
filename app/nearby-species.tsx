@@ -3,15 +3,18 @@ import { PackUpdateNotice } from "@/components/PackCoverageNotice";
 import SpinnerPill from "@/components/SpinnerPill";
 import TargetsView, { buildTargetsMenuSections } from "@/components/TargetsView";
 import { useLocation } from "@/hooks/useLocation";
+import { useNearbyRadius } from "@/hooks/useNearbyRadius";
 import {
   aggregateNearbySpecies,
+  countNearbySpecies,
   getNearbySpeciesRaw,
-  getRadiusOption,
   hasOutdatedNearbySpeciesPacks,
+  isMapCenteredOnUser,
+  NEARBY_MIN_PERCENTAGE,
   RADIUS_OPTIONS,
 } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
-import { calculateDistance, parsePackVersion } from "@/lib/utils";
+import { parsePackVersion } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,8 +24,6 @@ import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useSt
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
-// Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
-const NEARBY_MIN_PERCENTAGE = 0.1;
 const NEARBY_INITIAL_LIMIT = 100;
 
 export default function NearbySpeciesPage() {
@@ -46,19 +47,15 @@ function NearbySpeciesContent() {
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
   const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
   const setNearbyRadiusIndex = useSettingsStore((s) => s.setNearbyRadiusIndex);
+  const setNearbyRadiusAuto = useSettingsStore((s) => s.setNearbyRadiusAuto);
   const displayMode = useSettingsStore((s) => s.nearbyDisplayMode);
-  const radius = getRadiusOption(distanceUnits, nearbyRadiusIndex);
+  // Matches the map view unless the user has picked a specific radius.
+  const radius = useNearbyRadius();
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
   const [useMyLocation, setUseMyLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Snap to the user's actual location when the map center is basically already there,
-  // so the data and caption reflect "your location" rather than an arbitrary map point.
-  const AUTO_SNAP_KM = 1;
-  const nearUser =
-    !!userLocation &&
-    !!mapCenter &&
-    calculateDistance(mapCenter.lat, mapCenter.lng, userLocation.lat, userLocation.lng) <= AUTO_SNAP_KM;
+  const nearUser = isMapCenteredOnUser(mapCenter, userLocation);
   const atUserLocation = !!userLocation && (useMyLocation || nearUser);
   const center = atUserLocation ? userLocation : mapCenter;
   const canRecenter = !!userLocation && !atUserLocation;
@@ -67,7 +64,7 @@ function NearbySpeciesContent() {
   // synchronous aggregation below, so toggling months never refetches.
   const { data: rawData, isLoading, isFetching, isPlaceholderData } = useQuery({
     queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km],
-    queryFn: () => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km),
+    queryFn: ({ signal }) => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km, signal),
     enabled: !!center,
     placeholderData: (prev) => prev,
   });
@@ -108,17 +105,15 @@ function NearbySpeciesContent() {
   }, [openMenu, hasVersion]);
 
   const openRadiusMenu = useCallback(() => {
+    const check = (checked: boolean) =>
+      checked ? <Ionicons name="checkmark" size={18} color={tw.color("emerald-600")} /> : <View style={tw`w-5`} />;
     openMenu(
       [
+        { items: [{ label: "Match map view", icon: check(radius.isAuto), onPress: () => setNearbyRadiusAuto(true) }] },
         {
           items: RADIUS_OPTIONS[distanceUnits].map((option, index) => ({
-            label: `Within ${option.label}`,
-            icon:
-              index === nearbyRadiusIndex ? (
-                <Ionicons name="checkmark" size={18} color={tw.color("emerald-600")} />
-              ) : (
-                <View style={tw`w-5`} />
-              ),
+            label: option.label,
+            icon: check(!radius.isAuto && index === nearbyRadiusIndex),
             onPress: () => setNearbyRadiusIndex(index),
           })),
         },
@@ -126,7 +121,7 @@ function NearbySpeciesContent() {
       radiusAnchorRef,
       { placementOverride: PopoverPlacement.BOTTOM }
     );
-  }, [openMenu, distanceUnits, nearbyRadiusIndex, setNearbyRadiusIndex]);
+  }, [openMenu, distanceUnits, nearbyRadiusIndex, radius.isAuto, setNearbyRadiusIndex, setNearbyRadiusAuto]);
 
   const handleRecenter = useCallback(() => setUseMyLocation(true), []);
 
@@ -169,27 +164,47 @@ function NearbySpeciesContent() {
   }, [navigation, showMenu, openNearbyMenu, canRecenter, handleRecenter]);
 
   const locationLabel = atUserLocation ? "your location" : "map center";
-  const speciesCount = data ? data.targets.filter((t) => t.percentage >= NEARBY_MIN_PERCENTAGE).length : 0;
-  const captionText =
-    speciesCount > 0
-      ? `${speciesCount.toLocaleString()} species within ~${radius.label} of ${locationLabel}`
-      : `Reported within ~${radius.label} of ${locationLabel}`;
+  const speciesCount = data ? countNearbySpecies(data) : 0;
 
-  // The caption chip doubles as the radius picker.
-  const caption =
-    data && data.targets.length > 0 ? (
+  // Shown even when the area comes up empty, so a wider radius is always one tap away. The
+  // pill is outlined while the radius follows the map and filled once it's a fixed choice.
+  const caption = data ? (
+    <View style={tw`flex-row items-center justify-between`}>
+      <Text style={tw`flex-1 mr-3 text-sm text-gray-700`} numberOfLines={1}>
+        {speciesCount > 0 ? (
+          <>
+            <Text style={tw`font-semibold text-gray-900`}>{speciesCount.toLocaleString()} species</Text> near{" "}
+            {locationLabel}
+          </>
+        ) : (
+          `Near ${locationLabel}`
+        )}
+      </Text>
       <TouchableOpacity
         onPress={openRadiusMenu}
         activeOpacity={0.7}
-        style={tw`self-start flex-row items-center bg-gray-200 rounded-full pl-2.5 pr-3 py-1.5`}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={
+          radius.isAuto ? `Radius: ${radius.label}, matching the map view` : `Radius: fixed at ${radius.label}`
+        }
+        style={[
+          tw`rounded-full border pl-3.5 pr-2.5 py-1.5`,
+          radius.isAuto ? tw`bg-white border-gray-300` : tw`bg-emerald-600 border-emerald-600`,
+        ]}
       >
         <View ref={radiusAnchorRef} style={tw`flex-row items-center`}>
-          <Ionicons name="information-circle-outline" size={15} color={tw.color("gray-600")} style={tw`mr-1.5`} />
-          <Text style={tw`text-xs font-medium text-gray-700`}>{captionText}</Text>
-          <Ionicons name="chevron-down" size={12} color={tw.color("gray-600")} style={tw`ml-1`} />
+          <Text style={tw`text-sm font-semibold ${radius.isAuto ? "text-gray-800" : "text-white"}`}>{radius.label}</Text>
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color={radius.isAuto ? tw.color("gray-600") : "white"}
+            style={tw`ml-1`}
+          />
         </View>
       </TouchableOpacity>
-    ) : null;
+    </View>
+  ) : null;
 
   const updateNotice = hasOutdatedPacks ? <PackUpdateNotice /> : null;
 

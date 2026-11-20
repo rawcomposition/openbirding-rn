@@ -10,6 +10,7 @@ type MapStore = {
   setBounds: (bounds: Bounds | null) => void;
   inViewCount: number | null;
   setInViewCount: (count: number | null) => void;
+  /** Hotspots drawn inside the visible map (after filters); null when zoomed too far out. */
   displayedCount: number | null;
   setDisplayedCount: (count: number | null) => void;
   hotspotId: string | null;
@@ -22,6 +23,9 @@ type MapStore = {
   setIsHotspotListOpen: (isOpen: boolean) => void;
   mapCenter: { lat: number; lng: number } | null;
   setMapCenter: (center: { lat: number; lng: number } | null) => void;
+  /** Half the shorter side of the visible map, in km. Set at any zoom, unlike `bounds`. */
+  viewRadiusKm: number | null;
+  setViewRadiusKm: (radiusKm: number | null) => void;
   isZoomedTooFarOut: boolean;
   setIsZoomedTooFarOut: (zoomed: boolean) => void;
   isBottomSheetExpanded: boolean;
@@ -54,6 +58,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsHotspotListOpen: (isOpen) => set({ isHotspotListOpen: isOpen }),
   mapCenter: null,
   setMapCenter: (center) => set({ mapCenter: center }),
+  viewRadiusKm: null,
+  setViewRadiusKm: (radiusKm) => set({ viewRadiusKm: radiusKm }),
   isZoomedTooFarOut: false,
   setIsZoomedTooFarOut: (zoomed) => set({ isZoomedTooFarOut: zoomed }),
   isBottomSheetExpanded: false,

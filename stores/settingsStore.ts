@@ -38,6 +38,8 @@ type SettingsState = {
   nearbyDisplayMode: TargetsDisplayMode;
   hotspotDisplayMode: TargetsDisplayMode;
   nearbyRadiusIndex: number;
+  /** Nearby Species radius follows the map view; false once the user picks a fixed radius. */
+  nearbyRadiusAuto: boolean;
   speciesHotspotSort: SpeciesHotspotSort;
 };
 
@@ -52,7 +54,9 @@ type SettingsActions = {
   setDistanceUnits: (units: DistanceUnits) => void;
   setNearbyDisplayMode: (mode: TargetsDisplayMode) => void;
   setHotspotDisplayMode: (mode: TargetsDisplayMode) => void;
+  /** Picks a fixed radius, which also turns off following the map view. */
   setNearbyRadiusIndex: (index: number) => void;
+  setNearbyRadiusAuto: (value: boolean) => void;
   setSpeciesHotspotSort: (sort: SpeciesHotspotSort) => void;
 };
 
@@ -123,6 +127,7 @@ export const useSettingsStore = create<SettingsStore>()(
       nearbyDisplayMode: "chart",
       hotspotDisplayMode: "percent",
       nearbyRadiusIndex: DEFAULT_RADIUS_INDEX,
+      nearbyRadiusAuto: true,
       speciesHotspotSort: "best",
       setDirectionsProvider: (provider) => set({ directionsProvider: provider || null }),
       setLifelist: (lifelist) => set({ lifelist }),
@@ -134,7 +139,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setDistanceUnits: (units) => set({ distanceUnits: units }),
       setNearbyDisplayMode: (mode) => set({ nearbyDisplayMode: mode }),
       setHotspotDisplayMode: (mode) => set({ hotspotDisplayMode: mode }),
-      setNearbyRadiusIndex: (index) => set({ nearbyRadiusIndex: index }),
+      setNearbyRadiusIndex: (index) => set({ nearbyRadiusIndex: index, nearbyRadiusAuto: false }),
+      setNearbyRadiusAuto: (value) => set({ nearbyRadiusAuto: value }),
       setSpeciesHotspotSort: (sort) => set({ speciesHotspotSort: sort }),
     }),
     {

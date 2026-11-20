@@ -6,6 +6,7 @@ import MonthlyBarChart from "@/components/MonthlyBarChart";
 import SpinnerPill from "@/components/SpinnerPill";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useLocation } from "@/hooks/useLocation";
+import { useNearbyRadius } from "@/hooks/useNearbyRadius";
 import { usePinnedTargets } from "@/hooks/usePinnedTargets";
 import { useTaxonomy } from "@/hooks/useTaxonomy";
 import { getTargetsForHotspot } from "@/lib/database";
@@ -14,7 +15,6 @@ import {
   aggregateNearbySpecies,
   getBestHotspotsForSpecies,
   getNearbySpeciesRaw,
-  getRadiusOption,
   SpeciesHotspot,
 } from "@/lib/nearbySpecies";
 import { getSpeciesImage } from "@/lib/species";
@@ -61,10 +61,10 @@ function SpeciesDetailContent() {
 
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
-  const nearbyRadiusIndex = useSettingsStore((s) => s.nearbyRadiusIndex);
   const sort = useSettingsStore((s) => s.speciesHotspotSort);
   const setSort = useSettingsStore((s) => s.setSpeciesHotspotSort);
-  const radius = getRadiusOption(distanceUnits, nearbyRadiusIndex);
+  // Same radius as the Nearby Species list this was opened from.
+  const radius = useNearbyRadius();
   const useMiles = distanceUnits === "imperial";
 
   const [openHotspotId, setOpenHotspotId] = useState<string | null>(null);

@@ -55,6 +55,53 @@ export function getRadiusOption(units: DistanceUnits, index: number): RadiusOpti
   return options[Math.min(Math.max(index, 0), options.length - 1)];
 }
 
+// When the radius follows the map view it snaps to this ladder: the fixed choices plus a
+// few tighter steps for zoomed-in views. Snapping keeps the label a clean round number and
+// stops small zoom changes from invalidating the cached query.
+const AUTO_RADIUS_STEPS: Record<DistanceUnits, RadiusOption[]> = {
+  imperial: [
+    { km: 1 * KM_PER_MILE, label: "1 mi" },
+    { km: 2 * KM_PER_MILE, label: "2 mi" },
+    { km: 3 * KM_PER_MILE, label: "3 mi" },
+    ...RADIUS_OPTIONS.imperial,
+  ],
+  metric: [{ km: 2, label: "2 km" }, { km: 3, label: "3 km" }, { km: 5, label: "5 km" }, ...RADIUS_OPTIONS.metric],
+};
+
+/**
+ * Radius that best matches what the map is showing. `viewRadiusKm` is half the shorter side
+ * of the visible map; null (map not measured yet) falls back to the default fixed radius.
+ */
+export function getAutoRadiusOption(units: DistanceUnits, viewRadiusKm: number | null): RadiusOption {
+  if (viewRadiusKm == null || !(viewRadiusKm > 0)) return getRadiusOption(units, DEFAULT_RADIUS_INDEX);
+  // Nearest step on a log scale, so 7 mi reads as "5 mi" or "10 mi" by ratio rather than difference.
+  return AUTO_RADIUS_STEPS[units].reduce((best, step) =>
+    Math.abs(Math.log(step.km / viewRadiusKm)) < Math.abs(Math.log(best.km / viewRadiusKm)) ? step : best
+  );
+}
+
+// Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
+export const NEARBY_MIN_PERCENTAGE = 0.1;
+
+/** Species count shown for an area: everything reported at least NEARBY_MIN_PERCENTAGE of the time. */
+export function countNearbySpecies(result: HotspotTargetsResult): number {
+  return result.targets.reduce((count, target) => count + (target.percentage >= NEARBY_MIN_PERCENTAGE ? 1 : 0), 0);
+}
+
+type LatLng = { lat: number; lng: number };
+
+// Snap to the user's actual location when the map center is basically already there,
+// so the data and caption reflect "your location" rather than an arbitrary map point.
+const AUTO_SNAP_KM = 1;
+
+export function isMapCenteredOnUser(mapCenter: LatLng | null, userLocation: LatLng | null): boolean {
+  return (
+    !!userLocation &&
+    !!mapCenter &&
+    calculateDistance(mapCenter.lat, mapCenter.lng, userLocation.lat, userLocation.lng) <= AUTO_SNAP_KM
+  );
+}
+
 export type NearbySpeciesRaw = {
   /** Merged month-by-month counts for every grid cell in range; null when no cells matched. */
   data: RawHotspotTargetData | null;
@@ -64,7 +111,12 @@ export type NearbySpeciesRaw = {
 // Fetching and JSON-parsing hundreds of grid cells is the expensive part, so it runs once
 // per (center, radius) and is cached; month filtering happens in aggregateNearbySpecies so
 // toggling months never re-parses.
-export async function getNearbySpeciesRaw(lat: number, lng: number, radiusKm: number): Promise<NearbySpeciesRaw> {
+export async function getNearbySpeciesRaw(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+  signal?: AbortSignal
+): Promise<NearbySpeciesRaw> {
   const bounds = getBoundingBoxFromLocation(lat, lng, radiusKm);
   const rows = await getGridCellsWithinBounds(bounds);
 
@@ -84,7 +136,11 @@ export async function getNearbySpeciesRaw(lat: number, lng: number, radiusKm: nu
   const parsed: RawHotspotTargetData[] = [];
   for (let i = 0; i < withinRadius.length; i++) {
     parsed.push(parseHotspotTargetData(withinRadius[i].data));
-    if (i % 100 === 99) await new Promise((resolve) => setTimeout(resolve, 0));
+    if (i % 100 === 99) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      // The map moved on (or the screen closed) while parsing; drop the rest of the work.
+      if (signal?.aborted) throw new Error("Nearby species query cancelled");
+    }
   }
 
   return { data: mergeRawTargetData(parsed), version };
