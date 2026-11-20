@@ -6,7 +6,7 @@ import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
 
-export const MAP_VIEW_CONTROLS_HEIGHT = 56;
+export const MAP_VIEW_CONTROLS_HEIGHT = 48;
 
 type MapViewControlsProps = {
   onOpenList: () => void;

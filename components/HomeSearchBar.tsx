@@ -5,7 +5,7 @@ import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
 import { Platform, Pressable, Text, TouchableOpacity, View } from "react-native";
 
-export const HOME_SEARCH_BAR_HEIGHT = 52;
+export const HOME_SEARCH_BAR_HEIGHT = 48;
 
 type HomeSearchBarProps = {
   onOpenMenu: () => void;
