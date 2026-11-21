@@ -86,32 +86,24 @@ const iconPaths = {
 };
 
 export const placeIcons = {
-  // Sky - default
   hotspot: { icon: "star" as const, color: "#0284c7" },
-  // Green - outdoors
   hike: { icon: "hike" as const, color: "#15803d" },
   mountain: { icon: "tree" as const, color: "#15803d" },
   tent: { icon: "campground" as const, color: "#15803d" },
-  // Pink - accommodation
   house: { icon: "house" as const, color: "#ff385b" },
   airbnb: { icon: "airbnb" as const, color: "#ff385b" },
   bed: { icon: "bed" as const, color: "#ff385b" },
-  // Brown - birding & photography
   bins: { icon: "bins" as const, color: "#92400e" },
   camera: { icon: "camera" as const, color: "#92400e" },
-  // Purple - transport
   airport: { icon: "airplane" as const, color: "#6a4ca7" },
   boat: { icon: "boat" as const, color: "#6a4ca7" },
   car: { icon: "car" as const, color: "#6a4ca7" },
   bus: { icon: "bus" as const, color: "#6a4ca7" },
-  // Yellow - food & shopping
   utensils: { icon: "utensils" as const, color: "#f59e0b" },
   mug: { icon: "mug" as const, color: "#f59e0b" },
   trolley: { icon: "trolley" as const, color: "#f59e0b" },
-  // Blue - activities
   bike: { icon: "cycling" as const, color: "#0369a1" },
   dog: { icon: "dog" as const, color: "#0369a1" },
-  // Gray - infrastructure
   fuel: { icon: "fuel" as const, color: "#64748b" },
   parking: { icon: "parking" as const, color: "#64748b" },
   building: { icon: "building" as const, color: "#64748b" },

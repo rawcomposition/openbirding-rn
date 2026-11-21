@@ -2,7 +2,7 @@ import { getHotspotById, getSavedHotspotById, isHotspotSaved, saveHotspot, unsav
 import tw from "@/lib/tw";
 import { getMarkerColor } from "@/lib/utils";
 import { useMapStore } from "@/stores/mapStore";
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -30,6 +30,8 @@ type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
   onClose: () => void | false;
+  dimmed?: boolean;
+  onShowOnMap?: (hotspot: { id: string; lat: number; lng: number }) => void;
 };
 
 export default function HotspotDialog(props: HotspotDialogProps) {
@@ -42,7 +44,7 @@ export default function HotspotDialog(props: HotspotDialogProps) {
   );
 }
 
-function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps) {
+function HotspotDialogContent({ isOpen, hotspotId, onClose, dimmed = false, onShowOnMap }: HotspotDialogProps) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
@@ -153,12 +155,15 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
         detents={[0.4, 0.97]}
         headerContent={headerContent}
         scrollable
+        dimmed={dimmed}
       >
         <View style={tw`flex-1`}>
           <ScrollView
             style={tw`flex-1`}
             showsVerticalScrollIndicator={false}
             onScrollBeginDrag={closeMenu}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
           >
             <View style={[tw`px-4`, { minHeight: 350, paddingBottom: Math.max(insets.bottom, 16) }]}>
               {hotspot ? (
@@ -193,6 +198,21 @@ function HotspotDialogContent({ isOpen, hotspotId, onClose }: HotspotDialogProps
                       stacked={useStackedActionButtons}
                     />
                   </ActionButtonRow>
+
+                  {onShowOnMap && (
+                    <View style={tw`mt-3`}>
+                      <ActionButton
+                        icon={<Ionicons name="map-outline" size={20} color={tw.color("sky-600")} />}
+                        label="Show on Map"
+                        onPress={async () => {
+                          // Fully dismiss this sheet before the caller navigates, so the
+                          // native sheet isn't orphaned when the screen unmounts.
+                          await sheetRef.current?.dismiss();
+                          onShowOnMap({ id: hotspot.id, lat: hotspot.lat, lng: hotspot.lng });
+                        }}
+                      />
+                    </View>
+                  )}
 
                   <HotspotTargets
                     hotspotId={hotspot.id}

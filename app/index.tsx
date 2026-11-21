@@ -1,9 +1,9 @@
-import CountBadge from "@/components/CountBadge";
 import FilterSheet from "@/components/FilterSheet";
 import FloatingButton from "@/components/FloatingButton";
+import HomeSearchBar, { HOME_SEARCH_BAR_HEIGHT } from "@/components/HomeSearchBar";
 import HotspotDialog from "@/components/HotspotDialog";
 import HotspotList from "@/components/HotspotList";
-import MapViewControls from "@/components/MapViewControls";
+import MapViewControls, { MAP_VIEW_CONTROLS_HEIGHT } from "@/components/MapViewControls";
 import Mapbox, { MapboxMapRef } from "@/components/Mapbox";
 import MenuBottomSheet from "@/components/MenuBottomSheet";
 import PacksNotice from "@/components/PacksNotice";
@@ -12,12 +12,14 @@ import SearchSheet from "@/components/SearchSheet";
 import SunIndicator from "@/components/SunIndicator";
 import { useActiveFilterCount } from "@/hooks/useActiveFilterCount";
 import { useInstalledPacks } from "@/hooks/useInstalledPacks";
+import { useNearbySpeciesCount } from "@/hooks/useNearbySpeciesCount";
 import { usePackUpdates } from "@/hooks/usePackUpdates";
 import { useSavedLocation } from "@/hooks/useSavedLocation";
 import tw from "@/lib/tw";
 import { useMapStore } from "@/stores/mapStore";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useRef, useState } from "react";
+import { Href, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,6 +32,7 @@ export default function HomeScreen() {
   const isMapTouchActiveRef = useRef(false);
   const insets = useSafeAreaInsets();
   const activeFilterCount = useActiveFilterCount();
+  const router = useRouter();
 
   const { isLoadingLocation, savedLocation, updateLocation, hadSavedLocationOnInit } = useSavedLocation();
   const {
@@ -47,6 +50,10 @@ export default function HomeScreen() {
   } = useMapStore();
   const { data: installedPacks, isLoading: isLoadingInstalledPacks } = useInstalledPacks();
   const { updateCount } = usePackUpdates();
+  const hotspotCount = useMapStore((s) => s.displayedCount);
+  const isZoomedTooFarOut = useMapStore((s) => s.isZoomedTooFarOut);
+  const hasInstalledPacks = isLoadingInstalledPacks || installedPacks.size > 0;
+  const speciesCount = useNearbySpeciesCount(installedPacks.size > 0 && !isZoomedTooFarOut);
 
   const handleMapPress = (_event: any) => {
     if (isMenuOpen) handleCloseBottomSheet();
@@ -103,6 +110,10 @@ export default function HomeScreen() {
     setIsHotspotListOpen(false);
   };
 
+  const handleOpenSpecies = () => {
+    router.push("/nearby-species" as Href);
+  };
+
   const handleOpenSearch = () => {
     setIsSearchOpen(true);
   };
@@ -144,6 +155,14 @@ export default function HomeScreen() {
     [setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
 
+  const pendingMapFocus = useMapStore((s) => s.pendingMapFocus);
+  const setPendingMapFocus = useMapStore((s) => s.setPendingMapFocus);
+  useEffect(() => {
+    if (!pendingMapFocus) return;
+    setPendingMapFocus(null);
+    handleSelectHotspotFromList(pendingMapFocus.hotspotId, pendingMapFocus.lat, pendingMapFocus.lng);
+  }, [pendingMapFocus, setPendingMapFocus, handleSelectHotspotFromList]);
+
   const handleSelectPlaceFromList = useCallback(
     (selectedPlaceId: string, lat: number, lng: number) => {
       setCustomPinCoordinates(null);
@@ -161,7 +180,10 @@ export default function HomeScreen() {
   const initialCenter = savedLocation?.center ?? [-98.5, 39.5];
   const initialZoom = savedLocation?.zoom ?? 2;
 
-  const hasInstalledPacks = isLoadingInstalledPacks || installedPacks.size > 0;
+  const light = currentLayer === "satellite";
+  const searchBarTop = insets.top > 16 ? insets.top + 4 : insets.top + 12;
+  const belowSearchBar = searchBarTop + HOME_SEARCH_BAR_HEIGHT + 10;
+  const controlsBottom = insets.bottom > 0 ? insets.bottom + 8 : 32;
 
   return (
     <GestureHandlerRootView style={tw`flex-1 bg-white`}>
@@ -180,50 +202,37 @@ export default function HomeScreen() {
           onLongPressCoordinates={handleMapLongPress}
           placeCoordinates={customPinCoordinates}
           onTouchActiveChange={handleMapTouchActiveChange}
+          overlayTop={belowSearchBar}
         />
+        <View style={[tw`absolute left-4 right-4`, { top: searchBarTop }]}>
+          <HomeSearchBar
+            onOpenMenu={handleMenuPress}
+            onOpenSearch={handleOpenSearch}
+            onOpenFilters={handleOpenFilters}
+            menuBadgeCount={updateCount}
+            filterCount={activeFilterCount}
+            light={light}
+          />
+        </View>
         {!hasInstalledPacks && !isLoadingInstalledPacks ? (
-          <View
-            style={[
-              tw`absolute left-0 right-0`,
-              {
-                top: insets.top + 16,
-              },
-            ]}
-          >
+          <View style={[tw`absolute left-0 right-0`, { top: belowSearchBar }]}>
             <PacksNotice variant="banner" />
           </View>
         ) : (
-          <SunIndicator style={[tw`absolute`, { top: insets.top > 16 ? insets.top + 4 : insets.top + 16, left: 16 }]} />
+          <SunIndicator style={[tw`absolute`, { top: belowSearchBar, left: 16 }]} light={light} />
         )}
-        <View
-          style={[
-            tw`absolute right-6 gap-5`,
-            {
-              bottom: insets.bottom + 24,
-            },
-          ]}
-        >
-          <FloatingButton onPress={handleCenterOnUser} light={currentLayer === "satellite"}>
+        <View style={[tw`absolute right-4`, { bottom: controlsBottom + MAP_VIEW_CONTROLS_HEIGHT + 16 }]}>
+          <FloatingButton onPress={handleCenterOnUser} light={light}>
             <Ionicons name="locate" size={24} color={tw.color("gray-700")} />
           </FloatingButton>
-          <FloatingButton onPress={handleOpenSearch} light={currentLayer === "satellite"}>
-            <Ionicons name="search" size={24} color={tw.color("gray-700")} />
-          </FloatingButton>
-          <View style={tw`relative`}>
-            <FloatingButton onPress={handleMenuPress} light={currentLayer === "satellite"}>
-              <Ionicons name="menu" size={24} color={tw.color("gray-700")} />
-            </FloatingButton>
-            <CountBadge count={updateCount} />
-          </View>
         </View>
-        <View
-          style={[tw`absolute left-0 right-0 items-center`, { bottom: insets.bottom + 24 }]}
-          pointerEvents="box-none"
-        >
+        <View style={[tw`absolute left-4 right-4`, { bottom: controlsBottom }]}>
           <MapViewControls
-            onOpenFilters={handleOpenFilters}
             onOpenList={handleOpenHotspotList}
-            filterCount={activeFilterCount}
+            onOpenSpecies={handleOpenSpecies}
+            hotspotCount={installedPacks.size > 0 ? hotspotCount : null}
+            speciesCount={speciesCount}
+            light={light}
           />
         </View>
         <MenuBottomSheet isOpen={isMenuOpen} onClose={handleCloseBottomSheet} />

@@ -110,17 +110,19 @@ export const getMarkerColorIndex = (count: number) => {
 type Bbox = { west: number; south: number; east: number; north: number };
 
 export function padBoundsBySize(bbox: Bbox): Bbox {
-  // Check if bbox crosses the date line (west > east)
   const crossesDateLine = bbox.west > bbox.east;
   const width = crossesDateLine ? 180 - bbox.west + (bbox.east + 180) : bbox.east - bbox.west;
   const height = bbox.north - bbox.south;
   const span = Math.max(width, height);
 
-  // Big bbox → smaller padding, small bbox → bigger padding
-  let paddingPct = 0.1; // default 10%
-  if (span < 1) paddingPct = 0.4; // zoomed in: 40%
-  else if (span < 5) paddingPct = 0.25;
-  else if (span < 20) paddingPct = 0.15;
+  // The padding keeps markers ready ahead of a quick pan, which matters most zoomed in. Zoomed
+  // out it mostly pulls in off-screen hotspots (often a whole city just out of view) that count
+  // against the map's density cap, so it thins to almost nothing. For scale, a phone screen
+  // spans about 2° at zoom 8 and 4° at zoom 7.
+  let paddingPct = 0.03;
+  if (span < 1) paddingPct = 0.4;
+  else if (span < 2.5) paddingPct = 0.25;
+  else if (span < 5) paddingPct = 0.1;
 
   const dx = width * paddingPct;
   const dy = height * paddingPct;
@@ -128,7 +130,6 @@ export function padBoundsBySize(bbox: Bbox): Bbox {
   let west = bbox.west - dx;
   let east = bbox.east + dx;
 
-  // Wrap around the date line if needed
   if (west < -180) west += 360;
   if (east > 180) east -= 360;
 
@@ -186,8 +187,6 @@ export function getBoundingBoxFromLocation(lat: number, lng: number, radiusKm: n
   let east = lng + lngDelta;
   let west = lng - lngDelta;
 
-  // Wrap around the date line instead of clamping
-  // When west > east, it indicates the bbox crosses the date line
   if (east > 180) east -= 360;
   if (west < -180) west += 360;
 

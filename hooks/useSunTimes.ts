@@ -41,7 +41,6 @@ export function useSunTimes(): UseSunTimesReturn {
   const { location, isLoading: isLocationLoading } = useLocation(enabled);
   const [now, setNow] = useState(() => new Date());
 
-  // Update current time every minute
   useEffect(() => {
     if (!enabled) return;
 
@@ -85,22 +84,18 @@ export function useSunTimes(): UseSunTimesReturn {
     let sunset = todayTimes.sunset;
 
     if (now < todayTimes.sunrise) {
-      // Before sunrise - next event is sunrise
       nextEvent = "sunrise";
       nextEventTime = todayTimes.sunrise;
     } else if (now < todayTimes.sunset) {
-      // After sunrise, before sunset - next event is sunset
       nextEvent = "sunset";
       nextEventTime = todayTimes.sunset;
     } else {
-      // After sunset - next event is tomorrow's sunrise
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowTimes = SunCalc.getTimes(tomorrow, location.lat, location.lng);
 
       nextEvent = "sunrise";
       nextEventTime = tomorrowTimes.sunrise;
-      // Use tomorrow's times for display
       sunrise = tomorrowTimes.sunrise;
       sunset = tomorrowTimes.sunset;
     }

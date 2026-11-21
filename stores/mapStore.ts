@@ -22,6 +22,8 @@ type MapStore = {
   setIsHotspotListOpen: (isOpen: boolean) => void;
   mapCenter: { lat: number; lng: number } | null;
   setMapCenter: (center: { lat: number; lng: number } | null) => void;
+  viewRadiusKm: number | null;
+  setViewRadiusKm: (radiusKm: number | null) => void;
   isZoomedTooFarOut: boolean;
   setIsZoomedTooFarOut: (zoomed: boolean) => void;
   isBottomSheetExpanded: boolean;
@@ -30,6 +32,8 @@ type MapStore = {
   setIsSunDetailsOpen: (isOpen: boolean) => void;
   isMapAttributionOpen: boolean;
   setIsMapAttributionOpen: (isOpen: boolean) => void;
+  pendingMapFocus: { hotspotId: string; lat: number; lng: number } | null;
+  setPendingMapFocus: (focus: { hotspotId: string; lat: number; lng: number } | null) => void;
 };
 
 export const useMapStore = create<MapStore>((set) => ({
@@ -51,6 +55,8 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsHotspotListOpen: (isOpen) => set({ isHotspotListOpen: isOpen }),
   mapCenter: null,
   setMapCenter: (center) => set({ mapCenter: center }),
+  viewRadiusKm: null,
+  setViewRadiusKm: (radiusKm) => set({ viewRadiusKm: radiusKm }),
   isZoomedTooFarOut: false,
   setIsZoomedTooFarOut: (zoomed) => set({ isZoomedTooFarOut: zoomed }),
   isBottomSheetExpanded: false,
@@ -59,4 +65,6 @@ export const useMapStore = create<MapStore>((set) => ({
   setIsSunDetailsOpen: (isOpen) => set({ isSunDetailsOpen: isOpen }),
   isMapAttributionOpen: false,
   setIsMapAttributionOpen: (isOpen) => set({ isMapAttributionOpen: isOpen }),
+  pendingMapFocus: null,
+  setPendingMapFocus: (focus) => set({ pendingMapFocus: focus }),
 }));

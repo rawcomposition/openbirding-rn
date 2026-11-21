@@ -1,6 +1,6 @@
 import { useDelayedFlag } from "@/hooks/useDelayedFlag";
 import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
-import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
+import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces, hasMoreHotspotsThan } from "@/lib/database";
 import {
   haloInnerStyle,
   haloOuterStyle,
@@ -11,7 +11,7 @@ import {
 import { targetRichHotspotCache } from "@/lib/targetRichHotspots";
 import tw from "@/lib/tw";
 import { OnPressEvent } from "@/lib/types";
-import { findClosestFeature, getMarkerColorIndex, padBoundsBySize } from "@/lib/utils";
+import { calculateDistance, findClosestFeature, getMarkerColorIndex, isWithinBounds, padBoundsBySize } from "@/lib/utils";
 import { useFiltersStore } from "@/stores/filtersStore";
 import { useLocationPermissionStore } from "@/stores/locationPermissionStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -97,6 +97,7 @@ type MapboxMapProps = {
   onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
   placeCoordinates?: { latitude: number; longitude: number } | null;
   onTouchActiveChange?: (isActive: boolean) => void;
+  overlayTop?: number;
 };
 
 export type MapboxMapRef = {
@@ -105,14 +106,22 @@ export type MapboxMapRef = {
 };
 
 const THROTTLE_DELAY = 750;
-const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
+const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250;
 const SETTLED_BOUNDS_DELAY = 300;
-// Only surface the "Filtering hotspots..." badge if filtering outlasts this; incremental pans resolve faster and shouldn't flicker it.
 const TARGET_RICH_BADGE_DELAY = 350;
+// At this zoom and closer, hotspots always load.
 const MIN_ZOOM = 8;
+// Further out than MIN_ZOOM, hotspots still load while the view holds no more than this many,
+// so sparse regions stay usable from much further out. Dense cities already put ~4,000 on
+// the map at MIN_ZOOM, so this is never heavier to render than what loads there.
+const MAX_ZOOMED_OUT_HOTSPOTS = 3000;
+// Never load below this zoom, however sparse the area; the view spans whole countries by then.
+const ABSOLUTE_MIN_ZOOM = 5;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
 const BOUNDS_EPSILON = 0.0001;
+
+type Viewport = { bounds: Bounds; zoom: number };
 
 function areBoundsEquivalent(left: Bounds | null, right: Bounds | null): boolean {
   if (left === right) {
@@ -153,6 +162,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       onLongPressCoordinates,
       placeCoordinates,
       onTouchActiveChange,
+      overlayTop,
     },
     ref
   ) => {
@@ -160,6 +170,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const currentLayer = useMapStore((state) => state.currentLayer);
     const placeId = useMapStore((state) => state.placeId);
     const setMapCenter = useMapStore((state) => state.setMapCenter);
+    const setViewRadiusKm = useMapStore((state) => state.setViewRadiusKm);
     const setStoreBounds = useMapStore((state) => state.setBounds);
     const setInViewCount = useMapStore((state) => state.setInViewCount);
     const setDisplayedCount = useMapStore((state) => state.setDisplayedCount);
@@ -224,19 +235,33 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       throttleDelay = THROTTLE_DELAY_WITH_OPEN_HOTSPOT;
     }
 
-    const throttledSetBounds = useMemo(
-      () =>
-        throttle((nextBounds: Bounds | null) => {
-          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-        }, throttleDelay),
-      [throttleDelay]
+    const viewportRequestRef = useRef(0);
+    const applyViewport = useCallback(
+      async (viewport: Viewport) => {
+        const requestId = ++viewportRequestRef.current;
+        let isTooFarOut = viewport.zoom < ABSOLUTE_MIN_ZOOM;
+        if (!isTooFarOut && viewport.zoom < MIN_ZOOM) {
+          const padded = padBoundsBySize(viewport.bounds);
+          isTooFarOut = await hasMoreHotspotsThan(
+            MAX_ZOOMED_OUT_HOTSPOTS,
+            padded.west,
+            padded.south,
+            padded.east,
+            padded.north
+          ).catch(() => true);
+          // A newer viewport took over while this one was being counted.
+          if (requestId !== viewportRequestRef.current) return;
+        }
+        const nextBounds = isTooFarOut ? null : viewport.bounds;
+        setIsZoomedTooFarOut(isTooFarOut);
+        setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+      },
+      [setIsZoomedTooFarOut]
     );
-    const debouncedSetSettledBounds = useMemo(
-      () =>
-        debounce((nextBounds: Bounds | null) => {
-          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-        }, SETTLED_BOUNDS_DELAY),
-      []
+    const throttledApplyViewport = useMemo(() => throttle(applyViewport, throttleDelay), [applyViewport, throttleDelay]);
+    const debouncedApplySettledViewport = useMemo(
+      () => debounce(applyViewport, SETTLED_BOUNDS_DELAY),
+      [applyViewport]
     );
     const debouncedSaveLocation = useMemo(
       () =>
@@ -252,60 +277,62 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       () =>
         throttle(async () => {
           if (!mapRef.current) return;
-          const center = await mapRef.current.getCenter();
+          const [center, visible] = await Promise.all([mapRef.current.getCenter(), mapRef.current.getVisibleBounds()]);
           setMapCenter({ lat: center[1], lng: center[0] });
+          if (visible) {
+            const [[east, north], [west, south]] = visible;
+            const widthKm = calculateDistance(center[1], west, center[1], east);
+            const heightKm = calculateDistance(south, center[0], north, center[0]);
+            setViewRadiusKm(Math.min(widthKm, heightKm) / 2);
+          }
         }, 500),
-      [setMapCenter]
+      [setMapCenter, setViewRadiusKm]
     );
 
-    const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
+    const readViewport = useCallback(async (): Promise<Viewport | null> => {
       if (!mapRef.current) return null;
-      const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
-      const zoomedOut = z < MIN_ZOOM;
-      if (zoomedOut !== isZoomedTooFarOut) {
-        setIsZoomedTooFarOut(zoomedOut);
-      }
-      if (z >= MIN_ZOOM && b) {
-        return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
-      }
-      return null;
-    }, [isZoomedTooFarOut, setIsZoomedTooFarOut]);
+      const [b, zoom] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
+      if (!b) return null;
+      return { bounds: { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] }, zoom };
+    }, []);
 
-    const syncViewport = useCallback(async (immediate = false) => {
-      if (!mapRef.current) return;
-      const nextBounds = await readBoundsIfZoomed();
-      if (immediate) {
-        throttledSetBounds.cancel();
-        debouncedSetSettledBounds.cancel();
-        setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-      } else if (isTargetRichMapFiltering) {
-        debouncedSetSettledBounds(nextBounds);
-      } else {
-        throttledSetBounds(nextBounds);
-      }
-      debouncedSaveLocation();
-      throttledSetMapCenter();
-    }, [
-      debouncedSaveLocation,
-      debouncedSetSettledBounds,
-      isTargetRichMapFiltering,
-      readBoundsIfZoomed,
-      throttledSetBounds,
-      throttledSetMapCenter,
-    ]);
+    const syncViewport = useCallback(
+      async (immediate = false) => {
+        const viewport = await readViewport();
+        if (!viewport) return;
+        if (immediate) {
+          throttledApplyViewport.cancel();
+          debouncedApplySettledViewport.cancel();
+          void applyViewport(viewport);
+        } else if (isTargetRichMapFiltering) {
+          debouncedApplySettledViewport(viewport);
+        } else {
+          throttledApplyViewport(viewport);
+        }
+        debouncedSaveLocation();
+        throttledSetMapCenter();
+      },
+      [
+        applyViewport,
+        debouncedApplySettledViewport,
+        debouncedSaveLocation,
+        isTargetRichMapFiltering,
+        readViewport,
+        throttledApplyViewport,
+        throttledSetMapCenter,
+      ]
+    );
 
     useEffect(() => {
       return () => {
-        throttledSetBounds.cancel();
-        debouncedSetSettledBounds.cancel();
+        throttledApplyViewport.cancel();
+        debouncedApplySettledViewport.cancel();
       };
-    }, [debouncedSetSettledBounds, throttledSetBounds]);
+    }, [debouncedApplySettledViewport, throttledApplyViewport]);
 
     useEffect(() => {
-      throttledSetBounds.cancel();
-      debouncedSetSettledBounds.cancel();
       void syncViewport(true);
-    }, [debouncedSetSettledBounds, isTargetRichMapFiltering, syncViewport, throttledSetBounds]);
+    }, [isTargetRichMapFiltering, syncViewport]);
 
     const setTouchActive = useCallback(
       (isActive: boolean) => {
@@ -376,7 +403,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const isTargetRichLoading =
       targetRichFilter.isActive &&
       (isInitialTargetRichFetch || unresolvedCandidateCount > 0 || targetRichFilter.isLoading);
-    // Delay the badge so brief filtering during incremental pans doesn't flash it; markers still use isTargetRichLoading directly.
     const isTargetRichBadgeVisible = useDelayedFlag(isTargetRichLoading, TARGET_RICH_BADGE_DELAY);
     const displayedHotspots = useMemo(() => {
       if (showSavedOnly || targetRichFilter.isActive) {
@@ -407,11 +433,14 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       }
     }, [displayedHotspots, isTargetRichLoading]);
 
-    // Mirror the viewport + result counts into the store so the hotspot list can
-    // snapshot the same bounds and the toggle pill can show how many are in view.
     useEffect(() => {
       setStoreBounds(bounds);
     }, [bounds, setStoreBounds]);
+
+    const visibleHotspotCount = useMemo(
+      () => (bounds ? displayedHotspots.filter((hotspot) => isWithinBounds(hotspot.lat, hotspot.lng, bounds)).length : 0),
+      [bounds, displayedHotspots]
+    );
 
     useEffect(() => {
       if (bounds === null) {
@@ -420,8 +449,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         return;
       }
       setInViewCount(mapCandidateHotspots.length);
-      setDisplayedCount(displayedHotspots.length);
-    }, [bounds, mapCandidateHotspots.length, displayedHotspots.length, setInViewCount, setDisplayedCount]);
+      setDisplayedCount(visibleHotspotCount);
+    }, [bounds, mapCandidateHotspots.length, visibleHotspotCount, setInViewCount, setDisplayedCount]);
 
     const handleFeaturePress = useCallback(
       (event: any) => {
@@ -568,21 +597,18 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 ],
               }}
             >
-              {/* Hotspot */}
               <Mapbox.SymbolLayer
                 id="hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
                 style={hotspotSymbolStyle() as any}
               />
 
-              {/* Saved hotspot */}
               <Mapbox.SymbolLayer
                 id="saved-hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], true]]}
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Selected hotspot */}
               <Mapbox.CircleLayer
                 id="hotspot-halo"
                 filter={[
@@ -614,7 +640,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={hotspotSymbolStyle() as any}
               />
 
-              {/* Selected saved hotspot */}
               <Mapbox.CircleLayer
                 id="saved-hotspot-halo"
                 filter={[
@@ -646,7 +671,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Saved place */}
               <Mapbox.SymbolLayer
                 id="saved-place"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], false]]}
@@ -709,9 +733,13 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         </Mapbox.MapView>
 
         {isZoomedTooFarOut && hasInstalledPacks && (
-          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: overlayTop ?? insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+              <GlassView
+                style={tw`rounded-full overflow-hidden`}
+                glassEffectStyle="regular"
+                tintColor={currentLayer === "satellite" ? "rgba(255, 255, 255, 0.8)" : undefined}
+              >
                 <View style={tw`flex-row items-center px-4 py-2`}>
                   <Text style={tw`text-sm font-medium text-gray-700`}>Zoom in to load hotspots</Text>
                 </View>
@@ -725,9 +753,13 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
         )}
 
         {isTargetRichBadgeVisible && !isZoomedTooFarOut && (
-          <View style={[tw`absolute left-0 right-0 items-center`, { top: insets.top + 16 }]}>
+          <View style={[tw`absolute left-0 right-0 items-center`, { top: overlayTop ?? insets.top + 16 }]}>
             {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
-              <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+              <GlassView
+                style={tw`rounded-full overflow-hidden`}
+                glassEffectStyle="regular"
+                tintColor={currentLayer === "satellite" ? "rgba(255, 255, 255, 0.8)" : undefined}
+              >
                 <View style={tw`flex-row items-center px-4 py-2`}>
                   <Text style={tw`text-sm font-medium text-gray-700`}>Filtering hotspots...</Text>
                 </View>

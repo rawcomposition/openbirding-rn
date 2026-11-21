@@ -60,13 +60,20 @@ export function useManagePack(packId: number) {
           downloadStore.setProgress(progress);
         },
         onDownloadComplete: () => {
-          // Switch to installing phase before heavy file processing
           downloadStore.setPhase("installing");
           downloadStore.setProgress(100);
         },
       });
 
-      await installPackWithTargets(packId, pack.name, pack.v, pack.updatedAt, packData.hotspots, packData.targets);
+      await installPackWithTargets(
+        packId,
+        pack.name,
+        pack.v,
+        pack.updatedAt,
+        packData.hotspots,
+        packData.targets,
+        packData.cells
+      );
 
       downloadStore.setProgress(100);
 
@@ -77,12 +84,15 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
+      queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
+      queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
       refreshTaxonomy();
 
       logDownload(packId, pack.v);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
-        // User cancelled - clean up partial data
         await cleanupPartialInstall(packId);
         Toast.show({
           type: "info",
@@ -121,6 +131,10 @@ export function useManagePack(packId: number) {
       queryClient.invalidateQueries({ queryKey: ["hotspotSearch"] });
       queryClient.invalidateQueries({ queryKey: ["nearbyHotspots"] });
       queryClient.invalidateQueries({ queryKey: ["allHotspots"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbySpecies"] });
+      queryClient.invalidateQueries({ queryKey: ["nearbyOutdatedPacks"] });
+      queryClient.invalidateQueries({ queryKey: ["hotspotTargets"] });
+      queryClient.invalidateQueries({ queryKey: ["speciesHotspots"] });
     } catch (error) {
       console.error("Failed to uninstall pack:", error);
 

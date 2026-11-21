@@ -1,8 +1,5 @@
 import { getMarkerColorIndex } from "./utils";
 
-// Saved-hotspot marker PNGs keyed by species-color index. These are the circle
-// markers (colored disc + star) used on the map; the hotspot list reuses them
-// so a saved row's icon matches its map marker.
 const savedHotspotImages: Record<number, any> = {
   0: require("@/assets/markers/saved-hotspot-0.png"),
   1: require("@/assets/markers/saved-hotspot-1.png"),

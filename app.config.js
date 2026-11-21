@@ -4,11 +4,11 @@ module.exports = ({ config }) => ({
     ...(config.expo || {}),
     name: "OpenBirding",
     slug: "OpenBirding",
-    version: "2.0.0",
+    version: "2.1.0",
     orientation: "portrait",
     icon: "./assets/images/logo.png",
     scheme: "openbirding",
-    userInterfaceStyle: "automatic",
+    userInterfaceStyle: "light",
     ios: {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,

@@ -1,31 +1,66 @@
-import FilterSlidersIcon from "@/components/icons/FilterSlidersIcon";
+import BirdIcon from "@/components/icons/BirdIcon";
+import { formatNearbySpeciesCount, NearbySpeciesCount } from "@/lib/nearbySpecies";
 import tw from "@/lib/tw";
+import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React from "react";
 import { Platform, Text, TouchableOpacity, View } from "react-native";
 
+export const MAP_VIEW_CONTROLS_HEIGHT = 48;
+
 type MapViewControlsProps = {
-  onOpenFilters: () => void;
   onOpenList: () => void;
-  filterCount: number;
+  onOpenSpecies: () => void;
+  hotspotCount: number | null;
+  speciesCount: NearbySpeciesCount | null;
+  light?: boolean;
 };
 
-export default function MapViewControls({ onOpenFilters, onOpenList, filterCount }: MapViewControlsProps) {
+function hotspotLabel(count: number | null) {
+  if (count === null) return "Hotspots";
+  return `${count.toLocaleString()} ${count === 1 ? "hotspot" : "hotspots"}`;
+}
+
+function speciesLabel(count: NearbySpeciesCount | null) {
+  // No species at all usually means the area has no data rather than no birds, so don't
+  // claim a zero. "0 targets" where there is data is real, though: they've seen them all.
+  if (!count || count.total === 0) return "Species";
+  return formatNearbySpeciesCount(count);
+}
+
+export default function MapViewControls({
+  onOpenList,
+  onOpenSpecies,
+  hotspotCount,
+  speciesCount,
+  light,
+}: MapViewControlsProps) {
   const useGlass = Platform.OS === "ios" && isLiquidGlassAvailable();
 
   const inner = (
-    <View style={tw`flex-row items-center`}>
-      <TouchableOpacity onPress={onOpenFilters} activeOpacity={0.7} style={tw`flex-row items-center pl-5 pr-4 py-3`}>
-        <FilterSlidersIcon size={20} color={tw.color("gray-700")} />
-        {filterCount > 0 && (
-          <View style={tw`ml-2 px-2 py-0.5 rounded-full bg-blue-500`}>
-            <Text style={tw`text-white text-xs font-bold`}>{filterCount}</Text>
-          </View>
-        )}
+    <View style={[tw`flex-row items-center`, { height: MAP_VIEW_CONTROLS_HEIGHT }]}>
+      <TouchableOpacity
+        onPress={onOpenList}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        style={tw`flex-1 h-full flex-row items-center justify-center gap-2 px-3`}
+      >
+        <Ionicons name="location-outline" size={20} color={tw.color("gray-700")} />
+        <Text style={tw`text-base font-semibold text-gray-800`} numberOfLines={1}>
+          {hotspotLabel(hotspotCount)}
+        </Text>
       </TouchableOpacity>
-      <View style={tw`w-px h-6 bg-gray-300`} />
-      <TouchableOpacity onPress={onOpenList} activeOpacity={0.7} style={tw`flex-row items-center pl-4 pr-5 py-3`}>
-        <Text style={tw`text-base font-semibold text-gray-800`}>List</Text>
+      <View style={tw`w-px h-7 bg-gray-300`} />
+      <TouchableOpacity
+        onPress={onOpenSpecies}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        style={tw`flex-1 h-full flex-row items-center justify-center gap-2 px-3`}
+      >
+        <BirdIcon size={20} color={tw.color("gray-700")} />
+        <Text style={tw`text-base font-semibold text-gray-800`} numberOfLines={1}>
+          {speciesLabel(speciesCount)}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -33,7 +68,11 @@ export default function MapViewControls({ onOpenFilters, onOpenList, filterCount
   if (useGlass) {
     return (
       <View style={tw`rounded-full overflow-hidden`}>
-        <GlassView style={tw`rounded-full overflow-hidden`} glassEffectStyle="regular">
+        <GlassView
+          style={tw`rounded-full overflow-hidden`}
+          glassEffectStyle="regular"
+          tintColor={light ? "rgba(255, 255, 255, 0.8)" : undefined}
+        >
           {inner}
         </GlassView>
       </View>

@@ -211,13 +211,13 @@ export default function BirdPlanSettingsPage() {
       <TouchableOpacity
         onPress={() => router.push("/packs" as Href)}
         activeOpacity={0.7}
-        style={tw`bg-amber-50 rounded-xl px-4 py-3 mb-6 flex-row items-center border border-amber-200`}
+        style={tw`bg-white rounded-xl px-4 py-3 mb-6 flex-row items-center border border-gray-200`}
       >
-        <Ionicons name="information-circle" size={18} color={tw.color("amber-500")} style={tw`mr-2`} />
-        <Text style={tw`text-amber-800 text-sm flex-1`}>
+        <Ionicons name="information-circle" size={18} color={tw.color("gray-500")} style={tw`mr-2`} />
+        <Text style={tw`text-gray-600 text-sm flex-1`}>
           Hotspot packs must be installed for the areas your trips cover.
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={tw.color("amber-400")} style={tw`ml-2`} />
+        <Ionicons name="chevron-forward" size={16} color={tw.color("gray-400")} style={tw`ml-2`} />
       </TouchableOpacity>
 
       <Text style={tw`text-gray-500 text-xs uppercase px-4 pb-2 font-medium tracking-wide`}>
