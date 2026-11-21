@@ -55,17 +55,21 @@ export function getRadiusOption(units: DistanceUnits, index: number): RadiusOpti
   return options[Math.min(Math.max(index, 0), options.length - 1)];
 }
 
-// When the radius follows the map view it snaps to this ladder: the fixed choices plus a
-// few tighter steps for zoomed-in views. Snapping keeps the label a clean round number and
-// stops small zoom changes from invalidating the cached query.
+function range(from: number, to: number, step: number): number[] {
+  return Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+}
+
+// When the radius follows the map view it snaps to this ladder, whose step size grows with
+// the distance so the label stays within ~10% of the view. Snapping keeps the label a clean
+// round number and stops small zoom changes from invalidating the cached query.
 const AUTO_RADIUS_STEPS: Record<DistanceUnits, RadiusOption[]> = {
-  imperial: [
-    { km: 1 * KM_PER_MILE, label: "1 mi" },
-    { km: 2 * KM_PER_MILE, label: "2 mi" },
-    { km: 3 * KM_PER_MILE, label: "3 mi" },
-    ...RADIUS_OPTIONS.imperial,
-  ],
-  metric: [{ km: 2, label: "2 km" }, { km: 3, label: "3 km" }, { km: 5, label: "5 km" }, ...RADIUS_OPTIONS.metric],
+  imperial: [...range(1, 10, 1), ...range(15, 50, 5), ...range(60, 100, 10), ...range(125, 200, 25)].map((mi) => ({
+    km: mi * KM_PER_MILE,
+    label: `${mi} mi`,
+  })),
+  metric: [...range(2, 10, 1), ...range(15, 50, 5), ...range(60, 100, 10), ...range(125, 200, 25), 250, 320].map(
+    (km) => ({ km, label: `${km} km` })
+  ),
 };
 
 export function getAutoRadiusOption(units: DistanceUnits, viewRadiusKm: number | null): RadiusOption {
