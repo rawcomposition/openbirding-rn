@@ -68,33 +68,21 @@ const AUTO_RADIUS_STEPS: Record<DistanceUnits, RadiusOption[]> = {
   metric: [{ km: 2, label: "2 km" }, { km: 3, label: "3 km" }, { km: 5, label: "5 km" }, ...RADIUS_OPTIONS.metric],
 };
 
-/**
- * Radius that best matches what the map is showing. `viewRadiusKm` is half the shorter side
- * of the visible map; null (map not measured yet) falls back to the default fixed radius.
- */
 export function getAutoRadiusOption(units: DistanceUnits, viewRadiusKm: number | null): RadiusOption {
   if (viewRadiusKm == null || !(viewRadiusKm > 0)) return getRadiusOption(units, DEFAULT_RADIUS_INDEX);
-  // Nearest step on a log scale, so 7 mi reads as "5 mi" or "10 mi" by ratio rather than difference.
   return AUTO_RADIUS_STEPS[units].reduce((best, step) =>
     Math.abs(Math.log(step.km / viewRadiusKm)) < Math.abs(Math.log(best.km / viewRadiusKm)) ? step : best
   );
 }
 
-// Nearby Species surfaces the long tail of what's around, down to rarely-reported species.
 export const NEARBY_MIN_PERCENTAGE = 0.1;
 
 export type NearbySpeciesCount = {
-  /** What the list shows: unseen species when counting targets only, otherwise all of them. */
   count: number;
-  /** Every species reported in the area; zero means the area has no data. */
   total: number;
   isTargetsOnly: boolean;
 };
 
-/**
- * Species count shown for an area: everything reported at least NEARBY_MIN_PERCENTAGE of
- * the time. Pass the seen species (see useTargetsOnlySeenCodes) to count targets only.
- */
 export function countNearbySpecies(result: HotspotTargetsResult, seenCodes: Set<string> | null): NearbySpeciesCount {
   let count = 0;
   let total = 0;
@@ -106,7 +94,6 @@ export function countNearbySpecies(result: HotspotTargetsResult, seenCodes: Set<
   return { count, total, isTargetsOnly: !!seenCodes };
 }
 
-/** "42 targets" / "1 species", matching what countNearbySpecies counted. */
 export function formatNearbySpeciesCount({ count, isTargetsOnly }: NearbySpeciesCount): string {
   const noun = isTargetsOnly ? (count === 1 ? "target" : "targets") : "species";
   return `${count.toLocaleString()} ${noun}`;
@@ -114,8 +101,6 @@ export function formatNearbySpeciesCount({ count, isTargetsOnly }: NearbySpecies
 
 type LatLng = { lat: number; lng: number };
 
-// Snap to the user's actual location when the map center is basically already there,
-// so the data and caption reflect "your location" rather than an arbitrary map point.
 const AUTO_SNAP_KM = 1;
 
 export function isMapCenteredOnUser(mapCenter: LatLng | null, userLocation: LatLng | null): boolean {
@@ -127,7 +112,6 @@ export function isMapCenteredOnUser(mapCenter: LatLng | null, userLocation: LatL
 }
 
 export type NearbySpeciesRaw = {
-  /** Merged month-by-month counts for every grid cell in range; null when no cells matched. */
   data: RawHotspotTargetData | null;
   version: string | null;
 };
@@ -144,8 +128,6 @@ export async function getNearbySpeciesRaw(
   const bounds = getBoundingBoxFromLocation(lat, lng, radiusKm);
   const rows = await getGridCellsWithinBounds(bounds);
 
-  // The bounding box is a coarse pre-filter; keep only cells whose center is
-  // actually within the radius (matches our "center-in-radius" cell rule).
   const withinRadius = rows.filter((row) => calculateDistance(lat, lng, row.lat, row.lng) <= radiusKm);
 
   console.log(`[nearbySpecies] ${withinRadius.length} grid cells within ${radiusKm.toFixed(2)} km (${rows.length} in bbox)`);
@@ -162,7 +144,6 @@ export async function getNearbySpeciesRaw(
     parsed.push(parseHotspotTargetData(withinRadius[i].data));
     if (i % 100 === 99) {
       await new Promise((resolve) => setTimeout(resolve, 0));
-      // The map moved on (or the screen closed) while parsing; drop the rest of the work.
       if (signal?.aborted) throw new Error("Nearby species query cancelled");
     }
   }
@@ -186,7 +167,6 @@ export function aggregateNearbySpecies(raw: NearbySpeciesRaw, months?: number[])
   return { samples: totalSamples, targets, version: raw.version };
 }
 
-/** Any installed pack, regardless of region, has a format too old for Nearby Species. */
 export function hasOutdatedNearbySpeciesPacks(): Promise<boolean> {
   return hasPacksBelowFormat(NEARBY_SPECIES_MIN_PACK_FORMAT);
 }
@@ -196,15 +176,10 @@ export type SpeciesHotspot = {
   name: string;
   lat: number;
   lng: number;
-  /** Total species ever reported at the hotspot (drives the marker color). */
   speciesCount: number;
-  /** Checklists at this hotspot for the selected months. */
   samples: number;
-  /** Reporting frequency (%) of the species at this hotspot for the selected months. */
   percentage: number;
-  /** Wilson score lower bound (0-1) of that frequency; ranking value, never displayed. */
   score: number;
-  /** Distance from the search center. */
   distanceKm: number;
 };
 

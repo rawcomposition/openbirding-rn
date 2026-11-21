@@ -9,7 +9,6 @@ export type AggregatedHotspotTarget = {
   speciesCode: string;
   observations: number;
   percentage: number;
-  /** Full-year reporting frequency (%) per calendar month, regardless of the month filter. */
   monthly: number[];
 };
 

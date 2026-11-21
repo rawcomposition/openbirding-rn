@@ -97,7 +97,6 @@ type MapboxMapProps = {
   onLongPressCoordinates?: (coordinates: { latitude: number; longitude: number }) => void;
   placeCoordinates?: { latitude: number; longitude: number } | null;
   onTouchActiveChange?: (isActive: boolean) => void;
-  /** Distance from the top of the screen to the status badges; defaults to just under the status bar. */
   overlayTop?: number;
 };
 
@@ -107,9 +106,8 @@ export type MapboxMapRef = {
 };
 
 const THROTTLE_DELAY = 750;
-const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumping to a hotspot from list modal
+const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250;
 const SETTLED_BOUNDS_DELAY = 300;
-// Only surface the "Filtering hotspots..." badge if filtering outlasts this; incremental pans resolve faster and shouldn't flicker it.
 const TARGET_RICH_BADGE_DELAY = 350;
 // At this zoom and closer, hotspots always load.
 const MIN_ZOOM = 8;
@@ -237,8 +235,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       throttleDelay = THROTTLE_DELAY_WITH_OPEN_HOTSPOT;
     }
 
-    // Loads hotspots for the viewport, or flags it as too far out to load them. Runs at most
-    // once per throttle/debounce tick, which keeps the density count off the per-frame path.
     const viewportRequestRef = useRef(0);
     const applyViewport = useCallback(
       async (viewport: Viewport) => {
@@ -284,8 +280,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
           const [center, visible] = await Promise.all([mapRef.current.getCenter(), mapRef.current.getVisibleBounds()]);
           setMapCenter({ lat: center[1], lng: center[0] });
           if (visible) {
-            // Radius of the circle that fits inside the visible map; Nearby Species uses it
-            // to match its search radius to what's on screen.
             const [[east, north], [west, south]] = visible;
             const widthKm = calculateDistance(center[1], west, center[1], east);
             const heightKm = calculateDistance(south, center[0], north, center[0]);
@@ -409,7 +403,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
     const isTargetRichLoading =
       targetRichFilter.isActive &&
       (isInitialTargetRichFetch || unresolvedCandidateCount > 0 || targetRichFilter.isLoading);
-    // Delay the badge so brief filtering during incremental pans doesn't flash it; markers still use isTargetRichLoading directly.
     const isTargetRichBadgeVisible = useDelayedFlag(isTargetRichLoading, TARGET_RICH_BADGE_DELAY);
     const displayedHotspots = useMemo(() => {
       if (showSavedOnly || targetRichFilter.isActive) {
@@ -440,14 +433,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       }
     }, [displayedHotspots, isTargetRichLoading]);
 
-    // Mirror the viewport + result counts into the store so the hotspot list can
-    // snapshot the same bounds and the toggle pill can show how many are in view.
     useEffect(() => {
       setStoreBounds(bounds);
     }, [bounds, setStoreBounds]);
 
-    // Hotspots are fetched for a padded viewport (to have markers ready ahead of a pan), so
-    // clip back to the real bounds for the count the home screen shows.
     const visibleHotspotCount = useMemo(
       () => (bounds ? displayedHotspots.filter((hotspot) => isWithinBounds(hotspot.lat, hotspot.lng, bounds)).length : 0),
       [bounds, displayedHotspots]
@@ -608,21 +597,18 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 ],
               }}
             >
-              {/* Hotspot */}
               <Mapbox.SymbolLayer
                 id="hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], false]]}
                 style={hotspotSymbolStyle() as any}
               />
 
-              {/* Saved hotspot */}
               <Mapbox.SymbolLayer
                 id="saved-hotspot"
                 filter={["all", ["==", ["get", "featureType"], "hotspot"], ["==", ["get", "isSaved"], true]]}
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Selected hotspot */}
               <Mapbox.CircleLayer
                 id="hotspot-halo"
                 filter={[
@@ -654,7 +640,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={hotspotSymbolStyle() as any}
               />
 
-              {/* Selected saved hotspot */}
               <Mapbox.CircleLayer
                 id="saved-hotspot-halo"
                 filter={[
@@ -686,7 +671,6 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
                 style={savedHotspotSymbolStyle() as any}
               />
 
-              {/* Saved place */}
               <Mapbox.SymbolLayer
                 id="saved-place"
                 filter={["all", ["==", ["get", "featureType"], "place"], ["==", ["get", "isSelected"], false]]}

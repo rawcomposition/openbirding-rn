@@ -21,8 +21,6 @@ type SearchSheetProps = {
   onSelectPlace: (placeId: string, lat: number, lng: number) => void;
 };
 
-// Nothing is searched until the query is meaningful — a 1-char `LIKE %x%`
-// against the full table matches almost everything.
 const MIN_QUERY = 2;
 const HOTSPOT_LIMIT = 30;
 
@@ -41,9 +39,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
   const { location } = useLocation(isOpen);
   const mapCenter = useMapStore((state) => state.mapCenter);
 
-  // Sort origin falls back to map center so duplicate-named saved places (e.g.
-  // two "Airport"s) still order nearest-first without GPS. The displayed
-  // distance label stays gated on real location only — see `withDistance`.
   const originPoint = location ?? mapCenter ?? null;
 
   useEffect(() => {
@@ -53,7 +48,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     }
   }, [isOpen]);
 
-  // Debounce the hotspot SQL search; place filtering stays live off `query`.
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query.trim()), 250);
     return () => clearTimeout(handle);
@@ -109,8 +103,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
     return decorated.map((d) => d.place);
   }, [savedPlaces, query, withDistance, originPoint]);
 
-  // Hotspots come back alphabetical from SQL; surface prefix matches first so
-  // the most likely target sits at the top.
   const rankedHotspots = useMemo<HotspotWithDistance[]>(() => {
     if (!hotspotQueryEnabled) return [];
     const trimmed = debouncedQuery.toLowerCase();
@@ -176,7 +168,6 @@ export default function SearchSheet({ isOpen, onClose, onSelectHotspot, onSelect
 
   const keyExtractor = useCallback((item: SearchRow) => item.key, []);
 
-  // Distinguish empty-because-nothing-typed from empty-because-no-matches.
   const isSearching = query.trim().length >= MIN_QUERY;
   const emptyMessage = isSearching ? "No matches" : "Search for hotspots or saved locations";
 

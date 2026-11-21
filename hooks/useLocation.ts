@@ -9,7 +9,6 @@ type UseLocationReturn = {
 };
 
 type UseLocationOptions = {
-  /** Poll for a fresh fix on this interval (ms) while mounted. Off by default to save battery. */
   refetchInterval?: number;
 };
 
@@ -28,8 +27,8 @@ export function useLocation(enabled: boolean = true, options?: UseLocationOption
       };
     },
     enabled: enabled && permissionStatus === "granted",
-    staleTime: 60 * 1000, // 1 minute
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     retry: false,
     refetchInterval: options?.refetchInterval,
   });

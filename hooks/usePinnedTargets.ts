@@ -8,7 +8,6 @@ const NO_PINNED_TARGETS: string[] = [];
 
 type UsePinnedTargetsReturn = {
   pinnedTargets: string[];
-  /** No-op when there's no hotspot to pin against (e.g. Nearby Species). */
   togglePin: (speciesCode: string, isPinned: boolean) => Promise<void>;
 };
 
@@ -22,8 +21,6 @@ export function usePinnedTargets(hotspotId: string | null | undefined): UsePinne
     enabled: !!hotspotId,
   });
 
-  // Written optimistically so the pin badge and row reordering land immediately;
-  // rolled back if the write fails.
   const togglePin = useCallback(
     async (speciesCode: string, isPinned: boolean) => {
       if (!hotspotId) return;

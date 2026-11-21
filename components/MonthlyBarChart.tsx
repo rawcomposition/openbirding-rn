@@ -43,12 +43,9 @@ function formatPercent(percent: number) {
 }
 
 type MonthlyBarChartProps = {
-  /** Reporting frequency (%) for each of the 12 calendar months. */
   monthly: number[];
   variant?: "default" | "mini";
-  /** Months (0-11) to render highlighted. Empty or omitted highlights every month. */
   selectedMonths?: number[];
-  /** Describes the area the frequencies cover, e.g. "At this location". Default variant only. */
   caption?: string;
   style?: ViewStyle;
 };
@@ -64,8 +61,6 @@ export default function MonthlyBarChart({ monthly, variant = "default", selected
   const isHighlighted = (month: number) => allMonths || selectedMonths.includes(month);
 
   if (isMini) {
-    // The mini list charts stay monochrome so a hundred rows don't shout: every month is the
-    // same light step, and only the letters mark the selected months (or the current month).
     const isMarked = (month: number) => (allMonths ? month === currentMonth : selectedMonths.includes(month));
     return (
       <View style={style}>

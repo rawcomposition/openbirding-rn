@@ -1,7 +1,5 @@
 import { PlaceIconT } from "./placeIcons";
 
-// Marker PNGs keyed by saved-place icon. Shared by the map markers, the place
-// edit sheet, and the hotspot list's place rows.
 export const placeIconImages: Record<PlaceIconT, any> = {
   hike: require("@/assets/markers/place-hike.png"),
   mountain: require("@/assets/markers/place-mountain.png"),
@@ -26,8 +24,6 @@ export const placeIconImages: Record<PlaceIconT, any> = {
   hotspot: require("@/assets/markers/place-hotspot.png"),
 };
 
-// Resolve a (possibly legacy) saved-place icon value to an image, defaulting to
-// the generic hotspot pin for unknown icons (e.g. the old "star" value).
 export function getPlaceIconImage(icon: string): any {
   return placeIconImages[icon as PlaceIconT] ?? placeIconImages.hotspot;
 }

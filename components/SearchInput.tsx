@@ -9,8 +9,6 @@ type SearchInputProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
-  // When false, the inline clear (✕) button is never shown — useful when the
-  // surrounding UI already provides a close affordance and a second ✕ would clash.
   clearable?: boolean;
   onClose?: () => void;
 } & Pick<TextInputProps, "autoCorrect" | "autoCapitalize" | "autoComplete" | "returnKeyType" | "autoFocus">;

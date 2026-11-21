@@ -46,8 +46,6 @@ export default function TargetRichHotspotControls({
   const minPercent = useFiltersStore((state) => state.minTargetFrequency);
   const setMinPercent = useFiltersStore((state) => state.setMinTargetFrequency);
 
-  // Snap to clean tens as the user steps, so values stay 0/10/20/… even if a
-  // legacy stored value (e.g. 12) was off the grid.
   const stepPercent = (delta: number) => {
     const base = Math.round(minPercent / PERCENT_STEP) * PERCENT_STEP;
     setMinPercent(Math.min(100, Math.max(MIN_PERCENT, base + delta)));

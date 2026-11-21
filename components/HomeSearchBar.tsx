@@ -11,7 +11,6 @@ type HomeSearchBarProps = {
   onOpenMenu: () => void;
   onOpenSearch: () => void;
   onOpenFilters: () => void;
-  /** Pending pack updates, badged on the menu button. */
   menuBadgeCount: number;
   filterCount: number;
   light?: boolean;
@@ -29,7 +28,6 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-/** The map's top bar: menu, a search field that opens the search sheet, and filters. */
 export default function HomeSearchBar({
   onOpenMenu,
   onOpenSearch,

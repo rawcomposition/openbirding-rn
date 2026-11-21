@@ -244,10 +244,6 @@ function lngWithinBoundsCondition(west: number, east: number): string {
   return west > east ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
 }
 
-/**
- * Whether the bounds hold more than `limit` hotspots. Cheap enough to run before deciding
- * to load them: it reads only the (lat, lng) index and stops counting once past the limit.
- */
 export async function hasMoreHotspotsThan(
   limit: number,
   west: number,
@@ -454,18 +450,15 @@ export async function installPackWithTargets(
   try {
     const database = db;
 
-    // Optimize SQLite for bulk inserts
     await database.execAsync(`PRAGMA synchronous = OFF`);
     await database.execAsync(`PRAGMA journal_mode = MEMORY`);
     await database.execAsync(`PRAGMA cache_size = -64000`);
 
     await database.withTransactionAsync(async () => {
-      // Delete existing data for this pack
       await database.runAsync(`DELETE FROM targets WHERE pack_id = ?`, [packId]);
       await database.runAsync(`DELETE FROM grid_cells WHERE pack_id = ?`, [packId]);
       await database.runAsync(`DELETE FROM hotspots WHERE pack_id = ?`, [packId]);
 
-      // Insert/update pack record
       await database.runAsync(
         `INSERT OR REPLACE INTO packs (id, name, hotspots, installed_at, version, updated_at, grid_cells, format) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [packId, packName, hotspots.length, new Date().toISOString(), version, updatedAt, cells?.length ?? 0, PACK_FORMAT_VERSION]
@@ -477,7 +470,6 @@ export async function installPackWithTargets(
 
       const batchSize = 1000;
 
-      // Batch insert hotspots
       for (let i = 0; i < hotspots.length; i += batchSize) {
         const batch = hotspots.slice(i, i + batchSize);
         const values = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
@@ -502,13 +494,11 @@ export async function installPackWithTargets(
         );
       }
 
-      // Pre-stringify targets data outside the insert loop for better performance
       const targetsData = targets.map((target) => ({
         id: target.id,
         data: JSON.stringify({ samples: target.samples, species: target.species }),
       }));
 
-      // Batch insert targets
       for (let i = 0; i < targetsData.length; i += batchSize) {
         const batch = targetsData.slice(i, i + batchSize);
         const values = batch.map(() => "(?, ?, ?)").join(", ");
@@ -517,7 +507,6 @@ export async function installPackWithTargets(
         await database.runAsync(`INSERT INTO targets (id, data, pack_id) VALUES ${values}`, params);
       }
 
-      // Pre-stringify grid cell data outside the insert loop for better performance
       if (cells && cells.length > 0) {
         const cellsData = cells.map((cell) => ({
           id: cell.id,
@@ -539,7 +528,6 @@ export async function installPackWithTargets(
       }
     });
 
-    // Reset PRAGMA settings to safe defaults
     await database.execAsync(`PRAGMA synchronous = NORMAL`);
     await database.execAsync(`PRAGMA journal_mode = WAL`);
 
@@ -670,7 +658,6 @@ type BoundingBox = {
 export async function getNearbyHotspots(bbox: BoundingBox, savedOnly = false): Promise<HotspotResult[]> {
   if (!db) throw new Error("Database not initialized");
 
-  // When west > east, the bounding box crosses the international date line
   const crossesDateLine = bbox.west > bbox.east;
   const lngCondition = crossesDateLine ? `(h.lng >= ? OR h.lng <= ?)` : `(h.lng >= ? AND h.lng <= ?)`;
 
@@ -788,7 +775,6 @@ export async function getGridCellsWithinBounds(bounds: {
 }): Promise<GridCellRow[]> {
   if (!db) throw new Error("Database not initialized");
 
-  // When west > east, the bounding box crosses the international date line
   const crossesDateLine = bounds.west > bounds.east;
   const lngCondition = crossesDateLine ? `(g.lng >= ? OR g.lng <= ?)` : `(g.lng >= ? AND g.lng <= ?)`;
 
@@ -883,7 +869,6 @@ export async function importTrip(data: BirdPlanTripData): Promise<void> {
   const updateToken = data.updateToken ?? existing?.update_token ?? null;
 
   await database.withTransactionAsync(async () => {
-    // Remove any existing trip content so we start fresh.
     await deleteTripContent(database, data.id);
 
     await database.runAsync(

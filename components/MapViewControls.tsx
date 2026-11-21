@@ -11,9 +11,7 @@ export const MAP_VIEW_CONTROLS_HEIGHT = 48;
 type MapViewControlsProps = {
   onOpenList: () => void;
   onOpenSpecies: () => void;
-  /** Hotspots in the visible map; null when unknown (e.g. zoomed too far out). */
   hotspotCount: number | null;
-  /** Species (or targets) reported around the visible map; null when unknown. */
   speciesCount: NearbySpeciesCount | null;
   light?: boolean;
 };
@@ -30,7 +28,6 @@ function speciesLabel(count: NearbySpeciesCount | null) {
   return formatNearbySpeciesCount(count);
 }
 
-/** The map's bottom bar: what's in this map area, as a hotspot list and a species list. */
 export default function MapViewControls({
   onOpenList,
   onOpenSpecies,

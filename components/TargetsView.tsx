@@ -32,50 +32,20 @@ type TargetsViewProps = {
   isLoading: boolean;
   lat: number;
   lng: number;
-  /** Changing this value resets the "view all" local UI state. */
   resetKey?: string;
-  /**
-   * Hotspot these targets belong to. Enables pinning (own section, long-press action) and is
-   * handed to the species page so it can offer Pin/Unpin too.
-   */
   hotspotId?: string;
-  /**
-   * What lat/lng represents ("user" = the user's location, "map" = the map center).
-   * Forwarded to the species page so it can label the frequency chart's area.
-   */
   origin?: "user" | "map";
-  /**
-   * Expands the hosting bottom sheet. Called before the row long-press menu opens while the
-   * sheet is collapsed, so the menu has room and its anchor measures at its final position.
-   */
   onExpandSheet?: () => Promise<void>;
-  /** Controlled "About This Data" sheet, opened from the caller's menu (hotspot kebab / nav header button). */
   aboutDataOpen: boolean;
   onAboutDataOpenChange: (open: boolean) => void;
-  /** Optional metadata caption rendered under the month strip (e.g. sample size / data scope). */
   caption?: React.ReactNode;
-  /** How many rows to show before the "View all" toggle. */
   initialLimit?: number;
-  /** Fresh data is loading behind currently-visible (stale) results; dims the list (the caller renders its own loader). */
   isUpdating?: boolean;
-  /** Minimum reporting frequency (%) a species must reach to be listed. Defaults to 1. */
   minPercentage?: number;
-  /** Render each row's frequency as a mini bar chart or a progress bar. Defaults to progress bar. */
   displayMode?: TargetsDisplayMode;
-  /** Filters rows by common name (case-insensitive substring match). */
   searchQuery?: string;
-  /**
-   * Months the rendered data corresponds to. Pass a deferred value so a month toggle
-   * repaints the strip instantly while the rows update in a lower-priority render.
-   * Defaults to the live month selection.
-   */
   chartMonths?: number[];
-  /**
-   * Rendered instead of the generic "no species data" message when the empty result has a
-   * more specific cause the caller knows about (e.g. installed packs don't cover the area).
-   */
   emptyNotice?: React.ReactNode;
-  /** Skip the built-in loading spinner (the caller renders its own, e.g. a screen-centered one). */
   hideLoadingIndicator?: boolean;
   prominentRows?: boolean;
 };
@@ -122,7 +92,6 @@ export default function TargetsView({
     setShowAll(false);
   }, [resetKey]);
 
-  // Stable reference so the memoized rows aren't invalidated by unrelated re-renders.
   const handleSpeciesPress = useCallback(
     (speciesCode: string) => {
       router.push({
@@ -139,7 +108,6 @@ export default function TargetsView({
     [router, lat, lng, hotspotId, origin]
   );
 
-  // Long-pressing a row opens the actions that used to live in the per-row "..." menu.
   const openRowMenu = useCallback(
     (speciesCode: string, anchorRef: RefObject<View>) => {
       const sections = buildRowMenuSections(speciesCode, {
@@ -199,8 +167,6 @@ export default function TargetsView({
   const query = searchQuery?.trim().toLowerCase() ?? "";
   const effectiveChartMonths = chartMonths ?? selectedMonths;
 
-  // Stable across unrelated re-renders so the memoized rows can skip work — this is what
-  // keeps the month strip responsive while the list catches up in a deferred render.
   const filteredTargets = useMemo(() => {
     if (!data) return [];
     const lifelistCodes = lifelist ? new Set(lifelist.map((e) => e.code)) : null;
@@ -222,15 +188,11 @@ export default function TargetsView({
     });
   }, [data, query, lifelist, lifelistExclusions, pinnedTargets, showAllSpecies, minPercentage, taxonomyMap]);
 
-  // Species on the life list (minus exclusions, which count as unseen) get a checkmark.
   const seenCodes = useMemo(() => {
     const excluded = new Set(lifelistExclusions ?? []);
     return new Set((lifelist ?? []).map((e) => e.code).filter((c) => !excluded.has(c)));
   }, [lifelist, lifelistExclusions]);
 
-  // Even without a life list the list still renders (as all species); this banner nudges
-  // toward importing one and stays dismissed once closed. Installing packs is the more
-  // fundamental setup step, so the banner waits until at least one pack is installed.
   const importBanner =
     hasNoLifeList && !lifelistPromptDismissed && !isLoadingInstalledPacks && installedPacks.size > 0 ? (
       <View style={tw`mt-3 bg-sky-50 border border-sky-200/80 rounded-lg flex-row items-start`}>
@@ -326,8 +288,6 @@ export default function TargetsView({
     return null;
   };
 
-  // Keep the strip visible when a month selection is what emptied the list, so the user
-  // can always toggle back; hide it when there's genuinely no data for this area.
   const showMonthStrip = !hasNoTargetData && (data.targets.length > 0 || selectedMonths.length > 0);
 
   return (
@@ -532,7 +492,6 @@ const TargetRow = memo(function TargetRow({
   );
 });
 
-// Shared "..." menu content used by both the hotspot kebab and the Nearby Species header button.
 export function buildTargetsMenuSections(opts: {
   showAllSpecies: boolean;
   onToggleShowAll: () => void;
@@ -595,12 +554,10 @@ type RowMenuCtx = {
   lat: number;
   lng: number;
   isPinned: boolean;
-  /** Omitted when there's no hotspot to pin against (e.g. Nearby Species). */
   onTogglePin?: (code: string, isPinned: boolean) => void | Promise<void>;
   lifeListProps: LifeListMenuProps;
 };
 
-// The row long-press menu: the same actions the per-row "..." kebab used to offer.
 function buildRowMenuSections(code: string, ctx: RowMenuCtx): FloatingMenuSection[] {
   const firstSectionItems = [
     {

@@ -30,9 +30,7 @@ type HotspotDialogProps = {
   isOpen: boolean;
   hotspotId: string | null;
   onClose: () => void | false;
-  /** Dim the backdrop. Use when the dialog opens over a page rather than the map. */
   dimmed?: boolean;
-  /** Adds a "Show on Map" action for contexts outside the map view. */
   onShowOnMap?: (hotspot: { id: string; lat: number; lng: number }) => void;
 };
 

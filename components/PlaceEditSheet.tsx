@@ -69,7 +69,6 @@ export default function PlaceEditSheet({
     }
   }, [data]);
 
-  // Reset form when sheet opens for a new place
   useEffect(() => {
     if (isOpen && !placeId) {
       setTitle("");

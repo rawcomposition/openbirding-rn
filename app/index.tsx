@@ -53,7 +53,6 @@ export default function HomeScreen() {
   const hotspotCount = useMapStore((s) => s.displayedCount);
   const isZoomedTooFarOut = useMapStore((s) => s.isZoomedTooFarOut);
   const hasInstalledPacks = isLoadingInstalledPacks || installedPacks.size > 0;
-  // Zoomed far out there's no meaningful "this map area", and the query would be huge.
   const speciesCount = useNearbySpeciesCount(installedPacks.size > 0 && !isZoomedTooFarOut);
 
   const handleMapPress = (_event: any) => {
@@ -156,7 +155,6 @@ export default function HomeScreen() {
     [setCustomPinCoordinates, setPlaceId, setHotspotId]
   );
 
-  // Another screen (e.g. species detail's "Show on Map") asked us to open a hotspot.
   const pendingMapFocus = useMapStore((s) => s.pendingMapFocus);
   const setPendingMapFocus = useMapStore((s) => s.setPendingMapFocus);
   useEffect(() => {
@@ -185,7 +183,6 @@ export default function HomeScreen() {
   const light = currentLayer === "satellite";
   const searchBarTop = insets.top > 16 ? insets.top + 4 : insets.top + 12;
   const belowSearchBar = searchBarTop + HOME_SEARCH_BAR_HEIGHT + 10;
-  // With a home indicator the bar sits just above it; otherwise leave room for the map logo.
   const controlsBottom = insets.bottom > 0 ? insets.bottom + 8 : 32;
 
   return (

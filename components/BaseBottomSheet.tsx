@@ -23,7 +23,6 @@ type BaseBottomSheetProps = {
 
 export type BaseBottomSheetHandle = {
   expand: () => Promise<void>;
-  /** Dismiss the sheet; resolves once the dismiss animation completes. */
   dismiss: () => Promise<void>;
 };
 
@@ -50,7 +49,6 @@ function BaseBottomSheet(
   const [shouldRender, setShouldRender] = useState(isOpen);
 
   useEffect(() => {
-    // Handle external dismiss
     if (isOpen) {
       dismissingRef.current = false;
       setShouldRender(true);

@@ -43,7 +43,6 @@ function NearbySpeciesContent() {
   const menuAnchorRef = useRef<View>(null!);
   const radiusAnchorRef = useRef<View>(null!);
   const mapCenter = useMapStore((s) => s.mapCenter);
-  // Poll while this screen is open so the re-center button reacts to movement within ~5 min.
   const { location: userLocation } = useLocation(true, { refetchInterval: 5 * 60 * 1000 });
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const seenCodes = useTargetsOnlySeenCodes();
@@ -52,7 +51,6 @@ function NearbySpeciesContent() {
   const setNearbyRadiusIndex = useSettingsStore((s) => s.setNearbyRadiusIndex);
   const setNearbyRadiusAuto = useSettingsStore((s) => s.setNearbyRadiusAuto);
   const displayMode = useSettingsStore((s) => s.nearbyDisplayMode);
-  // Matches the map view unless the user has picked a specific radius.
   const radius = useNearbyRadius();
   const [aboutDataOpen, setAboutDataOpen] = useState(false);
   const [useMyLocation, setUseMyLocation] = useState(false);
@@ -63,8 +61,6 @@ function NearbySpeciesContent() {
   const center = atUserLocation ? userLocation : mapCenter;
   const canRecenter = !!userLocation && !atUserLocation;
 
-  // The query fetches/merges raw counts once per (center, radius); month filtering is a
-  // synchronous aggregation below, so toggling months never refetches.
   const { data: rawData, isLoading, isFetching, isPlaceholderData } = useQuery({
     queryKey: ["nearbySpecies", center?.lat, center?.lng, radius.km],
     queryFn: ({ signal }) => getNearbySpeciesRaw(center!.lat, center!.lng, radius.km, signal),
@@ -75,8 +71,6 @@ function NearbySpeciesContent() {
     queryKey: ["nearbyOutdatedPacks"],
     queryFn: hasOutdatedNearbySpeciesPacks,
   });
-  // Deferring the month selection lets a toggle paint immediately (strip + spinner) while
-  // the aggregation and the 100-row re-render happen in a lower-priority render pass.
   const deferredMonths = useDeferredValue(selectedMonths);
   const data = useMemo(
     () => (rawData ? aggregateNearbySpecies(rawData, deferredMonths.length > 0 ? deferredMonths : undefined) : undefined),
@@ -84,8 +78,6 @@ function NearbySpeciesContent() {
   );
   const deferredSearch = useDeferredValue(searchQuery);
   const isRecalculating = deferredMonths !== selectedMonths;
-  // Placeholder data is the previous radius/location's result; keep stale rows visible but
-  // dimmed under a spinner rather than swapping to a skeleton.
   const isUpdating = (isFetching && isPlaceholderData) || isRecalculating;
 
   const showMenu = !!data && data.targets.length > 0;
@@ -169,8 +161,6 @@ function NearbySpeciesContent() {
   const locationLabel = atUserLocation ? "your location" : "map center";
   const speciesCount = data ? countNearbySpecies(data, seenCodes) : null;
 
-  // Shown even when the area comes up empty, so a wider radius is always one tap away. The
-  // pill is white while the radius follows the map and green once it's a fixed choice.
   const caption = data ? (
     <View style={tw`flex-row items-center justify-between`}>
       <Text style={tw`flex-1 mr-3 text-sm text-gray-700`} numberOfLines={1}>
@@ -229,7 +219,6 @@ function NearbySpeciesContent() {
           // Negative margin trims the slack the collapsed header search bar leaves above
           // the month strip.
           <View style={tw`-mt-2`}>
-          {/* When the list is empty the update notice renders as the empty state instead */}
           {showMenu && updateNotice ? <View style={tw`mt-3 mb-2`}>{updateNotice}</View> : null}
           <TargetsView
             data={data}

@@ -14,7 +14,6 @@ export type FloatingMenuSection = {
   items: FloatingMenuItem[];
 };
 
-/** Either the trigger itself, or a fixed window rect to hang the menu from. */
 export type FloatingMenuAnchor = React.RefObject<View> | Rect;
 
 type FloatingMenuProps = {

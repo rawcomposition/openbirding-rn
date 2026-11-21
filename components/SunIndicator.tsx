@@ -95,7 +95,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
 
   const sheetContent = (
     <View style={tw`px-5 pt-1`}>
-      {/* Countdown hero */}
       <View style={tw`items-center mb-4`}>
         <View style={tw`px-5 py-2 items-center w-full`}>
           <View style={tw`mb-2`}>
@@ -112,7 +111,6 @@ export default function SunIndicator({ style, light }: SunIndicatorProps) {
         </View>
       </View>
 
-      {/* Daylight progress bar */}
       <View style={tw`mb-3`}>
         <View style={tw`flex-row justify-between mb-2`}>
           <View style={tw`flex-row items-center gap-1.5`}>

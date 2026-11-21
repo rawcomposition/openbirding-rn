@@ -37,7 +37,6 @@ type FloatingMenuHostProps = {
    * overlay the whole window, including the navigation header.
    */
   mode?: PopoverMode;
-  /** Gap between the trigger and the popover, in px. */
   offset?: number;
 };
 

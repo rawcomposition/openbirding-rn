@@ -1,8 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-// The full dataset (unlike latest-lite.json) includes the photo license,
-// which we surface on the species detail page.
 const SOURCE_URL = "https://avicommons.org/latest.json";
 const OUT_FILE = path.join(__dirname, "..", "avicommons.ts");
 const IDENTIFIER_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -38,7 +36,6 @@ function assertAviCommonsData(value: unknown): asserts value is AviCommonsRecord
 }
 
 function formatAviCommonsModule(records: AviCommonsRecord[]) {
-  // Licenses repeat constantly, so store them once and reference by index.
   const licenses: string[] = [];
   const licenseIndex = new Map<string, number>();
 

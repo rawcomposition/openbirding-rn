@@ -10,7 +10,6 @@ type MapStore = {
   setBounds: (bounds: Bounds | null) => void;
   inViewCount: number | null;
   setInViewCount: (count: number | null) => void;
-  /** Hotspots drawn inside the visible map (after filters); null when zoomed too far out. */
   displayedCount: number | null;
   setDisplayedCount: (count: number | null) => void;
   hotspotId: string | null;
@@ -23,7 +22,6 @@ type MapStore = {
   setIsHotspotListOpen: (isOpen: boolean) => void;
   mapCenter: { lat: number; lng: number } | null;
   setMapCenter: (center: { lat: number; lng: number } | null) => void;
-  /** Half the shorter side of the visible map, in km. Set at any zoom, unlike `bounds`. */
   viewRadiusKm: number | null;
   setViewRadiusKm: (radiusKm: number | null) => void;
   isZoomedTooFarOut: boolean;
@@ -34,7 +32,6 @@ type MapStore = {
   setIsSunDetailsOpen: (isOpen: boolean) => void;
   isMapAttributionOpen: boolean;
   setIsMapAttributionOpen: (isOpen: boolean) => void;
-  /** Request from another screen (e.g. species detail) for the map to open a hotspot and center on it. */
   pendingMapFocus: { hotspotId: string; lat: number; lng: number } | null;
   setPendingMapFocus: (focus: { hotspotId: string; lat: number; lng: number } | null) => void;
 };

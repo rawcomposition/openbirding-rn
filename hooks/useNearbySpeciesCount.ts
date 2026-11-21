@@ -13,18 +13,10 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
-// Parsing the grid cells for an area is expensive, so wait for the map to rest first.
 const SETTLE_DELAY = 600;
 
 type Area = { lat: number; lng: number; km: number };
 
-/**
- * How many species (or targets, when that's what it lists) the Nearby Species screen would
- * show for the current map view. Uses the same center, radius and query key as that screen,
- * so opening it afterwards is an instant cache hit and the two numbers agree. The previous
- * count stays up while the map settles and the new area loads; null when there's nothing to
- * show yet.
- */
 export function useNearbySpeciesCount(enabled: boolean): NearbySpeciesCount | null {
   const mapCenter = useMapStore((s) => s.mapCenter);
   const { location: userLocation } = useLocation();

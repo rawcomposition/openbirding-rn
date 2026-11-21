@@ -60,7 +60,6 @@ export function useManagePack(packId: number) {
           downloadStore.setProgress(progress);
         },
         onDownloadComplete: () => {
-          // Switch to installing phase before heavy file processing
           downloadStore.setPhase("installing");
           downloadStore.setProgress(100);
         },
@@ -94,7 +93,6 @@ export function useManagePack(packId: number) {
       logDownload(packId, pack.v);
     } catch (error) {
       if ((error as Error).name === "AbortError") {
-        // User cancelled - clean up partial data
         await cleanupPartialInstall(packId);
         Toast.show({
           type: "info",

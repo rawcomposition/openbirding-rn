@@ -32,8 +32,6 @@ type HotspotRow = Hotspot & { kind: "hotspot"; distance?: number };
 type PlaceRow = SavedPlace & { kind: "place"; distance?: number };
 type ListRow = HotspotRow | PlaceRow;
 
-// Captured when the list opens so it reflects the map's viewport at that moment,
-// rather than shifting if the map keeps reporting bounds during the animation.
 type ListSnapshot = {
   bounds: Bounds | null;
   center: { lat: number; lng: number } | null;
@@ -56,7 +54,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const wasOpenRef = useRef(false);
 
-  // Snapshot the current viewport on the closed -> open transition only.
   useEffect(() => {
     if (isOpen && !wasOpenRef.current) {
       setSnapshot({ bounds: storeBounds, center: storeMapCenter, zoomedTooFarOut: storeZoomedTooFarOut });
@@ -125,8 +122,6 @@ export default function HotspotList({ isOpen, onClose, onSelectHotspot, onSelect
     return candidateHotspots.filter((hotspot) => targetRichIds.has(hotspot.id));
   }, [candidateHotspots, targetRichFilter.isActive, targetRichIds]);
 
-  // Saved places within the same viewport. Excluded from the list when the
-  // target-rich filter is active, since they have no species data to qualify.
   const placesInView = useMemo(() => {
     if (!snapshotBounds) return [];
     return savedPlaces.filter((place) => isWithinBounds(place.lat, place.lng, snapshotBounds));

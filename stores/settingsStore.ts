@@ -38,7 +38,6 @@ type SettingsState = {
   nearbyDisplayMode: TargetsDisplayMode;
   hotspotDisplayMode: TargetsDisplayMode;
   nearbyRadiusIndex: number;
-  /** Nearby Species radius follows the map view; false once the user picks a fixed radius. */
   nearbyRadiusAuto: boolean;
   speciesHotspotSort: SpeciesHotspotSort;
 };
@@ -54,7 +53,6 @@ type SettingsActions = {
   setDistanceUnits: (units: DistanceUnits) => void;
   setNearbyDisplayMode: (mode: TargetsDisplayMode) => void;
   setHotspotDisplayMode: (mode: TargetsDisplayMode) => void;
-  /** Picks a fixed radius, which also turns off following the map view. */
   setNearbyRadiusIndex: (index: number) => void;
   setNearbyRadiusAuto: (value: boolean) => void;
   setSpeciesHotspotSort: (sort: SpeciesHotspotSort) => void;
@@ -72,7 +70,6 @@ const migrations: Migration[] = [
   {
     version: 1,
     migrate: async (state) => {
-      // Migrate from legacy default_map_provider key
       const legacyProvider = await AsyncStorage.getItem("default_map_provider");
       if (legacyProvider) {
         await AsyncStorage.removeItem("default_map_provider");
@@ -84,8 +81,6 @@ const migrations: Migration[] = [
   {
     version: 2,
     migrate: async (state) => {
-      // Seed distanceUnits from the device region for users upgrading from a build that
-      // predates the setting, and persist it so it no longer relies on the rehydrate-merge default.
       if (state.distanceUnits == null) {
         return { ...state, distanceUnits: getDeviceDistanceUnits() };
       }
@@ -120,10 +115,7 @@ export const useSettingsStore = create<SettingsStore>()(
       disableSunTimes: false,
       showAllSpecies: false,
       targetMonths: [],
-      // Seeded from the device region; persisted values from earlier installs fall back to this default
-      // via the shallow rehydrate merge, so existing users also pick up their locale's units.
       distanceUnits: getDeviceDistanceUnits(),
-      // Bar charts by default for Nearby Species, progress bars for hotspot targets.
       nearbyDisplayMode: "chart",
       hotspotDisplayMode: "percent",
       nearbyRadiusIndex: DEFAULT_RADIUS_INDEX,

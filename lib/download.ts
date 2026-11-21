@@ -47,7 +47,6 @@ export async function downloadWithProgress<T>({
       throw new Error("Download failed - no result");
     }
 
-    // Download complete - signal this before file processing
     onProgress?.(100);
     onDownloadComplete?.();
 
@@ -56,7 +55,6 @@ export async function downloadWithProgress<T>({
       throw new DOMException("Download aborted", "AbortError");
     }
 
-    // Use the new File API for efficient reading
     // The CDN serves with Content-Encoding: gzip, so the network layer
     // automatically decompresses - files on disk are already plain JSON
     const parseStart = Date.now();
@@ -65,7 +63,6 @@ export async function downloadWithProgress<T>({
     const parsed = JSON.parse(jsonString) as T;
     console.log(`[Pack] Downloaded in ${((Date.now() - parseStart) / 1000).toFixed(1)}s`);
 
-    // Clean up temp file
     await file.delete();
 
     return parsed;

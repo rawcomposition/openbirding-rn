@@ -32,9 +32,6 @@ import { PopoverMode, PopoverPlacement } from "react-native-popover-view";
 
 const MAX_HOTSPOTS = 100;
 
-// Only show distances measured from the user when they're reasonably close to the
-// search area; when browsing a remote spot, distances from the search center are
-// more meaningful than "4,200 mi from home".
 const REASONABLE_DISTANCE_KM = { imperial: 1609.34, metric: 1000 } as const;
 
 export default function SpeciesDetailPage() {
@@ -52,18 +49,13 @@ function SpeciesDetailContent() {
   const code = params.code;
   const lat = Number(params.lat);
   const lng = Number(params.lng);
-  // Only set when arriving from a hotspot's targets list, which is the only context
-  // where pinning means anything.
   const hotspotId = params.hotspotId;
-  // Whether lat/lng is the user's location ("user") or the map center ("map");
-  // coordinates alone can't distinguish the two.
   const origin = params.origin;
 
   const selectedMonths = useSettingsStore((s) => s.targetMonths);
   const distanceUnits = useSettingsStore((s) => s.distanceUnits);
   const sort = useSettingsStore((s) => s.speciesHotspotSort);
   const setSort = useSettingsStore((s) => s.setSpeciesHotspotSort);
-  // Same radius as the Nearby Species list this was opened from.
   const radius = useNearbyRadius();
   const useMiles = distanceUnits === "imperial";
 
@@ -82,8 +74,6 @@ function SpeciesDetailContent() {
   const image = getSpeciesImage(code, 900);
   const speciesName = taxon?.name ?? code;
 
-  // From a hotspot the chart shows that hotspot's own frequencies; same query key as
-  // HotspotTargets, so this is an instant cache hit.
   const { data: hotspotTargets, isLoading: isLoadingHotspotTargets } = useQuery({
     queryKey: ["hotspotTargets", hotspotId, selectedMonths],
     queryFn: () => getTargetsForHotspot(hotspotId!, selectedMonths.length > 0 ? selectedMonths : undefined),
@@ -91,8 +81,6 @@ function SpeciesDetailContent() {
     placeholderData: (prev) => prev,
   });
 
-  // From Nearby Species the chart shows the regional aggregate. Same query key as that
-  // list, so this is usually an instant cache hit.
   const { data: nearbyRaw, isLoading: isLoadingNearby } = useQuery({
     queryKey: ["nearbySpecies", lat, lng, radius.km],
     queryFn: () => getNearbySpeciesRaw(lat, lng, radius.km),
@@ -119,8 +107,6 @@ function SpeciesDetailContent() {
     ? "At this location"
     : `Within ~${radius.label} of ${origin === "user" ? "your location" : "map center"}`;
 
-  // Measure distances from the user when they're near the search area, otherwise
-  // from the search center itself.
   const userIsNearby =
     !!userLocation &&
     calculateDistance(userLocation.lat, userLocation.lng, lat, lng) <= REASONABLE_DISTANCE_KM[distanceUnits];
@@ -235,7 +221,6 @@ function SpeciesDetailContent() {
           {taxon?.sciName ? <Text style={tw`text-base italic text-gray-500 mt-0.5`}>{taxon.sciName}</Text> : null}
         </View>
 
-        {/* The page sits on gray-50, so these need their own white surface to read as buttons. */}
         <ActionButtonRow stacked={useStackedActionButtons}>
           {hotspotId ? (
             <ActionButton
@@ -272,7 +257,6 @@ function SpeciesDetailContent() {
           )}
         </View>
 
-        {/* From a hotspot, "hotspots near this hotspot" isn't a useful list. */}
         {!hotspotId && (
         <View style={tw`mt-6`}>
           <View style={tw`flex-row items-center justify-between`}>
@@ -309,7 +293,6 @@ function SpeciesDetailContent() {
 
       <FloatingMenuHost mode={PopoverMode.RN_MODAL} offset={12} />
 
-      {/* Presented on top of this screen, so dismissing it returns right here. */}
       <HotspotDialog
         isOpen={openHotspotId !== null}
         hotspotId={openHotspotId}
