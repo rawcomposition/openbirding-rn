@@ -239,6 +239,36 @@ export function getDatabase(): SQLite.SQLiteDatabase {
   return db;
 }
 
+// When west > east, the bounding box crosses the international date line
+function lngWithinBoundsCondition(west: number, east: number): string {
+  return west > east ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
+}
+
+/**
+ * Whether the bounds hold more than `limit` hotspots. Cheap enough to run before deciding
+ * to load them: it reads only the (lat, lng) index and stops counting once past the limit.
+ */
+export async function hasMoreHotspotsThan(
+  limit: number,
+  west: number,
+  south: number,
+  east: number,
+  north: number
+): Promise<boolean> {
+  if (!db) throw new Error("Database not initialized");
+
+  const row = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM (
+       SELECT 1 FROM hotspots
+       WHERE lat >= ? AND lat <= ? AND ${lngWithinBoundsCondition(west, east)}
+       LIMIT ?
+     )`,
+    [south, north, west, east, limit + 1]
+  );
+
+  return (row?.count ?? 0) > limit;
+}
+
 export async function getHotspotsWithinBounds(
   west: number,
   south: number,
@@ -247,13 +277,9 @@ export async function getHotspotsWithinBounds(
 ): Promise<{ id: string; name: string; lat: number; lng: number; species: number; country: string | null }[]> {
   if (!db) throw new Error("Database not initialized");
 
-  // When west > east, the bounding box crosses the international date line
-  const crossesDateLine = west > east;
-  const lngCondition = crossesDateLine ? `(lng >= ? OR lng <= ?)` : `(lng >= ? AND lng <= ?)`;
-
   const result = await db.getAllAsync(
     `SELECT id, name, lat, lng, species, country FROM hotspots
-     WHERE lat >= ? AND lat <= ? AND ${lngCondition}`,
+     WHERE lat >= ? AND lat <= ? AND ${lngWithinBoundsCondition(west, east)}`,
     [south, north, west, east]
   );
 

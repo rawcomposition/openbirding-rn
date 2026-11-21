@@ -1,6 +1,6 @@
 import { useDelayedFlag } from "@/hooks/useDelayedFlag";
 import { useTargetRichHotspots } from "@/hooks/useTargetRichHotspots";
-import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces } from "@/lib/database";
+import { getHotspotsWithinBounds, getSavedHotspots, getSavedPlaces, hasMoreHotspotsThan } from "@/lib/database";
 import {
   haloInnerStyle,
   haloOuterStyle,
@@ -111,10 +111,19 @@ const THROTTLE_DELAY_WITH_OPEN_HOTSPOT = 250; // Load hotspots faster when jumpi
 const SETTLED_BOUNDS_DELAY = 300;
 // Only surface the "Filtering hotspots..." badge if filtering outlasts this; incremental pans resolve faster and shouldn't flicker it.
 const TARGET_RICH_BADGE_DELAY = 350;
+// At this zoom and closer, hotspots always load.
 const MIN_ZOOM = 8;
+// Further out than MIN_ZOOM, hotspots still load while the view holds no more than this many,
+// so sparse regions stay usable from much further out. Dense cities already put ~4,000 on
+// the map at MIN_ZOOM, so this is never heavier to render than what loads there.
+const MAX_ZOOMED_OUT_HOTSPOTS = 3000;
+// Never load below this zoom, however sparse the area; the view spans whole countries by then.
+const ABSOLUTE_MIN_ZOOM = 5;
 const DEFAULT_USER_ZOOM = 14;
 const DEFAULT_HOTSPOT_ZOOM = 13;
 const BOUNDS_EPSILON = 0.0001;
+
+type Viewport = { bounds: Bounds; zoom: number };
 
 function areBoundsEquivalent(left: Bounds | null, right: Bounds | null): boolean {
   if (left === right) {
@@ -228,19 +237,35 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       throttleDelay = THROTTLE_DELAY_WITH_OPEN_HOTSPOT;
     }
 
-    const throttledSetBounds = useMemo(
-      () =>
-        throttle((nextBounds: Bounds | null) => {
-          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-        }, throttleDelay),
-      [throttleDelay]
+    // Loads hotspots for the viewport, or flags it as too far out to load them. Runs at most
+    // once per throttle/debounce tick, which keeps the density count off the per-frame path.
+    const viewportRequestRef = useRef(0);
+    const applyViewport = useCallback(
+      async (viewport: Viewport) => {
+        const requestId = ++viewportRequestRef.current;
+        let isTooFarOut = viewport.zoom < ABSOLUTE_MIN_ZOOM;
+        if (!isTooFarOut && viewport.zoom < MIN_ZOOM) {
+          const padded = padBoundsBySize(viewport.bounds);
+          isTooFarOut = await hasMoreHotspotsThan(
+            MAX_ZOOMED_OUT_HOTSPOTS,
+            padded.west,
+            padded.south,
+            padded.east,
+            padded.north
+          ).catch(() => true);
+          // A newer viewport took over while this one was being counted.
+          if (requestId !== viewportRequestRef.current) return;
+        }
+        const nextBounds = isTooFarOut ? null : viewport.bounds;
+        setIsZoomedTooFarOut(isTooFarOut);
+        setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
+      },
+      [setIsZoomedTooFarOut]
     );
-    const debouncedSetSettledBounds = useMemo(
-      () =>
-        debounce((nextBounds: Bounds | null) => {
-          setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-        }, SETTLED_BOUNDS_DELAY),
-      []
+    const throttledApplyViewport = useMemo(() => throttle(applyViewport, throttleDelay), [applyViewport, throttleDelay]);
+    const debouncedApplySettledViewport = useMemo(
+      () => debounce(applyViewport, SETTLED_BOUNDS_DELAY),
+      [applyViewport]
     );
     const debouncedSaveLocation = useMemo(
       () =>
@@ -270,54 +295,50 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>(
       [setMapCenter, setViewRadiusKm]
     );
 
-    const readBoundsIfZoomed = useCallback(async (): Promise<Bounds | null> => {
+    const readViewport = useCallback(async (): Promise<Viewport | null> => {
       if (!mapRef.current) return null;
-      const [b, z] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
-      const zoomedOut = z < MIN_ZOOM;
-      if (zoomedOut !== isZoomedTooFarOut) {
-        setIsZoomedTooFarOut(zoomedOut);
-      }
-      if (z >= MIN_ZOOM && b) {
-        return { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] };
-      }
-      return null;
-    }, [isZoomedTooFarOut, setIsZoomedTooFarOut]);
+      const [b, zoom] = await Promise.all([mapRef.current.getVisibleBounds(), mapRef.current.getZoom()]);
+      if (!b) return null;
+      return { bounds: { west: b[1][0], south: b[1][1], east: b[0][0], north: b[0][1] }, zoom };
+    }, []);
 
-    const syncViewport = useCallback(async (immediate = false) => {
-      if (!mapRef.current) return;
-      const nextBounds = await readBoundsIfZoomed();
-      if (immediate) {
-        throttledSetBounds.cancel();
-        debouncedSetSettledBounds.cancel();
-        setBounds((currentBounds) => (areBoundsEquivalent(currentBounds, nextBounds) ? currentBounds : nextBounds));
-      } else if (isTargetRichMapFiltering) {
-        debouncedSetSettledBounds(nextBounds);
-      } else {
-        throttledSetBounds(nextBounds);
-      }
-      debouncedSaveLocation();
-      throttledSetMapCenter();
-    }, [
-      debouncedSaveLocation,
-      debouncedSetSettledBounds,
-      isTargetRichMapFiltering,
-      readBoundsIfZoomed,
-      throttledSetBounds,
-      throttledSetMapCenter,
-    ]);
+    const syncViewport = useCallback(
+      async (immediate = false) => {
+        const viewport = await readViewport();
+        if (!viewport) return;
+        if (immediate) {
+          throttledApplyViewport.cancel();
+          debouncedApplySettledViewport.cancel();
+          void applyViewport(viewport);
+        } else if (isTargetRichMapFiltering) {
+          debouncedApplySettledViewport(viewport);
+        } else {
+          throttledApplyViewport(viewport);
+        }
+        debouncedSaveLocation();
+        throttledSetMapCenter();
+      },
+      [
+        applyViewport,
+        debouncedApplySettledViewport,
+        debouncedSaveLocation,
+        isTargetRichMapFiltering,
+        readViewport,
+        throttledApplyViewport,
+        throttledSetMapCenter,
+      ]
+    );
 
     useEffect(() => {
       return () => {
-        throttledSetBounds.cancel();
-        debouncedSetSettledBounds.cancel();
+        throttledApplyViewport.cancel();
+        debouncedApplySettledViewport.cancel();
       };
-    }, [debouncedSetSettledBounds, throttledSetBounds]);
+    }, [debouncedApplySettledViewport, throttledApplyViewport]);
 
     useEffect(() => {
-      throttledSetBounds.cancel();
-      debouncedSetSettledBounds.cancel();
       void syncViewport(true);
-    }, [debouncedSetSettledBounds, isTargetRichMapFiltering, syncViewport, throttledSetBounds]);
+    }, [isTargetRichMapFiltering, syncViewport]);
 
     const setTouchActive = useCallback(
       (isActive: boolean) => {
